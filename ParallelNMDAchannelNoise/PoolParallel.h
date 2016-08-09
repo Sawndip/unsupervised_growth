@@ -18,7 +18,7 @@ using std::vector;
 class PoolParallel
 {
 public:
-	PoolParallel(int N_tr, int N_ra, int Nic, int NiInC, int Ns);
+	PoolParallel(double beta, double beta_s, double Ap, double Ad, double activation, double super_threshold, double Gmax, int N_ra, int Nic, int NiInC, int N_ss, int N_tr);
 	~PoolParallel();
 
 	void read_from_file(const char* RA_xy, const char* I_xy, const char* RA_RA_all, const char* RA_RA_active, const char* RA_RA_super, const char* RA_I, const char* I_RA, const char* mature); // read network structure from files
@@ -214,12 +214,12 @@ protected:
 		unsigned* Id_RA_local; // Id of RA neurons in each process
 		unsigned* Id_I_local; // Id of I neurons in each process
 
-		const static double ACTIVATION; // activation threshold for synapses
+		//const static double ACTIVATION; // activation threshold for synapses
 		double p_RA2I(int i, int j); // probability of connection from RA to I neuron
 		double p_I2RA(int i, int j); // probability of connection from I to RA neuron
 		double p_RA2I_distant(int i, int j); // probability of distant connections from RA to I
 
-		const static double SUPERSYNAPSE_THRESHOLD; // threshold for supersynaptic connection
+		//const static double SUPERSYNAPSE_THRESHOLD; // threshold for supersynaptic connection
 
 		// developmental GABA switch
 		const static double T_GABA; // time scale of maturation
@@ -233,16 +233,25 @@ protected:
 		const static double LTP_WINDOW; // window for LTP beyond which we ignore all somatic spikes
 		const static double LTD_WINDOW; // window for LTD beyond which we ignore all somatic spikes
 
+        double ACTIVATION;
+        double SUPERSYNAPSE_THRESHOLD;
+        double BETA;
+        double BETA_SUPERSYNAPSE;
+        double G_MAX;
+        double A_D;
+        double A_P;
 
-		const static double G_MAX; // constant for maximum weight value
-		const static double BETA; // constant for potentiation decay
 
-		const static double A_P;
+
+		//const static double G_MAX; // constant for maximum weight value
+		//const static double BETA; // constant for potentiation decay
+
+		//const static double A_P;
 		const static double G_P;
 		const static double T_P;
 		const static double TAU_P;
 
-		const static double A_D;
+		//const static double A_D;
 		const static double T_D;
 		const static double TAU_D;
 

@@ -9,58 +9,92 @@ int main(int argc, char** argv)
 
 	double Gei_mean = 0.15;
 	double Gei_var = 0.0;
-	double Gie_mean = 0.60;
 	double Gie_var = 0.0;
 
     double interval = 1000;
     double timeStep = 0.01;
     int trials = 100000;
 
-    string fileRA = "/home/eugene/Output/RA.bin";
-    string fileI = "/home/eugene/Output/I.bin";
-    string filePajekSuper = "/home/eugene/Output/super.net";
-    string filePajekSuperPerm = "/home/eugene/Output/";
-    string filePajekActive = "/home/eugene/Output/active.net";
-    string filePajekActivePerm = "/home/eugene/Output/";
-    string filePajekAll = "/home/eugene/Output/all.net";
-    string filePajekAllPerm = "/home/eugene/Output/";
-    string filePajekFixed = "/home/eugene/Output/fixed.net";
-    string fileIxy = "/home/eugene/Output/I_xy.bin";
-    string fileRAxy = "/home/eugene/Output/RA_xy.bin";
-    string fileRA2I = "/home/eugene/Output/RA_I_connections.bin";
-    string fileI2RA = "/home/eugene/Output/I_RA_connections.bin";
-    
-	string fileSimInfo = "/home/eugene/Output/sim_info.bin";
-	string fileSynapticInfo = "/home/eugene/Output/synaptic_info.bin";
-	string fileMaturePerm = "/home/eugene/Output/";
-	
-	string fileMatureInfo = "/home/eugene/Output/mature393.bin"; // file from which to read mature information
-	string fileAllInfo = "/home/eugene/Output/all393.net"; // file from which to read all RA-RA connections
-	string fileActiveInfo = "/home/eugene/Output/active393.net"; // file from which to read all active RA-RA connections
-	string fileSuperInfo = "/home/eugene/Output/super393.net"; // file from which to read all super RA-RA connections
+    double beta, beta_s, Ap, Ad, activation, super_threshold, Gmax, Gie_mean;
+    int N_RA, num_inh_clusters_in_row, num_inh_in_cluster, N_ss, N_TR;
 
-    string fileActive = "/home/eugene/Output/RA_RA_connections.bin";
-    string fileSuper = "/home/eugene/Output/RA_RA_super_connections.bin";
-    string fileTimeSoma = "/home/eugene/Output/time_info_soma.bin";
-    string fileTimeDend = "/home/eugene/Output/time_info_dend.bin";
-
-    string fileWeights = "/home/eugene/Output/weights.bin";
-    string fileWeightsPerm = "/home/eugene/Output/";
-    string RAdir = "/home/eugene/Output/RAneurons/";
-    string Idir = "/home/eugene/Output/Ineurons/";
+    string outputDirectory;
+    string workDirectory = "/storage/home/yzt116/work/";
 
     int rank;
-    int N_RA = 100;
-    //int N_I = 36;
-	int num_inh_clusters_in_row = 4;
-	int num_inh_in_cluster = 2;
-    int N_TR = 2;
-    int N_ss = 2;
+
+	MPI_Init(&argc, &argv);
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    
+    // parse command line parameters
+    //
+    if (argc > 1)
+    {
+        Gie_mean = atof(argv[1]);
+        beta = atof(argv[2]);
+        beta_s = atof(argv[3]);
+        Ap = atof(argv[4]);
+        Ad = atof(argv[5]);
+        activation = atof(argv[6]);
+        super_threshold = atof(argv[7]);
+        Gmax = atof(argv[8]);
+        N_RA = atoi(argv[9]);
+        num_inh_clusters_in_row = atoi(argv[10]);
+        num_inh_in_cluster = atoi(argv[11]);
+        N_ss = atoi(argv[12]);
+        N_TR = atoi(argv[13]);
+        outputDirectory = argv[14];
+
+        
+        if (rank == 0)
+            printf("Output directory is %s\n", outputDirectory.c_str());
+    }
+    else
+    {
+        printf("Command line parameters are needed!\n");
+        return -1;
+    }
+
+    string fileRA = workDirectory + outputDirectory + "RA.bin";
+    string fileI = workDirectory + outputDirectory + "I.bin";
+    string filePajekSuper = workDirectory + outputDirectory + "super.net";
+    string filePajekSuperPerm = workDirectory + outputDirectory;
+    string filePajekActive = workDirectory + outputDirectory + "active.net";
+    string filePajekActivePerm = workDirectory + outputDirectory;
+    string filePajekAll = workDirectory + outputDirectory + "all.net";
+    string filePajekAllPerm = workDirectory + outputDirectory;
+    string filePajekFixed = workDirectory + outputDirectory + "fixed.net";
+    string fileIxy = workDirectory + outputDirectory + "I_xy.bin";
+    string fileRAxy = workDirectory + outputDirectory + "RA_xy.bin";
+    string fileRA2I = workDirectory + outputDirectory + "RA_I_connections.bin";
+    string fileI2RA = workDirectory + outputDirectory + "I_RA_connections.bin";
+    
+	string fileSimInfo = workDirectory + outputDirectory + "sim_info.bin";
+	string fileSynapticInfo = workDirectory + outputDirectory + "synaptic_info.bin";
+	string fileMaturePerm = workDirectory + outputDirectory;
+	
+	string fileMatureInfo = workDirectory + outputDirectory + "mature393.bin"; // file from which to read mature information
+	string fileAllInfo = workDirectory + outputDirectory + "all393.net"; // file from which to read all RA-RA connections
+	string fileActiveInfo = workDirectory + outputDirectory + "active393.net"; // file from which to read all active RA-RA connections
+	string fileSuperInfo = workDirectory + outputDirectory + "super393.net"; // file from which to read all super RA-RA connections
+
+    string fileActive = workDirectory + outputDirectory + "RA_RA_connections.bin";
+    string fileSuper = workDirectory + outputDirectory + "RA_RA_super_connections.bin";
+    string fileTimeSoma = workDirectory + outputDirectory + "time_info_soma.bin";
+    string fileTimeDend = workDirectory + outputDirectory + "time_info_dend.bin";
+
+    string fileWeights = workDirectory + outputDirectory + "weights.bin";
+    string fileWeightsPerm = workDirectory + outputDirectory;
+    string RAdir = workDirectory + outputDirectory + "RAneurons/";
+    string Idir = workDirectory + outputDirectory + "Ineurons/";
+
+
+    //printf("My rank is %d\n", rank);
 
 	MPI_Init(&argc, &argv);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
-	PoolParallel pool(N_TR, N_RA, num_inh_clusters_in_row, num_inh_in_cluster, N_ss);;
+	PoolParallel pool(beta, beta_s, Ap, Ad, activation, super_threshold, Gmax, N_RA, num_inh_clusters_in_row, num_inh_in_cluster, N_ss, N_TR);
 
 
 	pool.initialize_generator();

@@ -11,8 +11,10 @@
 
 using namespace std::placeholders;
 
-PoolParallel::PoolParallel(int N_tr, int N_ra, int Nic, int NiInC, int Ns) : N_TR(N_tr),
-				N_RA(N_ra), num_inh_clusters(Nic), num_inh_in_cluster(NiInC), Nss(Ns)
+PoolParallel::PoolParallel(double beta, double beta_s, double Ap, double Ad, double activation, double super_threshold, 
+                        double Gmax, int N_ra, int Nic, int NiInC, int N_ss, int N_tr) : BETA(beta), BETA_SUPERSYNAPSE(beta_s), 
+                        A_P(Ap), A_D(Ad), ACTIVATION(activation), SUPERSYNAPSE_THRESHOLD(super_threshold), G_MAX(Gmax),
+				        N_RA(N_ra), num_inh_clusters(Nic), num_inh_in_cluster(NiInC), Nss(N_ss), N_TR(N_tr)
 {
 
     MPI_Comm_size(MPI_COMM_WORLD, &MPI_size);
@@ -233,8 +235,8 @@ const double PoolParallel::CONNECT_CONST_I2RA = 3.0;
 const double PoolParallel::SIDE = 100; // length of HVC side
 
 // synapse activation
-const double PoolParallel::SUPERSYNAPSE_THRESHOLD = 0.01; // threshold for supersynaptic connection
-const double PoolParallel::ACTIVATION = 0.003; // activation threshold for synapses
+//const double PoolParallel::SUPERSYNAPSE_THRESHOLD = 0.01; // threshold for supersynaptic connection
+//const double PoolParallel::ACTIVATION = 0.003; // activation threshold for synapses
 
 
 // developmental GABA switch
@@ -245,15 +247,15 @@ const int PoolParallel::N_MATURATION = 100;
 
 // constants for STDP-rules
 const int PoolParallel::NUM_SOMA_SPIKES = 5; // number of last somatic spikes to store (necessary for LTP rule)
-const double PoolParallel::G_MAX = 0.040; // constant for maximum weight value
-const double PoolParallel::BETA = 0.995; // constant for potentiation decay
+//const double PoolParallel::G_MAX = 0.040; // constant for maximum weight value
+//const double PoolParallel::BETA = 0.995; // constant for potentiation decay
 
-const double PoolParallel::A_P = 0.0015;
+//const double PoolParallel::A_P = 0.0015;
 const double PoolParallel::G_P = 0.1;
 const double PoolParallel::T_P = 10;
 const double PoolParallel::TAU_P = 30;
 
-const double PoolParallel::A_D = 0.00010;
+//const double PoolParallel::A_D = 0.00010;
 const double PoolParallel::T_D = 10;
 const double PoolParallel::TAU_D = 30;
 
@@ -2520,7 +2522,10 @@ void PoolParallel::potentiation_decay()
     {
         for (int j = 0; j < N_RA; j++)
         {
-            weights_local[i][j] *= BETA;
+            if (weights_local[i][j] >= SUPERSYNAPSE_THRESHOLD)
+                weights_local[i][j] *= BETA_SUPERSYNAPSE;
+            else
+                weights_local[i][j] *= BETA;
         }
     }
 }
