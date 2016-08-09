@@ -1,0 +1,5 @@
+# this files species which files to ignore
+*.o
+*.txt
+pbs_script.*
+out
