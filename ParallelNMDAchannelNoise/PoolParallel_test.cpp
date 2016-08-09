@@ -19,7 +19,7 @@ int main(int argc, char** argv)
     int N_RA, num_inh_clusters_in_row, num_inh_in_cluster, N_ss, N_TR;
 
     string outputDirectory;
-    string workDirectory = "/storage/home/yzt116/work/";
+    string workDirectory = "/home/eugene/";
 
     int rank;
 
@@ -91,8 +91,6 @@ int main(int argc, char** argv)
 
     //printf("My rank is %d\n", rank);
 
-	MPI_Init(&argc, &argv);
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
 	PoolParallel pool(beta, beta_s, Ap, Ad, activation, super_threshold, Gmax, N_RA, num_inh_clusters_in_row, num_inh_in_cluster, N_ss, N_TR);
 
