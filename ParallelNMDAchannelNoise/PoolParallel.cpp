@@ -3482,7 +3482,7 @@ void PoolParallel::write_dend_time_info(const char* filename)
         for (unsigned i = 0; i < N_RA; i++)
         {
             int spike_array_size = spikes_in_trial_dend_global[i].size();
-            printf("Neuron %d; number of dendritic spikes in trial: %d\n", i, spike_array_size);
+            //printf("Neuron %d; number of dendritic spikes in trial: %d\n", i, spike_array_size);
             out.write(reinterpret_cast<char *>(&spike_array_size), sizeof(int));
 	    
             for (int j = 0; j < spike_array_size; j++)

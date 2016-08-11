@@ -161,7 +161,7 @@ int main(int argc, char** argv)
            	pool.write_num_synapses(fileSynapticInfo.c_str());
 		    pool.write_soma_time_info(fileTimeSoma.c_str());
             pool.write_dend_time_info(fileTimeDend.c_str());
-           // pool.write_weights(fileWeights.c_str());
+            pool.write_weights(fileWeights.c_str());
             pool.write_active_synapses(fileActive.c_str());
 	    	pool.write_supersynapses(fileSuper.c_str());
             pool.write_RA(fileRA.c_str(), 3);
@@ -177,7 +177,7 @@ int main(int argc, char** argv)
 		{
 	 		weightsFilename = fileWeightsPerm + "weights" + std::to_string(count) + ".bin";
 			pool.write_weights(weightsFilename.c_str());
-			pool.write_weights(fileWeights.c_str());
+			//pool.write_weights(fileWeights.c_str());
 
 			pajekSuperFilename = filePajekSuperPerm + "super" + std::to_string(count) + ".net";
 	    	pool.write_pajek_super(pajekSuperFilename.c_str());
