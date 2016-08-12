@@ -18,7 +18,7 @@ using std::vector;
 class PoolParallel
 {
 public:
-	PoolParallel(double beta, double beta_s, double Ap, double Ad, double activation, double super_threshold, double Gmax, int N_ra, int Nic, int NiInC, int N_ss, int N_tr);
+	PoolParallel(double beta, double beta_s, double Ap, double Ap_super, double Ad_super, double Ad, double activation, double super_threshold, double Gmax, int N_ra, int Nic, int NiInC, int N_ss, int N_tr);
 	~PoolParallel();
 
 	void read_from_file(const char* RA_xy, const char* I_xy, const char* RA_RA_all, const char* RA_RA_active, const char* RA_RA_super, const char* RA_I, const char* I_RA, const char* mature); // read network structure from files
@@ -98,6 +98,8 @@ public:
    // current
     void set_training_current(); // set current to training neurons
     void set_testing_current(); // set testing current for neurons
+
+	void print_simulation_parameters(); // print simulation parameters
 protected:
 		// number of neurons
 		int N_TR; // number of training HVC(RA) neurons
@@ -240,7 +242,8 @@ protected:
         double G_MAX;
         double A_D;
         double A_P;
-
+		double A_P_SUPER;
+		double A_D_SUPER;
 
 
 		//const static double G_MAX; // constant for maximum weight value

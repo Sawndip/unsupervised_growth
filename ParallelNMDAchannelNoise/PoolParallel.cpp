@@ -11,9 +11,9 @@
 
 using namespace std::placeholders;
 
-PoolParallel::PoolParallel(double beta, double beta_s, double Ap, double Ad, double activation, double super_threshold, 
+PoolParallel::PoolParallel(double beta, double beta_s, double Ap, double Ad, double Ap_super, double Ad_super, double activation, double super_threshold, 
                         double Gmax, int N_ra, int Nic, int NiInC, int N_ss, int N_tr) : BETA(beta), BETA_SUPERSYNAPSE(beta_s), 
-                        A_P(Ap), A_D(Ad), ACTIVATION(activation), SUPERSYNAPSE_THRESHOLD(super_threshold), G_MAX(Gmax),
+                        A_P(Ap), A_D(Ad), A_P_SUPER(Ap_super), A_D_SUPER(Ad_super), ACTIVATION(activation), SUPERSYNAPSE_THRESHOLD(super_threshold), G_MAX(Gmax),
 				        N_RA(N_ra), num_inh_clusters(Nic), num_inh_in_cluster(NiInC), Nss(N_ss), N_TR(N_tr)
 {
 
@@ -1083,6 +1083,25 @@ void PoolParallel::read_from_file(const char* RA_xy, const char* I_xy, const cha
 		inp_I_RA.close();
 		inp_mature.close();
 	}
+}
+
+void PoolParallel::print_simulation_parameters()
+{
+	if (MPI_rank == 0)
+	{
+		printf("BETA = %f\n", BETA);
+		printf("BETA_SUPERSYNAPSE = %f\n", BETA_SUPERSYNAPSE);
+		printf("A_P = %f\n", A_P);
+		printf("A_D = %f\n", A_D);
+		printf("A_P_SUPER = %f\n", A_P_SUPER);
+		printf("A_D_SUPER = %f\n", A_D_SUPER);
+		printf("ACTIVATION = %f\n", ACTIVATION);
+		printf("SUPERSYNAPSE_THRESHOLD = %f\n", SUPERSYNAPSE_THRESHOLD);
+		printf("Gmax = %f\n", G_MAX);
+
+	}
+
+
 }
 
 void PoolParallel::read_all_connections_from_net(const char* filename, double*** weights)
@@ -2672,10 +2691,15 @@ void PoolParallel::LTP(double &w, double t)
         //else
          //   printf("Positive LTP!!! t = %f; temp = %f\n", t, temp);
 		//w = w + temp;
-
-		w = w + R * A_P * G_P * ((1 + F_0) * t / T_P - F_0);
-
-
+		if (w >= SUPERSYNAPSE_THRESHOLD)
+		{
+			w = w + R * A_P_SUPER * G_P * ((1 + F_0) * t / T_P - F_0);
+		}
+		else
+		{
+			w = w + R * A_P * G_P * ((1 + F_0) * t / T_P - F_0);
+		}
+	
 
         //std::cout << "w = " << w << std::endl;
     }
@@ -2691,8 +2715,15 @@ void PoolParallel::LTP(double &w, double t)
          //   printf("Positive LTP!!! t = %f; temp = %f\n", t, temp);
 
         //w = w + temp;
-    	w = w + R * A_P * G_P * exp(-(t - T_P) / TAU_P);
+   		if (w >= SUPERSYNAPSE_THRESHOLD)
+		{
 
+   			w = w + R * A_P_SUPER * G_P * exp(-(t - T_P) / TAU_P);
+		}
+		else
+		{
+   			w = w + R * A_P * G_P * exp(-(t - T_P) / TAU_P);
+		}
 
         //std::cout << "w = " << w << std::endl;
     }
@@ -2713,8 +2744,17 @@ void PoolParallel::LTD(double &w, double t)
             //printf("LTD. Linear interval. Weight became negative. w = %f\n", w);
 		//w = w - R * A_D * w * ((1 - F_0) * t / T_D + F_0);
 		//w = w - R * A_D * ((1 - F_0) * t / T_D + F_0);
-		w = w - R * (A_P * G_P * F_0 + (A_D - A_P * G_P * F_0) * t / T_D);
-        if (w < 0)
+		if (w >= SUPERSYNAPSE_THRESHOLD)
+		{
+
+			w = w - R * (A_P_SUPER * G_P * F_0 + (A_D_SUPER - A_P_SUPER * G_P * F_0) * t / T_D);
+		}
+		else
+		{
+			w = w - R * (A_P * G_P * F_0 + (A_D - A_P * G_P * F_0) * t / T_D);
+        }
+		
+		if (w < 0)
             w = 0;
 
        // std::cout << "w = " << w << std::endl;
@@ -2725,7 +2765,14 @@ void PoolParallel::LTD(double &w, double t)
           //  printf("LTD. Exponential interval. Weight became negative. w = %f\n", w);
 
 		//w = w - R * A_D * w * exp(-(t - T_D) / TAU_D);
-		w = w - R * A_D * exp(-(t - T_D) / TAU_D);
+		if (w >= SUPERSYNAPSE_THRESHOLD)
+		{
+			w = w - R * A_D_SUPER * exp(-(t - T_D) / TAU_D);
+		}
+		else
+		{
+			w = w - R * A_D * exp(-(t - T_D) / TAU_D);
+		}
 
         if (w < 0)
             w = 0;

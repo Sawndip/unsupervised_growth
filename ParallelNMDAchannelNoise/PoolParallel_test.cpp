@@ -15,7 +15,7 @@ int main(int argc, char** argv)
     double timeStep = 0.01;
     int trials = 100000;
 
-    double beta, beta_s, Ap, Ad, activation, super_threshold, Gmax, Gie_mean;
+    double beta, beta_s, Ap, Ad, Ap_super, Ad_super, activation, super_threshold, Gmax, Gie_mean;
     int N_RA, num_inh_clusters_in_row, num_inh_in_cluster, N_ss, N_TR;
 
     string outputDirectory;
@@ -35,15 +35,17 @@ int main(int argc, char** argv)
         beta_s = atof(argv[3]);
         Ap = atof(argv[4]);
         Ad = atof(argv[5]);
-        activation = atof(argv[6]);
-        super_threshold = atof(argv[7]);
-        Gmax = atof(argv[8]);
-        N_RA = atoi(argv[9]);
-        num_inh_clusters_in_row = atoi(argv[10]);
-        num_inh_in_cluster = atoi(argv[11]);
-        N_ss = atoi(argv[12]);
-        N_TR = atoi(argv[13]);
-        outputDirectory = argv[14];
+        Ap_super = atof(argv[6]);
+        Ad_super = atof(argv[7]);
+        activation = atof(argv[8]);
+        super_threshold = atof(argv[9]);
+        Gmax = atof(argv[10]);
+        N_RA = atoi(argv[11]);
+        num_inh_clusters_in_row = atoi(argv[12]);
+        num_inh_in_cluster = atoi(argv[13]);
+        N_ss = atoi(argv[14]);
+        N_TR = atoi(argv[15]);
+        outputDirectory = argv[16];
 
         
         if (rank == 0)
@@ -73,10 +75,10 @@ int main(int argc, char** argv)
 	string fileSynapticInfo = workDirectory + outputDirectory + "synaptic_info.bin";
 	string fileMaturePerm = workDirectory + outputDirectory;
 	
-	string fileMatureInfo = workDirectory + outputDirectory + "mature393.bin"; // file from which to read mature information
-	string fileAllInfo = workDirectory + outputDirectory + "all393.net"; // file from which to read all RA-RA connections
-	string fileActiveInfo = workDirectory + outputDirectory + "active393.net"; // file from which to read all active RA-RA connections
-	string fileSuperInfo = workDirectory + outputDirectory + "super393.net"; // file from which to read all super RA-RA connections
+	string fileMatureInfo = workDirectory + outputDirectory + "mature23.bin"; // file from which to read mature information
+	string fileAllInfo = workDirectory + outputDirectory + "all23.net"; // file from which to read all RA-RA connections
+	string fileActiveInfo = workDirectory + outputDirectory + "active23.net"; // file from which to read all active RA-RA connections
+	string fileSuperInfo = workDirectory + outputDirectory + "super23.net"; // file from which to read all super RA-RA connections
 
     string fileActive = workDirectory + outputDirectory + "RA_RA_connections.bin";
     string fileSuper = workDirectory + outputDirectory + "RA_RA_super_connections.bin";
@@ -92,20 +94,20 @@ int main(int argc, char** argv)
     //printf("My rank is %d\n", rank);
 
 
-	PoolParallel pool(beta, beta_s, Ap, Ad, activation, super_threshold, Gmax, N_RA, num_inh_clusters_in_row, num_inh_in_cluster, N_ss, N_TR);
+	PoolParallel pool(beta, beta_s, Ap, Ad, Ap_super, Ad_super, activation, super_threshold, Gmax, N_RA, num_inh_clusters_in_row, num_inh_in_cluster, N_ss, N_TR);
 
-
+	pool.print_simulation_parameters();
 	pool.initialize_generator();
-	pool.initialize_inhibitory_clusters();
-	pool.initialize_RA_for_inh_clusters();
+	//pool.initialize_inhibitory_clusters();
+	//pool.initialize_RA_for_inh_clusters();
 	//pool.initialize_coordinates();
 	//pool.initialize_equal_clusters();
 	//pool.initialize_connections_for_clusters(Gei_mean, Gei_var, Gie_mean, Gie_var);
-	pool.initialize_connections_for_inhibitory_clusters(Gei_mean, Gei_var, Gie_mean, Gie_var);
-	//pool.read_from_file(fileRAxy.c_str(), fileIxy.c_str(), fileAllInfo.c_str(), fileActiveInfo.c_str(), fileSuperInfo.c_str(), fileRA2I.c_str(), fileI2RA.c_str(), fileMatureInfo.c_str());
+	//pool.initialize_connections_for_inhibitory_clusters(Gei_mean, Gei_var, Gie_mean, Gie_var);
+	pool.read_from_file(fileRAxy.c_str(), fileIxy.c_str(), fileAllInfo.c_str(), fileActiveInfo.c_str(), fileSuperInfo.c_str(), fileRA2I.c_str(), fileI2RA.c_str(), fileMatureInfo.c_str());
 	
 	pool.send_connections();
-	//pool.send_RARA_connections();
+	pool.send_RARA_connections();
 	
 	//pool.initialize_test_allI2RA_connections(0.2);
     //pool.initialize_test_allRA2I_connections(0.1);
@@ -127,7 +129,7 @@ int main(int argc, char** argv)
     pool.set_white_noise_soma();
     pool.set_white_noise_dend();
 
-	//pool.update_synaptic_info();
+	pool.update_synaptic_info();
     pool.write_coordinates(fileRAxy.c_str(), fileIxy.c_str());
     pool.write_invariable_synapses(fileRA2I.c_str(), fileI2RA.c_str());
     pool.write_pajek_fixed(filePajekFixed.c_str());
@@ -140,7 +142,7 @@ int main(int argc, char** argv)
 
     //double start_time = MPI_Wtime();
     string weightsFilename, pajekSuperFilename, pajekActiveFilename, pajekAllFilename, fileAllRAneurons, fileAllIneurons, fileMature;
-    int count = 0;
+    int count = 24;
    
    	int synapses_trials_update = 15;
 	int weights_trials_update = 50;
