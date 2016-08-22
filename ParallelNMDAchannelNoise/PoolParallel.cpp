@@ -222,15 +222,15 @@ const double PoolParallel::DEMOTIVATION_WINDOW = 200; // demotivation window in 
 // coordinates
 const double PoolParallel::CLUSTER_SIZE = 5; // cluster size
 const double PoolParallel::MIN_INTERNEURON_DISTANCE = 1; // minimum distance between neurons
-const double PoolParallel::LAMBDA_RA2I = 3; // spatial scale of probability of connections decay
+const double PoolParallel::LAMBDA_RA2I = 5; // spatial scale of probability of connections decay
 const double PoolParallel::A_RA2I = 4.0;
-const double PoolParallel::B_RA2I = 0.025;
+const double PoolParallel::B_RA2I = 0.030;
 const double PoolParallel::MEAN_RA2I = 20.0;
 const double PoolParallel::SIGMA_RA2I = 30.0;
 
 
-const double PoolParallel::LAMBDA_I2RA = 3; // spatial scale of probability of connections decay
-const double PoolParallel::CONNECT_CONST_I2RA = 3.0;
+const double PoolParallel::LAMBDA_I2RA = 4; // spatial scale of probability of connections decay
+const double PoolParallel::CONNECT_CONST_I2RA = 4.0;
 
 const double PoolParallel::SIDE = 100; // length of HVC side
 

@@ -13,10 +13,13 @@ int main(int argc, char** argv)
 
     double interval = 1000;
     double timeStep = 0.01;
-    int trials = 0;
+    int trials = 100000;
 
     double beta, beta_s, Ap, Ad, Ap_super, Ad_super, activation, super_threshold, Gmax, Gie_mean, Tp, Td, tauP, tauD;
     int N_RA, num_inh_clusters_in_row, num_inh_in_cluster, N_ss, N_TR;
+
+	double sigma_soma; // white noise amplitude in soma compartment
+	double sigma_dend; // white noise amplitude in dendritic compartment
 
     string outputDirectory;
 	string filenumber; // string containing number of the files from which to read network connectivity
@@ -34,29 +37,31 @@ int main(int argc, char** argv)
     //
     if (argc > 1)
     {
-        Gie_mean = atof(argv[1]);
-        beta = atof(argv[2]);
-        beta_s = atof(argv[3]);
-		Tp = atof(argv[4]);
-		Td = atof(argv[5]);
-		tauP = atof(argv[6]);
-		tauD = atof(argv[7]);
-        Ap = atof(argv[8]);
-        Ad = atof(argv[9]);
-        Ap_super = atof(argv[10]);
-        Ad_super = atof(argv[11]);
-        activation = atof(argv[12]);
-        super_threshold = atof(argv[13]);
-        Gmax = atof(argv[14]);
-        N_RA = atoi(argv[15]);
-        num_inh_clusters_in_row = atoi(argv[16]);
-        num_inh_in_cluster = atoi(argv[17]);
-        N_ss = atoi(argv[18]);
-        N_TR = atoi(argv[19]);
-        outputDirectory = argv[20];
-		reading = atoi(argv[21]);
-		filenumber = argv[22];
-		testing = atoi(argv[23]);
+		sigma_soma = atof(argv[1]);
+		sigma_dend = atof(argv[2]);
+        Gie_mean = atof(argv[3]);
+        beta = atof(argv[4]);
+        beta_s = atof(argv[5]);
+		Tp = atof(argv[6]);
+		Td = atof(argv[7]);
+		tauP = atof(argv[8]);
+		tauD = atof(argv[9]);
+        Ap = atof(argv[10]);
+        Ad = atof(argv[11]);
+        Ap_super = atof(argv[12]);
+        Ad_super = atof(argv[13]);
+        activation = atof(argv[14]);
+        super_threshold = atof(argv[15]);
+        Gmax = atof(argv[16]);
+        N_RA = atoi(argv[17]);
+        num_inh_clusters_in_row = atoi(argv[18]);
+        num_inh_in_cluster = atoi(argv[19]);
+        N_ss = atoi(argv[20]);
+        N_TR = atoi(argv[21]);
+        outputDirectory = argv[22];
+		reading = atoi(argv[23]);
+		filenumber = argv[24];
+		testing = atoi(argv[25]);
 
         
         if (rank == 0)
@@ -145,9 +150,9 @@ int main(int argc, char** argv)
 	}
 	
     double mu_soma = 30;
-    double sigma_soma = 100;
+    //double sigma_soma = 100;
     double mu_dend = 50;
-    double sigma_dend = 185;
+    //double sigma_dend = 185;
 
 
     //pool.print_invariable_connections();
