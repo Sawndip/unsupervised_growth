@@ -348,3 +348,15 @@ def read_mature(filename):
         mature.append(struct.unpack("<i", data[(SIZE_OF_INT + i*SIZE_OF_INT):(2*SIZE_OF_INT + i*SIZE_OF_INT)])[0])
         
     return mature
+    
+def read_simTime_info(filename):
+    with open(filename, "rb") as file:
+        data = file.read()
+        file.close()
+    
+    trial_number = struct.unpack("<i", data[:SIZE_OF_INT])[0]
+    internal_time = struct.unpack("<d", data[SIZE_OF_INT:(SIZE_OF_INT + SIZE_OF_DOUBLE)])[0]
+    network_time = struct.unpack("<d", data[(SIZE_OF_INT + SIZE_OF_DOUBLE):(SIZE_OF_INT + 2*SIZE_OF_DOUBLE)])[0]
+        
+    return trial_number, internal_time, network_time
+    

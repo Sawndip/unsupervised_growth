@@ -21,9 +21,10 @@ public:
 	PoolParallel(double beta, double beta_s, double Tp, double Td, double tauP, double tauD, double Ap, double Ap_super, double Ad_super, double Ad, double activation, double super_threshold, double Gmax, int N_ra, int Nic, int NiInC, int N_ss, int N_tr);
 	~PoolParallel();
 
-	void read_from_file(const char* RA_xy, const char* I_xy, const char* RA_RA_all, const char* RA_RA_active, const char* RA_RA_super, const char* RA_I, const char* I_RA, const char* mature); // read network structure from files
+	void read_from_file(const char* RA_xy, const char* I_xy, const char* RA_RA_all, const char* RA_RA_active, const char* RA_RA_super, const char* RA_I, const char* I_RA, const char* mature, const char* timeInfo); // read network structure from files
 	void read_connections_from_net(const char *filename, std::vector<unsigned int>** target_id, std::vector<double>** target_G); // read connection from .net file
 	void read_all_connections_from_net(const char *filename, double*** weights); // read connection from .net file
+    void read_all_connections(const char *filename, double** weights); // read all connections between RA neurons from binary file
 
 	void initialize_inhibitory_clusters(); // initialize coordinates of inhibitory clusters on square lattice
 	void initialize_RA_for_inh_clusters(); // initialize coordinates of pool neurons for inhibitory clusters
@@ -34,10 +35,13 @@ public:
 
     void initialize_connections(double Gei_mean, double Gei_var, double Gie_mean, double Gie_var); // initialize connections for neurons
 	void initialize_connections_for_clusters(double Gei_mean, double Gei_var, double Gie_mean, double Gie_var); // initialize connections for neurons in equal clusters
-	void initialize_connections_for_inhibitory_clusters(double Gei_mean, double Gei_var, double Gie_mean, double Gie_var); // initialize connections for inhibitory clusters
+
+    void initialize_connections_for_inhibitory_clusters(double Gei_mean, double Gei_var, double Gie_mean, double Gie_var); // initialize connections for inhibitory clusters
 	
+    int get_trial_number(); // get current number of trials performed
+
 	void send_connections(); // send fixed connections connections to all processes
-	void send_RARA_connections(); // send RA to RA connections to all processes
+	void send_simulation_parameters(); // send parameters of simulation and RA to RA connections to all processes
 	
 	void update_synaptic_info(); // update synaptic information after reading network structure from files
 
@@ -71,6 +75,7 @@ public:
     void write_soma_time_info(const char* filename); // write somatic spike information to a file
     void write_dend_time_info(const char* filename); // write dendritic spike information to a file
 	void write_mature(const char* filename); // write mature neurons
+    void write_time_info(const char* filename); // write simulation time information
 
     void write_pajek_super(const char* filename); // write supersynapses to a file for pajek
 	void write_pajek_active(const char* filename); // write active synapses to a file for pajek
@@ -145,7 +150,10 @@ protected:
 		int size; // time array size for dynamics
 		double timeStep; // time step for dynamics
 		double trial_duration; // duration of trial in milliseconds
-		double internal_time = 0; // internal time
+		double internal_time = 0; // internal time of each neuron
+        double network_time = 0; // network time
+        double network_update_frequency = 1; // how often network state should be updated in ms
+
 		double current_injection_time; // injection time of training current
 		int trial_number = 0; // number of simulated trials
 

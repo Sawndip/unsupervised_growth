@@ -18,6 +18,8 @@ int main(int argc, char** argv)
     double beta, beta_s, Ap, Ad, Ap_super, Ad_super, activation, super_threshold, Gmax, Gie_mean, Tp, Td, tauP, tauD;
     int N_RA, num_inh_clusters_in_row, num_inh_in_cluster, N_ss, N_TR;
 
+    int N_I = num_inh_clusters_in_row * num_inh_clusters_in_row * num_inh_in_cluster;
+
 	double sigma_soma; // white noise amplitude in soma compartment
 	double sigma_dend; // white noise amplitude in dendritic compartment
 
@@ -86,13 +88,14 @@ int main(int argc, char** argv)
     string fileRAxy = outputDirectory + "RA_xy.bin";
     string fileRA2I = outputDirectory + "RA_I_connections.bin";
     string fileI2RA = outputDirectory + "I_RA_connections.bin";
+    string fileTimeInfo = outputDirectory + "timeInfo.bin";
     
 	string fileSimInfo = outputDirectory + "sim_info.bin";
 	string fileSynapticInfo = outputDirectory + "synaptic_info.bin";
 	string fileMaturePerm = outputDirectory;
 	
 	string fileMatureInfo = outputDirectory + "mature" + filenumber + ".bin"; // file from which to read mature information
-	string fileAllInfo = outputDirectory + "all" + filenumber + ".net"; // file from which to read all RA-RA connections
+	string fileAllInfo = outputDirectory + "weights" + filenumber + ".bin"; // file from which to read all RA-RA connections
 	string fileActiveInfo = outputDirectory + "active" + filenumber + ".net"; // file from which to read all active RA-RA connections
 	string fileSuperInfo = outputDirectory + "super" + filenumber + ".net"; // file from which to read all super RA-RA connections
 
@@ -116,16 +119,16 @@ int main(int argc, char** argv)
 	{
 		count = atoi(filenumber.c_str()) + 1;
 
-		pool.read_from_file(fileRAxy.c_str(), fileIxy.c_str(), fileAllInfo.c_str(), fileActiveInfo.c_str(), fileSuperInfo.c_str(), fileRA2I.c_str(), fileI2RA.c_str(), fileMatureInfo.c_str());
+		pool.read_from_file(fileRAxy.c_str(), fileIxy.c_str(), fileAllInfo.c_str(), fileActiveInfo.c_str(), fileSuperInfo.c_str(), fileRA2I.c_str(), fileI2RA.c_str(), fileMatureInfo.c_str(), fileTimeInfo.c_str());
 
 		pool.send_connections();
-		pool.send_RARA_connections();
+		pool.send_simulation_parameters();
 		
 		pool.update_synaptic_info();
 	}
 	else
 	{
-		count = 0;
+		count = 1;
 
 		// if testing run assemble neurons into clusters
 		if (testing > 0)
@@ -169,21 +172,25 @@ int main(int argc, char** argv)
     //double start_time = MPI_Wtime();
     string weightsFilename, pajekSuperFilename, pajekActiveFilename, pajekAllFilename, fileAllRAneurons, fileAllIneurons, fileMature;
    
-   	int synapses_trials_update = 15;
-	int weights_trials_update = 50;
+   	int synapses_trials_update = 5;
+	int weights_trials_update = 10;
 
 	pool.write_sim_info(fileSimInfo.c_str(), synapses_trials_update, weights_trials_update);
 	
 	
-    for (int i = 0; i < trials; i++)
+    while (true)
     {
-        if (rank == 0)
-            printf("Trial %d\n", i);
         pool.trial(training);
         pool.gather_data();
-	//pool.statistics();
+	    
+        int trial_number = pool.get_trial_number();
 
-        if (i % synapses_trials_update == 0)
+        if (rank == 0)
+            printf("Trial %d\n", trial_number);
+        
+        //pool.statistics();
+
+        if (trial_number % synapses_trials_update == 0)
         {
            	pool.write_num_synapses(fileSynapticInfo.c_str());
 		    pool.write_soma_time_info(fileTimeSoma.c_str());
@@ -200,7 +207,7 @@ int main(int argc, char** argv)
 	
 			
 
-		if (i % weights_trials_update == 0)
+		if (trial_number % weights_trials_update == 0)
 		{
 	 		weightsFilename = fileWeightsPerm + "weights" + std::to_string(count) + ".bin";
 			pool.write_weights(weightsFilename.c_str());
@@ -212,11 +219,13 @@ int main(int argc, char** argv)
 	   		pajekActiveFilename = filePajekActivePerm + "active" + std::to_string(count) + ".net";
 	    	pool.write_pajek_active(pajekActiveFilename.c_str());
 
-	    	pajekAllFilename = filePajekAllPerm + "all" + std::to_string(count) + ".net";
-	    	pool.write_pajek_all(pajekAllFilename.c_str());
+	    	//pajekAllFilename = filePajekAllPerm + "all" + std::to_string(count) + ".net";
+	    	//pool.write_pajek_all(pajekAllFilename.c_str());
 
 			fileMature = fileMaturePerm + "mature" + std::to_string(count) + ".bin";
 			pool.write_mature(fileMature.c_str());
+
+            pool.write_time_info(fileTimeInfo.c_str());
 
 		
 			//for (int i = 0; i < N_RA; i++)
