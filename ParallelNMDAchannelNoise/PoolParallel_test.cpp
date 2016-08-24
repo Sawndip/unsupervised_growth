@@ -15,13 +15,20 @@ int main(int argc, char** argv)
     double timeStep = 0.01;
     int trials = 100000;
 
-    double beta, beta_s, Ap, Ad, activation, super_threshold, Gmax, Gie_mean;
+    double beta, beta_s, Ap, Ad, Ap_super, Ad_super, activation, super_threshold, Gmax, Gie_mean, Tp, Td, tauP, tauD;
     int N_RA, num_inh_clusters_in_row, num_inh_in_cluster, N_ss, N_TR;
 
-    string outputDirectory;
-    string workDirectory = "/home/eugene/";
+	double sigma_soma; // white noise amplitude in soma compartment
+	double sigma_dend; // white noise amplitude in dendritic compartment
 
-    int rank;
+    string outputDirectory;
+	string filenumber; // string containing number of the files from which to read network connectivity
+	
+
+    int rank; // MPI process rank
+	int reading; // indicator whether we read connections from the files or not
+	int testing; // indicator if it is a test run
+	int count; // file number from which to start writing output data
 
 	MPI_Init(&argc, &argv);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -30,20 +37,31 @@ int main(int argc, char** argv)
     //
     if (argc > 1)
     {
-        Gie_mean = atof(argv[1]);
-        beta = atof(argv[2]);
-        beta_s = atof(argv[3]);
-        Ap = atof(argv[4]);
-        Ad = atof(argv[5]);
-        activation = atof(argv[6]);
-        super_threshold = atof(argv[7]);
-        Gmax = atof(argv[8]);
-        N_RA = atoi(argv[9]);
-        num_inh_clusters_in_row = atoi(argv[10]);
-        num_inh_in_cluster = atoi(argv[11]);
-        N_ss = atoi(argv[12]);
-        N_TR = atoi(argv[13]);
-        outputDirectory = argv[14];
+		sigma_soma = atof(argv[1]);
+		sigma_dend = atof(argv[2]);
+        Gie_mean = atof(argv[3]);
+        beta = atof(argv[4]);
+        beta_s = atof(argv[5]);
+		Tp = atof(argv[6]);
+		Td = atof(argv[7]);
+		tauP = atof(argv[8]);
+		tauD = atof(argv[9]);
+        Ap = atof(argv[10]);
+        Ad = atof(argv[11]);
+        Ap_super = atof(argv[12]);
+        Ad_super = atof(argv[13]);
+        activation = atof(argv[14]);
+        super_threshold = atof(argv[15]);
+        Gmax = atof(argv[16]);
+        N_RA = atoi(argv[17]);
+        num_inh_clusters_in_row = atoi(argv[18]);
+        num_inh_in_cluster = atoi(argv[19]);
+        N_ss = atoi(argv[20]);
+        N_TR = atoi(argv[21]);
+        outputDirectory = argv[22];
+		reading = atoi(argv[23]);
+		filenumber = argv[24];
+		testing = atoi(argv[25]);
 
         
         if (rank == 0)
@@ -55,65 +73,86 @@ int main(int argc, char** argv)
         return -1;
     }
 
-    string fileRA = workDirectory + outputDirectory + "RA.bin";
-    string fileI = workDirectory + outputDirectory + "I.bin";
-    string filePajekSuper = workDirectory + outputDirectory + "super.net";
-    string filePajekSuperPerm = workDirectory + outputDirectory;
-    string filePajekActive = workDirectory + outputDirectory + "active.net";
-    string filePajekActivePerm = workDirectory + outputDirectory;
-    string filePajekAll = workDirectory + outputDirectory + "all.net";
-    string filePajekAllPerm = workDirectory + outputDirectory;
-    string filePajekFixed = workDirectory + outputDirectory + "fixed.net";
-    string fileIxy = workDirectory + outputDirectory + "I_xy.bin";
-    string fileRAxy = workDirectory + outputDirectory + "RA_xy.bin";
-    string fileRA2I = workDirectory + outputDirectory + "RA_I_connections.bin";
-    string fileI2RA = workDirectory + outputDirectory + "I_RA_connections.bin";
+    string fileRA = outputDirectory + "RA.bin";
+    string fileI = outputDirectory + "I.bin";
+    string filePajekSuper = outputDirectory + "super.net";
+    string filePajekSuperPerm = outputDirectory;
+    string filePajekActive = outputDirectory + "active.net";
+    string filePajekActivePerm = outputDirectory;
+    string filePajekAll = outputDirectory + "all.net";
+    string filePajekAllPerm = outputDirectory;
+    string filePajekFixed = outputDirectory + "fixed.net";
+    string fileIxy = outputDirectory + "I_xy.bin";
+    string fileRAxy = outputDirectory + "RA_xy.bin";
+    string fileRA2I = outputDirectory + "RA_I_connections.bin";
+    string fileI2RA = outputDirectory + "I_RA_connections.bin";
     
-	string fileSimInfo = workDirectory + outputDirectory + "sim_info.bin";
-	string fileSynapticInfo = workDirectory + outputDirectory + "synaptic_info.bin";
-	string fileMaturePerm = workDirectory + outputDirectory;
+	string fileSimInfo = outputDirectory + "sim_info.bin";
+	string fileSynapticInfo = outputDirectory + "synaptic_info.bin";
+	string fileMaturePerm = outputDirectory;
 	
-	string fileMatureInfo = workDirectory + outputDirectory + "mature393.bin"; // file from which to read mature information
-	string fileAllInfo = workDirectory + outputDirectory + "all393.net"; // file from which to read all RA-RA connections
-	string fileActiveInfo = workDirectory + outputDirectory + "active393.net"; // file from which to read all active RA-RA connections
-	string fileSuperInfo = workDirectory + outputDirectory + "super393.net"; // file from which to read all super RA-RA connections
+	string fileMatureInfo = outputDirectory + "mature" + filenumber + ".bin"; // file from which to read mature information
+	string fileAllInfo = outputDirectory + "all" + filenumber + ".net"; // file from which to read all RA-RA connections
+	string fileActiveInfo = outputDirectory + "active" + filenumber + ".net"; // file from which to read all active RA-RA connections
+	string fileSuperInfo = outputDirectory + "super" + filenumber + ".net"; // file from which to read all super RA-RA connections
 
-    string fileActive = workDirectory + outputDirectory + "RA_RA_connections.bin";
-    string fileSuper = workDirectory + outputDirectory + "RA_RA_super_connections.bin";
-    string fileTimeSoma = workDirectory + outputDirectory + "time_info_soma.bin";
-    string fileTimeDend = workDirectory + outputDirectory + "time_info_dend.bin";
+    string fileActive = outputDirectory + "RA_RA_connections.bin";
+    string fileSuper = outputDirectory + "RA_RA_super_connections.bin";
+    string fileTimeSoma = outputDirectory + "time_info_soma.bin";
+    string fileTimeDend = outputDirectory + "time_info_dend.bin";
 
-    string fileWeights = workDirectory + outputDirectory + "weights.bin";
-    string fileWeightsPerm = workDirectory + outputDirectory;
-    string RAdir = workDirectory + outputDirectory + "RAneurons/";
-    string Idir = workDirectory + outputDirectory + "Ineurons/";
+    string fileWeights = outputDirectory + "weights.bin";
+    string fileWeightsPerm = outputDirectory;
+    string RAdir = outputDirectory + "RAneurons/";
+    string Idir = outputDirectory + "Ineurons/";
 
+	PoolParallel pool(beta, beta_s, Tp, Td, tauP, tauD, Ap, Ad, Ap_super, Ad_super, activation, super_threshold, Gmax, N_RA, num_inh_clusters_in_row, num_inh_in_cluster, N_ss, N_TR);
 
-    //printf("My rank is %d\n", rank);
-
-
-	PoolParallel pool(beta, beta_s, Ap, Ad, activation, super_threshold, Gmax, N_RA, num_inh_clusters_in_row, num_inh_in_cluster, N_ss, N_TR);
-
-
+	pool.print_simulation_parameters();
 	pool.initialize_generator();
-	pool.initialize_inhibitory_clusters();
-	pool.initialize_RA_for_inh_clusters();
-	//pool.initialize_coordinates();
-	//pool.initialize_equal_clusters();
-	//pool.initialize_connections_for_clusters(Gei_mean, Gei_var, Gie_mean, Gie_var);
-	pool.initialize_connections_for_inhibitory_clusters(Gei_mean, Gei_var, Gie_mean, Gie_var);
-	//pool.read_from_file(fileRAxy.c_str(), fileIxy.c_str(), fileAllInfo.c_str(), fileActiveInfo.c_str(), fileSuperInfo.c_str(), fileRA2I.c_str(), fileI2RA.c_str(), fileMatureInfo.c_str());
-	
-	pool.send_connections();
-	//pool.send_RARA_connections();
-	
-	//pool.initialize_test_allI2RA_connections(0.2);
-    //pool.initialize_test_allRA2I_connections(0.1);
 
+	// if we need to read connections from network
+	if (reading > 0)
+	{
+		count = atoi(filenumber.c_str()) + 1;
+
+		pool.read_from_file(fileRAxy.c_str(), fileIxy.c_str(), fileAllInfo.c_str(), fileActiveInfo.c_str(), fileSuperInfo.c_str(), fileRA2I.c_str(), fileI2RA.c_str(), fileMatureInfo.c_str());
+
+		pool.send_connections();
+		pool.send_RARA_connections();
+		
+		pool.update_synaptic_info();
+	}
+	else
+	{
+		count = 0;
+
+		// if testing run assemble neurons into clusters
+		if (testing > 0)
+		{
+
+			pool.initialize_inhibitory_clusters();
+			pool.initialize_RA_for_inh_clusters();
+			pool.initialize_connections_for_inhibitory_clusters(Gei_mean, Gei_var, Gie_mean, Gie_var);
+
+		}
+		else
+		// if real run set distribution for connections between neurons
+		{
+			pool.initialize_coordinates();
+			pool.initialize_connections(Gei_mean, Gei_var, Gie_mean, Gie_var);
+		}
+
+		pool.send_connections();
+    	pool.write_coordinates(fileRAxy.c_str(), fileIxy.c_str());
+    	pool.write_invariable_synapses(fileRA2I.c_str(), fileI2RA.c_str());
+    	pool.write_pajek_fixed(filePajekFixed.c_str());
+	}
+	
     double mu_soma = 30;
-    double sigma_soma = 100;
+    //double sigma_soma = 100;
     double mu_dend = 50;
-    double sigma_dend = 185;
+    //double sigma_dend = 185;
 
 
     //pool.print_invariable_connections();
@@ -127,20 +166,8 @@ int main(int argc, char** argv)
     pool.set_white_noise_soma();
     pool.set_white_noise_dend();
 
-	//pool.update_synaptic_info();
-    pool.write_coordinates(fileRAxy.c_str(), fileIxy.c_str());
-    pool.write_invariable_synapses(fileRA2I.c_str(), fileI2RA.c_str());
-    pool.write_pajek_fixed(filePajekFixed.c_str());
-    
-   // pool.write_pajek_active("/home/eugene/Output/active_test.net");
-	//pool.write_pajek_super("/home/eugene/Output/super_test.net");
-
-    //pool.write_pajek_all("/home/eugene/Output/all_test.net");
-	//pool.write_mature("/home/eugene/Output/mature_test.net");
-
     //double start_time = MPI_Wtime();
     string weightsFilename, pajekSuperFilename, pajekActiveFilename, pajekAllFilename, fileAllRAneurons, fileAllIneurons, fileMature;
-    int count = 0;
    
    	int synapses_trials_update = 15;
 	int weights_trials_update = 50;
@@ -161,7 +188,7 @@ int main(int argc, char** argv)
            	pool.write_num_synapses(fileSynapticInfo.c_str());
 		    pool.write_soma_time_info(fileTimeSoma.c_str());
             pool.write_dend_time_info(fileTimeDend.c_str());
-           // pool.write_weights(fileWeights.c_str());
+            pool.write_weights(fileWeights.c_str());
             pool.write_active_synapses(fileActive.c_str());
 	    	pool.write_supersynapses(fileSuper.c_str());
             pool.write_RA(fileRA.c_str(), 3);
@@ -177,7 +204,7 @@ int main(int argc, char** argv)
 		{
 	 		weightsFilename = fileWeightsPerm + "weights" + std::to_string(count) + ".bin";
 			pool.write_weights(weightsFilename.c_str());
-			pool.write_weights(fileWeights.c_str());
+			//pool.write_weights(fileWeights.c_str());
 
 			pajekSuperFilename = filePajekSuperPerm + "super" + std::to_string(count) + ".net";
 	    	pool.write_pajek_super(pajekSuperFilename.c_str());

@@ -47,7 +47,7 @@ const double HH2_final::EdL = -80;
 const double HH2_final::EdCa = 120;
 const double HH2_final::EdK = -90;
 const double HH2_final::tExc = 5;
-const double HH2_final::tInh = 3;
+const double HH2_final::tInh = 7;
 const double HH2_final::tNMDA = 200;
 
 

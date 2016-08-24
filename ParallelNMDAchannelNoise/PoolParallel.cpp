@@ -11,9 +11,9 @@
 
 using namespace std::placeholders;
 
-PoolParallel::PoolParallel(double beta, double beta_s, double Ap, double Ad, double activation, double super_threshold, 
+PoolParallel::PoolParallel(double beta, double beta_s, double Tp, double Td, double tauP, double tauD, double Ap, double Ad, double Ap_super, double Ad_super, double activation, double super_threshold, 
                         double Gmax, int N_ra, int Nic, int NiInC, int N_ss, int N_tr) : BETA(beta), BETA_SUPERSYNAPSE(beta_s), 
-                        A_P(Ap), A_D(Ad), ACTIVATION(activation), SUPERSYNAPSE_THRESHOLD(super_threshold), G_MAX(Gmax),
+                        A_P(Ap), A_D(Ad), T_P(Tp), T_D(Td), TAU_P(tauP), TAU_D(tauD), A_P_SUPER(Ap_super), A_D_SUPER(Ad_super), ACTIVATION(activation), SUPERSYNAPSE_THRESHOLD(super_threshold), G_MAX(Gmax),
 				        N_RA(N_ra), num_inh_clusters(Nic), num_inh_in_cluster(NiInC), Nss(N_ss), N_TR(N_tr)
 {
 
@@ -222,21 +222,18 @@ const double PoolParallel::DEMOTIVATION_WINDOW = 200; // demotivation window in 
 // coordinates
 const double PoolParallel::CLUSTER_SIZE = 5; // cluster size
 const double PoolParallel::MIN_INTERNEURON_DISTANCE = 1; // minimum distance between neurons
-const double PoolParallel::LAMBDA_RA2I = 2; // spatial scale of probability of connections decay
+const double PoolParallel::LAMBDA_RA2I = 5; // spatial scale of probability of connections decay
 const double PoolParallel::A_RA2I = 4.0;
-const double PoolParallel::B_RA2I = 0.025;
+const double PoolParallel::B_RA2I = 0.030;
 const double PoolParallel::MEAN_RA2I = 20.0;
 const double PoolParallel::SIGMA_RA2I = 30.0;
 
 
-const double PoolParallel::LAMBDA_I2RA = 3; // spatial scale of probability of connections decay
-const double PoolParallel::CONNECT_CONST_I2RA = 3.0;
+const double PoolParallel::LAMBDA_I2RA = 4; // spatial scale of probability of connections decay
+const double PoolParallel::CONNECT_CONST_I2RA = 4.0;
 
 const double PoolParallel::SIDE = 100; // length of HVC side
 
-// synapse activation
-//const double PoolParallel::SUPERSYNAPSE_THRESHOLD = 0.01; // threshold for supersynaptic connection
-//const double PoolParallel::ACTIVATION = 0.003; // activation threshold for synapses
 
 
 // developmental GABA switch
@@ -247,17 +244,7 @@ const int PoolParallel::N_MATURATION = 100;
 
 // constants for STDP-rules
 const int PoolParallel::NUM_SOMA_SPIKES = 5; // number of last somatic spikes to store (necessary for LTP rule)
-//const double PoolParallel::G_MAX = 0.040; // constant for maximum weight value
-//const double PoolParallel::BETA = 0.995; // constant for potentiation decay
-
-//const double PoolParallel::A_P = 0.0015;
 const double PoolParallel::G_P = 0.1;
-const double PoolParallel::T_P = 10;
-const double PoolParallel::TAU_P = 30;
-
-//const double PoolParallel::A_D = 0.00010;
-const double PoolParallel::T_D = 10;
-const double PoolParallel::TAU_D = 30;
 
 const double PoolParallel::R = 1;
 const double PoolParallel::F_0 = 1.0;
@@ -1083,6 +1070,29 @@ void PoolParallel::read_from_file(const char* RA_xy, const char* I_xy, const cha
 		inp_I_RA.close();
 		inp_mature.close();
 	}
+}
+
+void PoolParallel::print_simulation_parameters()
+{
+	if (MPI_rank == 0)
+	{
+		printf("BETA = %f\n", BETA);
+		printf("BETA_SUPERSYNAPSE = %f\n", BETA_SUPERSYNAPSE);
+		printf("T_P = %f\n", T_P);
+		printf("TAU_P = %f\n", TAU_P);
+		printf("T_D = %f\n", T_D);
+		printf("TAU_D = %f\n", TAU_D);
+		printf("A_P = %f\n", A_P);
+		printf("A_D = %f\n", A_D);
+		printf("A_P_SUPER = %f\n", A_P_SUPER);
+		printf("A_D_SUPER = %f\n", A_D_SUPER);
+		printf("ACTIVATION = %f\n", ACTIVATION);
+		printf("SUPERSYNAPSE_THRESHOLD = %f\n", SUPERSYNAPSE_THRESHOLD);
+		printf("Gmax = %f\n", G_MAX);
+
+	}
+
+
 }
 
 void PoolParallel::read_all_connections_from_net(const char* filename, double*** weights)
@@ -2672,10 +2682,15 @@ void PoolParallel::LTP(double &w, double t)
         //else
          //   printf("Positive LTP!!! t = %f; temp = %f\n", t, temp);
 		//w = w + temp;
-
-		w = w + R * A_P * G_P * ((1 + F_0) * t / T_P - F_0);
-
-
+		if (w >= SUPERSYNAPSE_THRESHOLD)
+		{
+			w = w + R * A_P_SUPER * G_P * ((1 + F_0) * t / T_P - F_0);
+		}
+		else
+		{
+			w = w + R * A_P * G_P * ((1 + F_0) * t / T_P - F_0);
+		}
+	
 
         //std::cout << "w = " << w << std::endl;
     }
@@ -2691,8 +2706,15 @@ void PoolParallel::LTP(double &w, double t)
          //   printf("Positive LTP!!! t = %f; temp = %f\n", t, temp);
 
         //w = w + temp;
-    	w = w + R * A_P * G_P * exp(-(t - T_P) / TAU_P);
+   		if (w >= SUPERSYNAPSE_THRESHOLD)
+		{
 
+   			w = w + R * A_P_SUPER * G_P * exp(-(t - T_P) / TAU_P);
+		}
+		else
+		{
+   			w = w + R * A_P * G_P * exp(-(t - T_P) / TAU_P);
+		}
 
         //std::cout << "w = " << w << std::endl;
     }
@@ -2713,8 +2735,17 @@ void PoolParallel::LTD(double &w, double t)
             //printf("LTD. Linear interval. Weight became negative. w = %f\n", w);
 		//w = w - R * A_D * w * ((1 - F_0) * t / T_D + F_0);
 		//w = w - R * A_D * ((1 - F_0) * t / T_D + F_0);
-		w = w - R * (A_P * G_P * F_0 + (A_D - A_P * G_P * F_0) * t / T_D);
-        if (w < 0)
+		if (w >= SUPERSYNAPSE_THRESHOLD)
+		{
+
+			w = w - R * (A_P_SUPER * G_P * F_0 + (A_D_SUPER - A_P_SUPER * G_P * F_0) * t / T_D);
+		}
+		else
+		{
+			w = w - R * (A_P * G_P * F_0 + (A_D - A_P * G_P * F_0) * t / T_D);
+        }
+		
+		if (w < 0)
             w = 0;
 
        // std::cout << "w = " << w << std::endl;
@@ -2725,7 +2756,14 @@ void PoolParallel::LTD(double &w, double t)
           //  printf("LTD. Exponential interval. Weight became negative. w = %f\n", w);
 
 		//w = w - R * A_D * w * exp(-(t - T_D) / TAU_D);
-		w = w - R * A_D * exp(-(t - T_D) / TAU_D);
+		if (w >= SUPERSYNAPSE_THRESHOLD)
+		{
+			w = w - R * A_D_SUPER * exp(-(t - T_D) / TAU_D);
+		}
+		else
+		{
+			w = w - R * A_D * exp(-(t - T_D) / TAU_D);
+		}
 
         if (w < 0)
             w = 0;
@@ -3482,7 +3520,7 @@ void PoolParallel::write_dend_time_info(const char* filename)
         for (unsigned i = 0; i < N_RA; i++)
         {
             int spike_array_size = spikes_in_trial_dend_global[i].size();
-            printf("Neuron %d; number of dendritic spikes in trial: %d\n", i, spike_array_size);
+            //printf("Neuron %d; number of dendritic spikes in trial: %d\n", i, spike_array_size);
             out.write(reinterpret_cast<char *>(&spike_array_size), sizeof(int));
 	    
             for (int j = 0; j < spike_array_size; j++)

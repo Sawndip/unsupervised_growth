@@ -6,7 +6,7 @@ double training_current(double start, double t)
 {
 	//double start = 0;
 	double duration = 20;
-	double I_ampl = 2000;
+	double I_ampl = 1000;
 
 	if ((t >= start)&&(t <= (start + duration)))
 		return I_ampl;
