@@ -15,7 +15,7 @@ int main(int argc, char** argv)
     double timeStep = 0.01;
     int trials = 100000;
 
-    double beta, beta_s, Ap, Ad, Ap_super, Ad_super, activation, super_threshold, Gmax, Gie_mean, Tp, Td, tauP, tauD;
+    double network_update, beta, beta_s, Ap, Ad, Ap_super, Ad_super, activation, super_threshold, Gmax, Gie_mean, Tp, Td, tauP, tauD;
     int N_RA, num_inh_clusters_in_row, num_inh_in_cluster, N_ss, N_TR;
 
     int N_I = num_inh_clusters_in_row * num_inh_clusters_in_row * num_inh_in_cluster;
@@ -64,8 +64,8 @@ int main(int argc, char** argv)
 		reading = atoi(argv[23]);
 		filenumber = argv[24];
 		testing = atoi(argv[25]);
+        network_update = atof(argv[26]);
 
-        
         if (rank == 0)
             printf("Output directory is %s\n", outputDirectory.c_str());
     }
@@ -109,7 +109,7 @@ int main(int argc, char** argv)
     string RAdir = outputDirectory + "RAneurons/";
     string Idir = outputDirectory + "Ineurons/";
 
-	PoolParallel pool(beta, beta_s, Tp, Td, tauP, tauD, Ap, Ad, Ap_super, Ad_super, activation, super_threshold, Gmax, N_RA, num_inh_clusters_in_row, num_inh_in_cluster, N_ss, N_TR);
+	PoolParallel pool(network_update, beta, beta_s, Tp, Td, tauP, tauD, Ap, Ad, Ap_super, Ad_super, activation, super_threshold, Gmax, N_RA, num_inh_clusters_in_row, num_inh_in_cluster, N_ss, N_TR);
 
 	pool.print_simulation_parameters();
 	pool.initialize_generator();
@@ -172,8 +172,8 @@ int main(int argc, char** argv)
     //double start_time = MPI_Wtime();
     string weightsFilename, pajekSuperFilename, pajekActiveFilename, pajekAllFilename, fileAllRAneurons, fileAllIneurons, fileMature;
    
-   	int synapses_trials_update = 5;
-	int weights_trials_update = 10;
+   	int synapses_trials_update = 15;
+	int weights_trials_update = 50;
 
 	pool.write_sim_info(fileSimInfo.c_str(), synapses_trials_update, weights_trials_update);
 	

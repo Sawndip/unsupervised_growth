@@ -18,7 +18,7 @@ using std::vector;
 class PoolParallel
 {
 public:
-	PoolParallel(double beta, double beta_s, double Tp, double Td, double tauP, double tauD, double Ap, double Ap_super, double Ad_super, double Ad, double activation, double super_threshold, double Gmax, int N_ra, int Nic, int NiInC, int N_ss, int N_tr);
+	PoolParallel(double network_update, double beta, double beta_s, double Tp, double Td, double tauP, double tauD, double Ap, double Ap_super, double Ad_super, double Ad, double activation, double super_threshold, double Gmax, int N_ra, int Nic, int NiInC, int N_ss, int N_tr);
 	~PoolParallel();
 
 	void read_from_file(const char* RA_xy, const char* I_xy, const char* RA_RA_all, const char* RA_RA_active, const char* RA_RA_super, const char* RA_I, const char* I_RA, const char* mature, const char* timeInfo); // read network structure from files
@@ -152,7 +152,7 @@ protected:
 		double trial_duration; // duration of trial in milliseconds
 		double internal_time = 0; // internal time of each neuron
         double network_time = 0; // network time
-        double network_update_frequency = 1; // how often network state should be updated in ms
+        double network_update_frequency; // how often network state should be updated in ms
 
 		double current_injection_time; // injection time of training current
 		int trial_number = 0; // number of simulated trials

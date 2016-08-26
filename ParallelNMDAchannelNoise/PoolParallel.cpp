@@ -11,8 +11,8 @@
 
 using namespace std::placeholders;
 
-PoolParallel::PoolParallel(double beta, double beta_s, double Tp, double Td, double tauP, double tauD, double Ap, double Ad, double Ap_super, double Ad_super, double activation, double super_threshold, 
-                        double Gmax, int N_ra, int Nic, int NiInC, int N_ss, int N_tr) : BETA(beta), BETA_SUPERSYNAPSE(beta_s), 
+PoolParallel::PoolParallel(double network_update, double beta, double beta_s, double Tp, double Td, double tauP, double tauD, double Ap, double Ad, double Ap_super, double Ad_super, double activation, double super_threshold, 
+                        double Gmax, int N_ra, int Nic, int NiInC, int N_ss, int N_tr) : network_update_frequency(network_update), BETA(beta), BETA_SUPERSYNAPSE(beta_s), 
                         A_P(Ap), A_D(Ad), T_P(Tp), T_D(Td), TAU_P(tauP), TAU_D(tauD), A_P_SUPER(Ap_super), A_D_SUPER(Ad_super), ACTIVATION(activation), SUPERSYNAPSE_THRESHOLD(super_threshold), G_MAX(Gmax),
 				        N_RA(N_ra), num_inh_clusters(Nic), num_inh_in_cluster(NiInC), Nss(N_ss), N_TR(N_tr)
 {
@@ -26,7 +26,7 @@ PoolParallel::PoolParallel(double beta, double beta_s, double Tp, double Td, dou
     double mu_soma = 30; // dc component of white noise to somatic compartment
     double sigma_soma = 100; // variance of white noise to somatic compartment
     double mu_dend = 50; // dc component of white noise to dendritic compartment
-    double sigma_dend = 185; // variance of white noise to dendritic compartment
+    double sigma_dend = 150; // variance of white noise to dendritic compartment
 
 	double delay = 0;
 	int num_related_spikes = 0;
@@ -2026,8 +2026,8 @@ void PoolParallel::trial(bool training)
             if (HVCRA_local[i].get_fired_soma())
             {
                 some_RA_neuron_fired_soma_local = 1;
-                spikes_in_trial_soma_local[i].push_back(network_time);
-                last_soma_spikes_local[i].push_back(network_time);
+                spikes_in_trial_soma_local[i].push_back(internal_time);
+                last_soma_spikes_local[i].push_back(internal_time);
 
                 while ((!last_soma_spikes_local[i].empty())&&
                     (last_soma_spikes_local[i].back() - last_soma_spikes_local[i].front() > LTP_WINDOW))
@@ -2062,7 +2062,7 @@ void PoolParallel::trial(bool training)
 
 						//update_g_local[target_ID] += g_KICK; // update glutamate of supersynaptic target
 
-                        double dt = network_time - spike_times_dend_global[target_ID];
+                        double dt = internal_time - spike_times_dend_global[target_ID];
 
                         if ((Id_RA_local[fired_ID] != target_ID)&&(dt < LTD_WINDOW))
                         {
@@ -2079,7 +2079,7 @@ void PoolParallel::trial(bool training)
                 {
                     for (int j = 0; j < N_RA; j++)
                     {
-                        double dt = network_time - spike_times_dend_global[j];
+                        double dt = internal_time - spike_times_dend_global[j];
 
                         if (Id_RA_local[fired_ID] != j)
                         {
@@ -2113,7 +2113,7 @@ void PoolParallel::trial(bool training)
             if (HVCRA_local[i].get_fired_dend())
             {
                 some_RA_neuron_fired_dend_local = 1;
-                spikes_in_trial_dend_local[i].push_back(network_time);
+                spikes_in_trial_dend_local[i].push_back(internal_time);
                 //printf("My rank = %d; RA neuron %d fired; spike_time = %f\n", MPI_rank, Id_RA_local[i], spike_times_local[i]);
                 RA_neurons_fired_dend_local.push_back(i);
                 RA_neurons_fired_dend_realID.push_back(Id_RA_local[i]);
@@ -2247,7 +2247,7 @@ void PoolParallel::trial(bool training)
                 // change spike times
                 for (int i = 0; i < RA_neurons_fired_dend_global.size(); i++)
                 {
-                    spike_times_dend_global[RA_neurons_fired_dend_global[i]] = network_time;
+                    spike_times_dend_global[RA_neurons_fired_dend_global[i]] = internal_time;
 
                 }
 
@@ -2277,7 +2277,7 @@ void PoolParallel::trial(bool training)
                             {
                                 for  (int k = 0; k < last_soma_spikes_local[i].size(); k++)
                                 {
-                                    double dt = network_time - last_soma_spikes_local[i][k];
+                                    double dt = internal_time - last_soma_spikes_local[i][k];
 
                                     if (dt < LTP_WINDOW)
                                     {
