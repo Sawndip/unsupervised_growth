@@ -18,7 +18,7 @@ using std::vector;
 class PoolParallel
 {
 public:
-	PoolParallel(double network_update, double beta, double beta_s, double Tp, double Td, double tauP, double tauD, double Ap, double Ap_super, double Ad_super, double Ad, double activation, double super_threshold, double Gmax, int N_ra, int Nic, int NiInC, int N_ss, int N_tr);
+	PoolParallel(double a, double b, double lambdaRA, double meanRA, double sigmaRA, double c, double lambdaI, double network_update, double beta, double beta_s, double Tp, double Td, double tauP, double tauD, double Ap, double Ap_super, double Ad_super, double Ad, double activation, double super_threshold, double Gmax, int N_ra, int Nic, int NiInC, int N_ss, int N_tr);
 	~PoolParallel();
 
 	void read_from_file(const char* RA_xy, const char* I_xy, const char* RA_RA_all, const char* RA_RA_active, const char* RA_RA_super, const char* RA_I, const char* I_RA, const char* mature, const char* timeInfo); // read network structure from files
@@ -130,14 +130,14 @@ protected:
 		const static double g_KICK; // glutamate kick value
 		const static double CLUSTER_SIZE; // cluster size
         const static double MIN_INTERNEURON_DISTANCE; // minimum distance between neurons
-		const static double LAMBDA_RA2I; // spatial scale of probability of connections decay (exponential)
-		const static double A_RA2I; // constant for nearby connections
-		const static double B_RA2I; // constant for far away connections
-		const static double MEAN_RA2I; // mean of Gaussian distribution for far away connections
-		const static double SIGMA_RA2I; // variance of Gaussian distribution for far away connections
+		double LAMBDA_RA2I; // spatial scale of probability of connections decay (exponential)
+		double A_RA2I; // constant for nearby connections
+		double B_RA2I; // constant for far away connections
+		double MEAN_RA2I; // mean of Gaussian distribution for far away connections
+		double SIGMA_RA2I; // variance of Gaussian distribution for far away connections
 
-		const static double LAMBDA_I2RA; // spatial scale of probability of connections decay
-		const static double CONNECT_CONST_I2RA;
+		double LAMBDA_I2RA; // spatial scale of probability of connections decay
+		double C_I2RA; // constant for I to RA connections
 		const static double SIDE; // length of HVC side
 		
 		const static double DEMOTIVATION_WINDOW; // demotivation window in ms
@@ -281,8 +281,8 @@ protected:
         int MPI_size; // number of processes
         int MPI_rank; // rank of the process
 
-        int N_RA_process; // number of RA neurons in one process
-        int N_I_process; // number of I neurons in one process
+		int* N_RA_sizes; // array with number of RA neurons in each process
+		int* N_I_sizes; // array with nubmer of I neurons in each process
 
 	void get_neuronRA_location(unsigned n, int* rank, int* shift); // get location of RA neuron with ID n in terms of process and position in array
 	void get_neuronI_location(unsigned n, int* rank, int *shift); // get location of I neuron with ID n in terms of process and position in array

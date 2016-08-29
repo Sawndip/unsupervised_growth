@@ -11,9 +11,13 @@
 
 using namespace std::placeholders;
 
-PoolParallel::PoolParallel(double network_update, double beta, double beta_s, double Tp, double Td, double tauP, double tauD, double Ap, double Ad, double Ap_super, double Ad_super, double activation, double super_threshold, 
-                        double Gmax, int N_ra, int Nic, int NiInC, int N_ss, int N_tr) : network_update_frequency(network_update), BETA(beta), BETA_SUPERSYNAPSE(beta_s), 
-                        A_P(Ap), A_D(Ad), T_P(Tp), T_D(Td), TAU_P(tauP), TAU_D(tauD), A_P_SUPER(Ap_super), A_D_SUPER(Ad_super), ACTIVATION(activation), SUPERSYNAPSE_THRESHOLD(super_threshold), G_MAX(Gmax),
+PoolParallel::PoolParallel(double a, double b, double lambdaRA, double meanRA, double sigmaRA, double c, double lambdaI, double network_update,
+						double beta, double beta_s, double Tp, double Td, double tauP, double tauD, double Ap, double Ad, double Ap_super, 
+						double Ad_super, double activation, double super_threshold, 
+                        double Gmax, int N_ra, int Nic, int NiInC, int N_ss, int N_tr) : A_RA2I(a), B_RA2I(b), LAMBDA_RA2I(lambdaRA), 
+						MEAN_RA2I(meanRA), SIGMA_RA2I(sigmaRA), C_I2RA(c), LAMBDA_I2RA(lambdaI), network_update_frequency(network_update),
+						BETA(beta), BETA_SUPERSYNAPSE(beta_s), A_P(Ap), A_D(Ad), T_P(Tp), T_D(Td), TAU_P(tauP), TAU_D(tauD), A_P_SUPER(Ap_super),
+						A_D_SUPER(Ad_super), ACTIVATION(activation), SUPERSYNAPSE_THRESHOLD(super_threshold), G_MAX(Gmax),
 				        N_RA(N_ra), num_inh_clusters(Nic), num_inh_in_cluster(NiInC), Nss(N_ss), N_TR(N_tr)
 {
 
@@ -33,28 +37,47 @@ PoolParallel::PoolParallel(double network_update, double beta, double beta_s, do
 
 	N_I = num_inh_clusters*num_inh_clusters*num_inh_in_cluster;
 
-    N_RA_local = N_RA/MPI_size;
-    N_I_local = N_I/MPI_size;
+	N_RA_sizes = new int[MPI_size]; // array with number of RA neurons per process
+	N_I_sizes = new int[MPI_size]; // array with number of I neurons per process
 
-
-	// if root assign all excessive neurons
-	if (MPI_rank == 0)
+	
+	for (int i = 0; i < MPI_size; i++)
 	{
-        if (N_TR > N_RA)
-            printf("Number of training neurons exceeds total number of RA neurons!\n");
-        else
-        {
-            if (N_TR > N_RA_local)
-                printf("Number of training neurons exceeds number of neurons assigned to master process");
-        }
+		N_RA_sizes[i] = N_RA / MPI_size;
+		N_I_sizes[i] = N_I / MPI_size;
+	}
+	int RA_remain = N_RA % MPI_size;
+	int I_remain = N_I % MPI_size;
+	int j = 0;
 
-		N_RA_local += N_RA % MPI_size;
-		N_I_local += N_I % MPI_size;
+	// distribute RA neurons
+	while (RA_remain > 0)
+	{
+		N_RA_sizes[j] += 1;
+		RA_remain -= 1;
+		j += 1;
 
+		if (j >= MPI_size)
+			j -= MPI_size;
 	}
 
-	printf("My rank is %d; N_RA_local = %d; N_I_local = %d\n", MPI_rank, N_RA_local, N_I_local);
+	// distribute I neurons
+	j = 0;
+	while (I_remain > 0)
+	{
+		
+		N_I_sizes[j] += 1;
+		I_remain -= 1;
+		j += 1;
 
+		if (j >= MPI_size)
+			j -= MPI_size;
+	}
+
+	N_RA_local = N_RA_sizes[MPI_rank]; // assign number of RA neurons for each process
+	N_I_local = N_I_sizes[MPI_rank]; // assign number of I neurons for each process
+
+	printf("My rank is %d; N_RA_local = %d; N_I_local = %d\n", MPI_rank, N_RA_local, N_I_local);
 
 	HVCRA_local = new HH2_final_pool[N_RA_local];
 	HVCI_local = new HHI_final_pool[N_I_local];
@@ -126,20 +149,24 @@ PoolParallel::PoolParallel(double network_update, double beta, double beta_s, do
             supersynapses_local[i][j] = false;
         }
 
-		if (MPI_rank == 0)
-			Id_RA_local[i] = i;
-		else
-			Id_RA_local[i] = MPI_rank*N_RA_local + N_RA % MPI_size + i;
+		// assign real Id for RA neurons
+		int N = 0; // number of neurons in the processes with lower rank
+		
+		for (int k = 0; k < MPI_rank; k++)
+			N += N_RA_sizes[k];
 
+		Id_RA_local[i] = N + i;
 	}
 
+	// assign real ID for I neurons
     for (int i = 0; i < N_I_local; i++)
 	{
-		if (MPI_rank == 0)
-			Id_I_local[i] = i;
-		else
-			Id_I_local[i] = MPI_rank*N_I_local + N_I % MPI_size + i;
+		int N = 0; // number of neurons in the processes with lower rank
+		
+		for (int k = 0; k < MPI_rank; k++)
+			N += N_I_sizes[k];
 
+		Id_I_local[i] = N + i;
 	}
 
 
@@ -213,18 +240,8 @@ const double PoolParallel::DEMOTIVATION_WINDOW = 200; // demotivation window in 
 // coordinates
 const double PoolParallel::CLUSTER_SIZE = 5; // cluster size
 const double PoolParallel::MIN_INTERNEURON_DISTANCE = 1; // minimum distance between neurons
-const double PoolParallel::LAMBDA_RA2I = 5; // spatial scale of probability of connections decay
-const double PoolParallel::A_RA2I = 4.0;
-const double PoolParallel::B_RA2I = 0.030;
-const double PoolParallel::MEAN_RA2I = 20.0;
-const double PoolParallel::SIGMA_RA2I = 30.0;
-
-
-const double PoolParallel::LAMBDA_I2RA = 4; // spatial scale of probability of connections decay
-const double PoolParallel::CONNECT_CONST_I2RA = 4.0;
 
 const double PoolParallel::SIDE = 100; // length of HVC side
-
 
 
 // developmental GABA switch
@@ -1292,12 +1309,12 @@ void PoolParallel::send_simulation_parameters()
 		
 		// prepare number of active and supersynaptic connections for each neuron
 
-		sendcounts_syn_num_RA[0] = N_RA_local;
+		sendcounts_syn_num_RA[0] = N_RA_sizes[0];
 		displs_syn_num_RA[0] = 0;
 
 		for (int i = 1; i < MPI_size; i++)
 		{
-			sendcounts_syn_num_RA[i] = N_RA / MPI_size;
+			sendcounts_syn_num_RA[i] = N_RA_sizes[i];
 			displs_syn_num_RA[i] = displs_syn_num_RA[i-1] + sendcounts_syn_num_RA[i-1];
 		}
 
@@ -1440,15 +1457,15 @@ void PoolParallel::send_connections()
 
 		// send connections to all processes
 
-		sendcounts_syn_num_RA[0] = N_RA_local;
-		sendcounts_syn_num_I[0] = N_I_local;
+		sendcounts_syn_num_RA[0] = N_RA_sizes[0];
+		sendcounts_syn_num_I[0] = N_I_sizes[0];
 		displs_syn_num_RA[0] = 0;
 		displs_syn_num_I[0] = 0;
 
 		for (int i = 1; i < MPI_size; i++)
 		{
-			sendcounts_syn_num_RA[i] = N_RA / MPI_size;
-			sendcounts_syn_num_I[i] = N_I / MPI_size;
+			sendcounts_syn_num_RA[i] = N_RA_sizes[i];
+			sendcounts_syn_num_I[i] = N_I_sizes[i];
 			displs_syn_num_RA[i] = displs_syn_num_RA[i-1] + sendcounts_syn_num_RA[i-1];
 			displs_syn_num_I[i] = displs_syn_num_I[i-1] + sendcounts_syn_num_I[i-1];
 		}
@@ -2114,7 +2131,7 @@ void PoolParallel::trial(bool training)
             {
                 some_RA_neuron_fired_dend_local = 1;
                 spikes_in_trial_dend_local[i].push_back(internal_time);
-                //printf("My rank = %d; RA neuron %d fired; spike_time = %f\n", MPI_rank, Id_RA_local[i], spike_times_local[i]);
+                //printf("My rank = %d; RA neuron %d fired; spike_time = %f\n", MPI_rank, Id_RA_local[i], internal_time);
                 RA_neurons_fired_dend_local.push_back(i);
                 RA_neurons_fired_dend_realID.push_back(Id_RA_local[i]);
 
@@ -2534,7 +2551,7 @@ double PoolParallel::p_I2RA(int i_I, int j_RA)
 		return 0;
 	else
 	{
-		prob = CONNECT_CONST_I2RA * exp(-d / LAMBDA_I2RA);
+		prob = C_I2RA * exp(-d / LAMBDA_I2RA);
 		//printf("p = %f\n", prob);
  	}
 	return prob;
@@ -2671,12 +2688,12 @@ void PoolParallel::gather_data()
 
     if (MPI_rank == 0)
     {
-        recvcounts[0] = N_RA_local;
+        recvcounts[0] = N_RA_sizes[0];
         displs[0] = 0;
 
         for (int i = 1; i < MPI_size; i++)
         {
-            recvcounts[i] = N_RA / MPI_size;
+            recvcounts[i] = N_RA_sizes[i];
             displs[i] = displs[i-1] + recvcounts[i-1];
         }
     }
@@ -2756,50 +2773,50 @@ void PoolParallel::gather_data()
 
         }
     // Gather from others
-        int offset = N_RA / MPI_size;
-
+		int N = N_RA_sizes[0]; // number of RA neurons in the processes with lower rank
 
         for (int i = 1; i < MPI_size; i++)
         {
-            for (int j = 0; j < offset; j++)
+
+            for (int j = 0; j < N_RA_sizes[i]; j++)
             {
                 int count;
-
-                MPI_Recv(&weights_global[N_RA_local + (i-1)*offset + j][0],
+				int receive_index = N + j;
+                MPI_Recv(&weights_global[receive_index][0],
                                         N_RA, MPI_DOUBLE, i, 0, MPI_COMM_WORLD, &status);
                 MPI_Get_count(&status, MPI_DOUBLE, &count);
                 //printf("Recv weights; from i = %d  count = %d\n", i, count);
-                if (supersyn_sizes_global[N_RA_local + (i-1)*offset + j] != 0)
+                if (supersyn_sizes_global[receive_index] != 0)
                 {
-                    MPI_Recv(&active_supersynapses_global[N_RA_local + (i-1)*offset + j][0],
-                        supersyn_sizes_global[N_RA_local + (i-1)*offset + j], MPI_UNSIGNED, i, 0, MPI_COMM_WORLD, &status);
+                    MPI_Recv(&active_supersynapses_global[receive_index][0],
+                        supersyn_sizes_global[receive_index], MPI_UNSIGNED, i, 0, MPI_COMM_WORLD, &status);
 
                     MPI_Get_count(&status, MPI_UNSIGNED, &count);
                     //printf("Recv supersynapses; from i = %d  count = %d\n", i, count);
                 }
 
-                if (syn_sizes_global[N_RA_local + (i-1)*offset + j] != 0)
+                if (syn_sizes_global[receive_index] != 0)
                 {
-                    MPI_Recv(&active_synapses_global[N_RA_local + (i-1)*offset + j][0],
-                        syn_sizes_global[N_RA_local + (i-1)*offset + j], MPI_UNSIGNED, i, 0, MPI_COMM_WORLD, &status);
+                    MPI_Recv(&active_synapses_global[receive_index][0],
+                        syn_sizes_global[receive_index], MPI_UNSIGNED, i, 0, MPI_COMM_WORLD, &status);
 
                     MPI_Get_count(&status, MPI_UNSIGNED, &count);
                     //printf("Recv synapses; from i = %d  count = %d\n", i, count);
                 }
 
-                if (spike_num_soma_global[N_RA_local + (i-1)*offset + j] != 0)
+                if (spike_num_soma_global[receive_index] != 0)
                 {
-                    MPI_Recv(&spikes_in_trial_soma_global[N_RA_local + (i-1)*offset + j][0],
-                        spike_num_soma_global[N_RA_local + (i-1)*offset + j], MPI_DOUBLE, i, 0, MPI_COMM_WORLD, &status);
+                    MPI_Recv(&spikes_in_trial_soma_global[receive_index][0],
+                        spike_num_soma_global[receive_index], MPI_DOUBLE, i, 0, MPI_COMM_WORLD, &status);
 
                     MPI_Get_count(&status, MPI_INT, &count);
                     //printf("Recv spikes in trial; from i = %d  count = %d\n", i, count);
                 }
 
-                if (spike_num_dend_global[N_RA_local + (i-1)*offset + j] != 0)
+                if (spike_num_dend_global[receive_index] != 0)
                 {
-                    MPI_Recv(&spikes_in_trial_dend_global[N_RA_local + (i-1)*offset + j][0],
-                        spike_num_dend_global[N_RA_local + (i-1)*offset + j], MPI_DOUBLE, i, 0, MPI_COMM_WORLD, &status);
+                    MPI_Recv(&spikes_in_trial_dend_global[receive_index][0],
+                        spike_num_dend_global[receive_index], MPI_DOUBLE, i, 0, MPI_COMM_WORLD, &status);
 
                     MPI_Get_count(&status, MPI_INT, &count);
                     //printf("Recv spikes in trial; from i = %d  count = %d\n", i, count);
@@ -2824,6 +2841,8 @@ void PoolParallel::gather_data()
                    // printf("Master; spikes_in_trial_global[%d][%d] = %f\n", N_RA_local + (i-1)*offset + j, k,
                       //  spikes_in_trial_global[N_RA_local + (i-1)*offset + j][k]);
             }
+
+			N += N_RA_sizes[i];
 
         }
 
@@ -2881,39 +2900,40 @@ void PoolParallel::gather_data()
 
 void PoolParallel::get_neuronRA_location(unsigned n, int* rank, int* shift)
 {
-    int master_N_RA = N_RA / MPI_size + N_RA % MPI_size;
+	int i = 0;
+	int N = 0;
 
-    if (n < master_N_RA)
-    {
-        *rank = 0;
-	*shift = n;
-    }
-    else
-    {
-        *rank = (n - master_N_RA) / (N_RA / MPI_size) + 1;
-	*shift = (n - master_N_RA) % (N_RA / MPI_size);
-    }
-
-
+	while (n >= N)
+	{
+		if (n < N + N_RA_sizes[i])
+		{
+			*rank = i;
+			*shift = n - N;
+		}
+		
+		N += N_RA_sizes[i];
+		i++;
+	}
 }
 
 void PoolParallel::get_neuronI_location(unsigned n, int* rank, int* shift)
 {
-    int master_N_I = N_I / MPI_size + N_I % MPI_size;
+	int i = 0;
+	int N = 0;
 
-    if (n < master_N_I)
-    {
-        *rank = 0;
-	*shift = n;
-    }
-    else
-    {
-        *rank = (n - master_N_I) / (N_I / MPI_size) + 1;
-        *shift = (n - master_N_I) % (N_I / MPI_size);
-    }
-
-
+	while (n >= N)
+	{
+		if (n < N + N_I_sizes[i])
+		{
+			*rank = i;
+			*shift = n - N;
+		}
+		
+		N += N_I_sizes[i];
+		i++;
+	}
 }
+
 void PoolParallel::statistics()
 {
 
@@ -3425,6 +3445,7 @@ void PoolParallel::write_dend_time_info(const char* filename)
                 //out.write(reinterpret_cast<char *>(&spikes_in_trial_dend_global[i][j]), sizeof(double));
 	        double relative_spike_time = spikes_in_trial_dend_global[i][j] - (trial_number - 1) * trial_duration;
         	out.write(reinterpret_cast<char *>(&relative_spike_time), sizeof(double));
+			//printf("Neuron %d; relative spike time = %f\n", i, relative_spike_time);
 	    }
 	}
         //out.write(reinterpret_cast<char *>(spike_times), N_RA*sizeof(double));
@@ -3635,77 +3656,71 @@ void PoolParallel::write_pajek_all(const char * filename)
 
 void PoolParallel::write_RA(const char* filename, int n)
 {
-    int master_N_RA = N_RA/MPI_size + N_RA%MPI_size;
-    //printf("master_N_RA = %d; n = %d\n", master_N_RA, n);
-
-    if (n >= N_RA)
+	if (n >= N_RA)
     {
-        printf("Selected neuron ID doesn't exist in the pool! Instead wrote neuron 0 to the file.\n");
 
         if (MPI_rank == 0)
+        {
+			printf("Selected neuron ID doesn't exist in the pool! Instead wrote neuron 0 to the file.\n");
             HVCRA_local[0].writeToFile(filename);
-    }
+    	}
+	}
     else
     {
-        if (n < master_N_RA)
-        {
-            //printf("master_N_RA = %d; n = %d\n", master_N_RA, n);
+		int N = 0; // number of neurons in all previous processes
+        int i = 0;
 
-            if (MPI_rank == 0)
-            {
-                HVCRA_local[n].writeToFile(filename);
-                //printf("Master. master_N_RA = %d; n = %d\n", master_N_RA, n);
-            }
-        }
-        else
-        {
-            int rank = (n - master_N_RA) / (N_RA / MPI_size);
-            int ind = (n - master_N_RA) % (N_RA / MPI_size);
-            if (MPI_rank == rank + 1)
-            {
-                HVCRA_local[ind].writeToFile(filename);
-                //printf("Rank = %d; ind = %d\n", MPI_rank, ind);
-            }
+		while (n >= N)
+		{
+			if (n < N + N_RA_sizes[i])
+			{
+				if (MPI_rank == i)
+				{
+					HVCRA_local[n-N].writeToFile(filename);
+					//printf("My rank is %d; Writing neuron %d for n-N = %d\n", MPI_rank, n, n-N);
+				}
+			}
 
-        }
+			N += N_RA_sizes[i];
+			i++;
+		}
+		
     }
 }
 
+
 void PoolParallel::write_I(const char* filename, int n)
 {
-    int master_N_I = N_I/MPI_size + N_I%MPI_size;
-    //printf("master_N_RA = %d; n = %d\n", master_N_RA, n);
-
     if (n >= N_I)
     {
-        printf("Selected neuron ID doesn't exist in the pool! Instead wrote neuron 0 to the file.\n");
-
         if (MPI_rank == 0)
+        {
+			printf("Selected neuron %d doesn't exist in the pool! Instead wrote neuron 0 to the file.\n",n);
             HVCI_local[0].writeToFile(filename);
-    }
+    	}
+	}
     else
     {
-        if (n < master_N_I)
-        {
-            //printf("master_N_RA = %d; n = %d\n", master_N_RA, n);
+		int N = 0; // number of neurons in all previous processes
+        int i = 0;
 
-            if (MPI_rank == 0)
-            {
-                HVCI_local[n].writeToFile(filename);
-                //printf("Master. master_N_I = %d; n = %d\n", master_N_I, n);
-            }
-        }
-        else
-        {
-            int rank = (n - master_N_I) / (N_I / MPI_size);
-            int ind = (n - master_N_I) % (N_I / MPI_size);
-            if (MPI_rank == rank + 1)
-            {
-                HVCI_local[ind].writeToFile(filename);
-                //printf("ind = %d\n", ind);
-            }
+		while (n >= N)
+		{
+			if (n < N + N_I_sizes[i])
+			{
+				//printf("My rank is %d; n = %d; N = %d\n", MPI_rank, n, N);
+				if (MPI_rank == i)
+				{
+					//printf("My rank is %d; Writing neuron %d\n", MPI_rank, n);
+					HVCI_local[n-N].writeToFile(filename);
 
-        }
+				}
+			}
+
+			N += N_I_sizes[i];
+			i++;
+		}
+		
     }
 }
 
