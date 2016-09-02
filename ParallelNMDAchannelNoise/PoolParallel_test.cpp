@@ -5,8 +5,6 @@ using namespace std;
 
 int main(int argc, char** argv)
 {
-    bool training = true;
-
 	double Gei_mean = 0.15;
 	double Gei_var = 0.0;
 	double Gie_var = 0.0;
@@ -15,7 +13,7 @@ int main(int argc, char** argv)
     double timeStep = 0.01;
     int trials = 100000;
 
-    double network_update, beta, beta_s, Ap, Ad, Ap_super, Ad_super, activation, super_threshold, Gmax, Gie_mean, Tp, Td, tauP, tauD;
+    double network_update, Ei, beta, beta_s, Ap, Ad, Ap_super, Ad_super, f0, activation, super_threshold, Gmax, Gie_mean, Tp, Td, tauP, tauD;
     int N_RA, num_inh_clusters_in_row, num_inh_in_cluster, N_ss, N_TR;
 	double a, b, c, lambdaRA, lambdaI, meanRA, sigmaRA;
 
@@ -29,6 +27,7 @@ int main(int argc, char** argv)
     int rank; // MPI process rank
 	int reading; // indicator whether we read connections from the files or not
 	int testing; // indicator if it is a test run
+	int training; // indcator if we innervate training neurons
 	int count; // file number from which to start writing output data
 
 	MPI_Init(&argc, &argv);
@@ -41,36 +40,39 @@ int main(int argc, char** argv)
 		sigma_soma = atof(argv[1]);
 		sigma_dend = atof(argv[2]);
         Gie_mean = atof(argv[3]);
-        beta = atof(argv[4]);
-        beta_s = atof(argv[5]);
-		Tp = atof(argv[6]);
-		Td = atof(argv[7]);
-		tauP = atof(argv[8]);
-		tauD = atof(argv[9]);
-        Ap = atof(argv[10]);
-        Ad = atof(argv[11]);
-        Ap_super = atof(argv[12]);
-        Ad_super = atof(argv[13]);
-        activation = atof(argv[14]);
-        super_threshold = atof(argv[15]);
-        Gmax = atof(argv[16]);
-        N_RA = atoi(argv[17]);
-        num_inh_clusters_in_row = atoi(argv[18]);
-        num_inh_in_cluster = atoi(argv[19]);
-        N_ss = atoi(argv[20]);
-        N_TR = atoi(argv[21]);
-        outputDirectory = argv[22];
-		reading = atoi(argv[23]);
-		filenumber = argv[24];
-		testing = atoi(argv[25]);
-        network_update = atof(argv[26]);
-		a = atof(argv[27]);
-		b = atof(argv[28]);
-		lambdaRA = atof(argv[29]);
-		meanRA = atof(argv[30]);
-		sigmaRA = atof(argv[31]);
-		c = atof(argv[32]);
-		lambdaI = atof(argv[33]);
+		Ei = atof(argv[4]);
+        beta = atof(argv[5]);
+        beta_s = atof(argv[6]);
+		Tp = atof(argv[7]);
+		Td = atof(argv[8]);
+		tauP = atof(argv[9]);
+		tauD = atof(argv[10]);
+        Ap = atof(argv[11]);
+        Ad = atof(argv[12]);
+        Ap_super = atof(argv[13]);
+        Ad_super = atof(argv[14]);
+		f0 = atof(argv[15]);
+        activation = atof(argv[16]);
+        super_threshold = atof(argv[17]);
+        Gmax = atof(argv[18]);
+        N_RA = atoi(argv[19]);
+        num_inh_clusters_in_row = atoi(argv[20]);
+        num_inh_in_cluster = atoi(argv[21]);
+        N_ss = atoi(argv[22]);
+        N_TR = atoi(argv[23]);
+        outputDirectory = argv[24];
+		reading = atoi(argv[25]);
+		filenumber = argv[26];
+		testing = atoi(argv[27]);
+		training = atoi(argv[28]);
+        network_update = atof(argv[29]);
+		a = atof(argv[30]);
+		b = atof(argv[31]);
+		lambdaRA = atof(argv[32]);
+		meanRA = atof(argv[33]);
+		sigmaRA = atof(argv[34]);
+		c = atof(argv[35]);
+		lambdaI = atof(argv[36]);
 
         if (rank == 0)
             printf("Output directory is %s\n", outputDirectory.c_str());
@@ -117,7 +119,7 @@ int main(int argc, char** argv)
 
     int N_I = num_inh_clusters_in_row * num_inh_clusters_in_row * num_inh_in_cluster;
 	
-	PoolParallel pool(a, b, lambdaRA, meanRA, sigmaRA, c, lambdaI, network_update, beta, beta_s, Tp, Td, tauP, tauD, Ap, Ad, Ap_super, Ad_super, activation, super_threshold, Gmax, N_RA, num_inh_clusters_in_row, num_inh_in_cluster, N_ss, N_TR);
+	PoolParallel pool(a, b, lambdaRA, meanRA, sigmaRA, c, lambdaI, network_update, Ei, beta, beta_s, Tp, Td, tauP, tauD, Ap, Ad, Ap_super, Ad_super, f0, activation, super_threshold, Gmax, N_RA, num_inh_clusters_in_row, num_inh_in_cluster, N_ss, N_TR);
 
 	pool.print_simulation_parameters();
 	pool.initialize_generator();
@@ -179,8 +181,8 @@ int main(int argc, char** argv)
 
     string weightsFilename, pajekSuperFilename, pajekActiveFilename, pajekAllFilename, fileAllRAneurons, fileAllIneurons, fileMature;
    
-   	int synapses_trials_update = 15;
-	int weights_trials_update = 50;
+   	int synapses_trials_update = 25;
+	int weights_trials_update = 70;
 
 	pool.write_sim_info(fileSimInfo.c_str(), synapses_trials_update, weights_trials_update);
 	

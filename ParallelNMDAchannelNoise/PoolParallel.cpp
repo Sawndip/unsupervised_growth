@@ -12,12 +12,13 @@
 using namespace std::placeholders;
 
 PoolParallel::PoolParallel(double a, double b, double lambdaRA, double meanRA, double sigmaRA, double c, double lambdaI, double network_update,
-						double beta, double beta_s, double Tp, double Td, double tauP, double tauD, double Ap, double Ad, double Ap_super, 
-						double Ad_super, double activation, double super_threshold, 
+						double Ei, double beta, double beta_s, double Tp, double Td, double tauP, double tauD, double Ap, double Ad, double Ap_super, 
+						double Ad_super, double f0, double activation, double super_threshold, 
                         double Gmax, int N_ra, int Nic, int NiInC, int N_ss, int N_tr) : A_RA2I(a), B_RA2I(b), LAMBDA_RA2I(lambdaRA), 
 						MEAN_RA2I(meanRA), SIGMA_RA2I(sigmaRA), C_I2RA(c), LAMBDA_I2RA(lambdaI), network_update_frequency(network_update),
-						BETA(beta), BETA_SUPERSYNAPSE(beta_s), A_P(Ap), A_D(Ad), T_P(Tp), T_D(Td), TAU_P(tauP), TAU_D(tauD), A_P_SUPER(Ap_super),
-						A_D_SUPER(Ad_super), ACTIVATION(activation), SUPERSYNAPSE_THRESHOLD(super_threshold), G_MAX(Gmax),
+						E_GABA_IMMATURE(Ei), BETA(beta), BETA_SUPERSYNAPSE(beta_s), A_P(Ap), A_D(Ad), T_P(Tp), T_D(Td), TAU_P(tauP), 
+						TAU_D(tauD), A_P_SUPER(Ap_super),
+						A_D_SUPER(Ad_super), F_0(f0), ACTIVATION(activation), SUPERSYNAPSE_THRESHOLD(super_threshold), G_MAX(Gmax),
 				        N_RA(N_ra), num_inh_clusters(Nic), num_inh_in_cluster(NiInC), Nss(N_ss), N_TR(N_tr)
 {
 
@@ -246,7 +247,6 @@ const double PoolParallel::SIDE = 100; // length of HVC side
 
 // developmental GABA switch
 const double PoolParallel::T_GABA = 10000;
-const double PoolParallel::E_GABA_IMMATURE = -50;
 const double PoolParallel::E_GABA_MATURE = -80;
 const int PoolParallel::N_MATURATION = 100;
 
@@ -255,7 +255,6 @@ const int PoolParallel::NUM_SOMA_SPIKES = 5; // number of last somatic spikes to
 const double PoolParallel::G_P = 0.1;
 
 const double PoolParallel::R = 1;
-const double PoolParallel::F_0 = 1.0;
 
 const double PoolParallel::LTP_WINDOW = 50;
 const double PoolParallel::LTD_WINDOW = 50;
@@ -1945,7 +1944,7 @@ int PoolParallel::get_trial_number()
     return trial_number;
 }
 
-void PoolParallel::trial(bool training)
+void PoolParallel::trial(int training)
 {
 	int some_RA_neuron_fired_soma_local;
 	int some_RA_neuron_fired_dend_local;
@@ -1974,7 +1973,7 @@ void PoolParallel::trial(bool training)
     //printf("network time = %f\n", network_time);
 
     // if training trial
-    if (training)
+    if (training > 0)
         this->set_training_current();
 
     //this->set_testing_current();

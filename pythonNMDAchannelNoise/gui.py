@@ -15,7 +15,7 @@ from matplotlib.pyplot import figure
 
 SIDE = 100
 FONT_SIZE = 5
-SUPERSYNAPSE_THRESHOLD = 0.01
+SUPERSYNAPSE_THRESHOLD = 0.007
 TRIAL_DURATION = 1000
 
 filenameRA_RA = "/home/eugene/Output/RA_RA_connections.bin"

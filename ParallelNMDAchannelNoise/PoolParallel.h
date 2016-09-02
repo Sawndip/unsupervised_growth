@@ -18,7 +18,7 @@ using std::vector;
 class PoolParallel
 {
 public:
-	PoolParallel(double a, double b, double lambdaRA, double meanRA, double sigmaRA, double c, double lambdaI, double network_update, double beta, double beta_s, double Tp, double Td, double tauP, double tauD, double Ap, double Ap_super, double Ad_super, double Ad, double activation, double super_threshold, double Gmax, int N_ra, int Nic, int NiInC, int N_ss, int N_tr);
+	PoolParallel(double a, double b, double lambdaRA, double meanRA, double sigmaRA, double c, double lambdaI, double network_update, double Ei, double beta, double beta_s, double Tp, double Td, double tauP, double tauD, double Ap, double Ap_super, double Ad_super, double Ad, double f0, double activation, double super_threshold, double Gmax, int N_ra, int Nic, int NiInC, int N_ss, int N_tr);
 	~PoolParallel();
 
 	void read_from_file(const char* RA_xy, const char* I_xy, const char* RA_RA_all, const char* RA_RA_active, const char* RA_RA_super, const char* RA_I, const char* I_RA, const char* mature, const char* timeInfo); // read network structure from files
@@ -51,7 +51,7 @@ public:
     void initialize_test_allI2RA_connections(double Gie); // initialize all equal I to RA connections except for training neurons
     void initialize_test_allRA2I_connections(double Gei); // initialize all equal RA to I connections except for training neurons
 
-	void trial(bool training); // make one trial
+	void trial(int training); // make one trial
 	void ground_state(unsigned N_trials); // make simulation of a ground state;
 
 	void randomize_after_trial(); // set all neurons to the resting state
@@ -235,7 +235,7 @@ protected:
 		const static double T_GABA; // time scale of maturation
 		//double E_GABA(double t); // time-dependent switch
 		double E_GABA(int n); // activity-dependent switch
-		const static double E_GABA_IMMATURE; // immature reverse GABA potential
+		double E_GABA_IMMATURE; // immature reverse GABA potential
         const static double E_GABA_MATURE; // mature reverse GABA potential
         const static int N_MATURATION; // maturation scale for number of active synapses
 
@@ -264,7 +264,7 @@ protected:
 		//const static double A_D;
 
 		const static double R;
-		const static double F_0;
+		double F_0;
 
 		void LTD(double &w, double t); // long-term depression STDP rule
 		void LTP(double &w, double t); // long-term potentiation STDP rule
