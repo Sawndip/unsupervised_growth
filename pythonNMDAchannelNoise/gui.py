@@ -909,3 +909,4 @@ def std(array):
 
 app = My_gui()
 app.mainloop()
+c

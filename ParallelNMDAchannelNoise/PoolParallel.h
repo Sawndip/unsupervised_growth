@@ -18,7 +18,7 @@ using std::vector;
 class PoolParallel
 {
 public:
-	PoolParallel(double a, double b, double lambdaRA, double meanRA, double sigmaRA, double c, double lambdaI, double network_update, double Ei, double beta, double beta_s, double Tp, double Td, double tauP, double tauD, double Ap, double Ap_super, double Ad_super, double Ad, double f0, double activation, double super_threshold, double Gmax, int N_ra, int Nic, int NiInC, int N_ss, int N_tr);
+	PoolParallel(double a, double b, double lambdaRA_near, double lambdaRA_far, double c, double lambdaI, double network_update, double Ei, double beta, double beta_s, double Tp, double Td, double tauP, double tauD, double Ap, double Ad, double Ap_super, double Ad_super, double f0, double activation, double super_threshold, double Gmax, int N_ra, int Nic, int NiInC, int N_ss, int N_tr);
 	~PoolParallel();
 
 	void read_from_file(const char* RA_xy, const char* I_xy, const char* RA_RA_all, const char* RA_RA_active, const char* RA_RA_super, const char* RA_I, const char* I_RA, const char* mature, const char* timeInfo); // read network structure from files
@@ -130,7 +130,8 @@ protected:
 		const static double g_KICK; // glutamate kick value
 		const static double CLUSTER_SIZE; // cluster size
         const static double MIN_INTERNEURON_DISTANCE; // minimum distance between neurons
-		double LAMBDA_RA2I; // spatial scale of probability of connections decay (exponential)
+		double LAMBDA_RA2I_near; // spatial scale of probability of nearby connections decay (exponential)
+		double LAMBDA_RA2I_far; // spatial scale of probability of distant connections decay (exponential)
 		double A_RA2I; // constant for nearby connections
 		double B_RA2I; // constant for far away connections
 		double MEAN_RA2I; // mean of Gaussian distribution for far away connections

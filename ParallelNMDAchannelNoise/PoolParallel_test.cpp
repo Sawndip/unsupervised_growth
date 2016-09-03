@@ -15,7 +15,7 @@ int main(int argc, char** argv)
 
     double network_update, Ei, beta, beta_s, Ap, Ad, Ap_super, Ad_super, f0, activation, super_threshold, Gmax, Gie_mean, Tp, Td, tauP, tauD;
     int N_RA, num_inh_clusters_in_row, num_inh_in_cluster, N_ss, N_TR;
-	double a, b, c, lambdaRA, lambdaI, meanRA, sigmaRA;
+	double a, b, c, lambdaRA_near, lambdaRA_far, lambdaI;
 
 	double sigma_soma; // white noise amplitude in soma compartment
 	double sigma_dend; // white noise amplitude in dendritic compartment
@@ -68,11 +68,10 @@ int main(int argc, char** argv)
         network_update = atof(argv[29]);
 		a = atof(argv[30]);
 		b = atof(argv[31]);
-		lambdaRA = atof(argv[32]);
-		meanRA = atof(argv[33]);
-		sigmaRA = atof(argv[34]);
-		c = atof(argv[35]);
-		lambdaI = atof(argv[36]);
+		lambdaRA_near = atof(argv[32]);
+		lambdaRA_far = atof(argv[33]);
+		c = atof(argv[34]);
+		lambdaI = atof(argv[35]);
 
         if (rank == 0)
             printf("Output directory is %s\n", outputDirectory.c_str());
@@ -119,7 +118,7 @@ int main(int argc, char** argv)
 
     int N_I = num_inh_clusters_in_row * num_inh_clusters_in_row * num_inh_in_cluster;
 	
-	PoolParallel pool(a, b, lambdaRA, meanRA, sigmaRA, c, lambdaI, network_update, Ei, beta, beta_s, Tp, Td, tauP, tauD, Ap, Ad, Ap_super, Ad_super, f0, activation, super_threshold, Gmax, N_RA, num_inh_clusters_in_row, num_inh_in_cluster, N_ss, N_TR);
+	PoolParallel pool(a, b, lambdaRA_near, lambdaRA_far, c, lambdaI, network_update, Ei, beta, beta_s, Tp, Td, tauP, tauD, Ap, Ad, Ap_super, Ad_super, f0, activation, super_threshold, Gmax, N_RA, num_inh_clusters_in_row, num_inh_in_cluster, N_ss, N_TR);
 
 	pool.print_simulation_parameters();
 	pool.initialize_generator();
@@ -191,6 +190,7 @@ int main(int argc, char** argv)
     
 	while (true)
     {
+		break;
         pool.trial(training);
         pool.gather_data();
 	    

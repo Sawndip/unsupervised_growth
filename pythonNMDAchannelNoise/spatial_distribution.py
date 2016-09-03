@@ -19,7 +19,8 @@ import math
 import matplotlib.pyplot as plt
 import numpy as np
 
-SIDE = 100
+SQUARE_SIDE = 100
+SIDE = SQUARE_SIDE * math.sqrt(2)
 
 
 
@@ -58,6 +59,10 @@ print "(x_RA, y_RA):", zip(x_RA, y_RA)
 print "RA_super_targets: ", RA_super_targets
 
 
+num_targetsRAI = [len(t) for t in RA_targets]
+num_targetsIRA = [len(t) for t in I_targets]
+targetsRAI = [t for sublist in RA_targets for t in sublist]
+targetsIRA = [t for sublist in I_targets for t in sublist]
 
 # code for super.net file
 #==============================================================================
@@ -176,6 +181,7 @@ ax.hist(dist_RA2I, numBins)
 ax.set_xlabel("Normalized distance")
 ax.set_ylabel("Number of connections")
 ax.set_title("Spatial distribution of connections from RA onto I neurons")
+ax.set_xlim([0,1])
 
 numBins = 25
 
@@ -185,6 +191,7 @@ ax.hist(dist_I2RA, numBins)
 ax.set_xlabel("Normalized distance")
 ax.set_ylabel("Number of connections")
 ax.set_title("Spatial distribution of connections from I onto RA neurons")
+ax.set_xlim([0,1])
 
 numBins = 25
 
@@ -194,5 +201,18 @@ ax.hist(dist_RA2RA, numBins)
 ax.set_xlabel("Normalized distance")
 ax.set_ylabel("Number of connections")
 ax.set_title("Spatial distribution of connections from RA onto RA neurons")
+ax.set_xlim([0,1])
+
+f4 = plt.figure()
+ax = f4.add_subplot(111)
+ax.hist(num_targetsRAI, numBins)
+ax.set_xlabel("# of targets")
+ax.set_title("Distribution of number of targets from RA to I neurons")
+
+f5 = plt.figure()
+ax = f5.add_subplot(111)
+ax.hist(num_targetsIRA, numBins)
+ax.set_xlabel("# of targets")
+ax.set_title("Distribution of number of targets from I to RA neurons")
 
 plt.show()
