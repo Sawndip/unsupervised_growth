@@ -190,7 +190,6 @@ int main(int argc, char** argv)
     
 	while (true)
     {
-		break;
         pool.trial(training);
         pool.gather_data();
 	    
