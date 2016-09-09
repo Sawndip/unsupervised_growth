@@ -189,7 +189,8 @@ int main(int argc, char** argv)
     double start_time = MPI_Wtime();
     
 	while (true)
-    {
+    {	
+		break;
         pool.trial(training);
         pool.gather_data();
 	    
