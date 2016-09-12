@@ -1101,6 +1101,29 @@ void PoolParallel::print_simulation_parameters()
 {
 	if (MPI_rank == 0)
 	{
+		printf("\nSpatial distribution\n");
+		printf("A_RA2I = %f\n", A_RA2I);
+		printf("B_RA2I = %f\n", B_RA2I);
+		printf("LAMBDA_RA2I_near = %f\n", LAMBDA_RA2I_near);
+		printf("LAMBDA_RA2I_far = %f\n", LAMBDA_RA2I_far);
+		printf("C_I2RA = %f\n", C_I2RA);
+		printf("LAMBDA_I2RA = %f\n", LAMBDA_I2RA);
+
+		printf("\nPool\n");
+		printf("N_RA = %d\n", N_RA);
+		printf("N_I = %d\n", N_I);
+
+		printf("\nChain width\n");		
+		printf("N_TR = %d\n", N_TR);
+		printf("Nss = %d\n", Nss);
+
+		printf("\nNoise:\n");
+		printf("mu_soma = %f\n", mu_soma);
+		printf("sigma_soma = %f\n", sigma_soma);
+		printf("mu_dend = %f\n", mu_dend);
+		printf("sigma_dend = %f\n", sigma_dend);
+
+		printf("\nSTDP constants\n");
 		printf("BETA = %f\n", BETA);
 		printf("BETA_SUPERSYNAPSE = %f\n", BETA_SUPERSYNAPSE);
 		printf("T_P = %f\n", T_P);
