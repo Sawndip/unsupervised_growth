@@ -13,7 +13,7 @@ const double HH2_final::G_channel = 50; // NMDA channel conductance in pS
 
 // number of NMDA receptors
 const int HH2_final::nmda_soma = 0; // in somatic compartment
-const int HH2_final::nmda_dend = 5000; // in dendritic compartment
+const int HH2_final::nmda_dend = 0; // in dendritic compartment
 
 // extracellular glutamate concentration
 const double HH2_final::T = 0.01; // mM 

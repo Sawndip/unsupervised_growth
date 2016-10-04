@@ -11,11 +11,11 @@
 
 using namespace std::placeholders;
 
-PoolParallel::PoolParallel(double a, double b, double lambdaRA_near, double lambdaRA_far, double c, double lambdaI, double network_update,
+PoolParallel::PoolParallel(double a, double s_rai, double b, double s_ira, double network_update,
 						double Ei, double beta, double beta_s, double Tp, double Td, double tauP, double tauD, double Ap, double Ad, double Ap_super, 
 						double Ad_super, double f0, double activation, double super_threshold, 
-                        double Gmax, int N_ra, int Nic, int NiInC, int N_ss, int N_tr) : A_RA2I(a), B_RA2I(b), LAMBDA_RA2I_near(lambdaRA_near), 
-						LAMBDA_RA2I_far(lambdaRA_far), C_I2RA(c), LAMBDA_I2RA(lambdaI), network_update_frequency(network_update),
+                        double Gmax, int N_ra, int Nic, int NiInC, int N_ss, int N_tr) : A_RA2I(a), 
+						SIGMA_RA2I(s_rai), B_I2RA(b), SIGMA_I2RA(s_ira), network_update_frequency(network_update),
 						E_GABA_IMMATURE(Ei), BETA(beta), BETA_SUPERSYNAPSE(beta_s), A_P(Ap), A_D(Ad), T_P(Tp), T_D(Td), TAU_P(tauP), 
 						TAU_D(tauD), A_P_SUPER(Ap_super),
 						A_D_SUPER(Ad_super), F_0(f0), ACTIVATION(activation), SUPERSYNAPSE_THRESHOLD(super_threshold), G_MAX(Gmax),
@@ -1103,11 +1103,9 @@ void PoolParallel::print_simulation_parameters()
 	{
 		printf("\nSpatial distribution\n");
 		printf("A_RA2I = %f\n", A_RA2I);
-		printf("B_RA2I = %f\n", B_RA2I);
-		printf("LAMBDA_RA2I_near = %f\n", LAMBDA_RA2I_near);
-		printf("LAMBDA_RA2I_far = %f\n", LAMBDA_RA2I_far);
-		printf("C_I2RA = %f\n", C_I2RA);
-		printf("LAMBDA_I2RA = %f\n", LAMBDA_I2RA);
+		printf("SIGMA_RA2I = %f\n", SIGMA_RA2I);
+		printf("B_I2RA = %f\n", B_I2RA);
+		printf("SIGMA_I2RA = %f\n", SIGMA_I2RA);
 
 		printf("\nPool\n");
 		printf("N_RA = %d\n", N_RA);
@@ -2543,24 +2541,8 @@ double PoolParallel::p_RA2I(int i_RA, int j_I)
 	{
 		//prob = A_RA2I * exp(-d / LAMBDA_RA2I) + B_RA2I * exp(-(d - MEAN_RA2I)*(d - MEAN_RA2I)/(2*SIGMA_RA2I*SIGMA_RA2I));
 		
-		prob = A_RA2I * exp(-d / LAMBDA_RA2I_near) + B_RA2I * exp(-d / LAMBDA_RA2I_far);
+		prob = A_RA2I * exp(-d * d / (2 * SIGMA_RA2I * SIGMA_RA2I));
 		
-		//printf("p = %f\n", prob);
- 	}
-	return prob;
-}
-
-double PoolParallel::p_RA2I_distant(int i_RA, int j_I)
-{
-	double prob;
-    double d;
-    d = distance(xx_RA[i_RA], yy_RA[i_RA], xx_I[j_I], yy_I[j_I]);
-
-	if (d < MIN_INTERNEURON_DISTANCE)
-		return 0;
-	else
-	{
-		prob = B_RA2I * exp(-(d - MEAN_RA2I)*(d - MEAN_RA2I)/(2*SIGMA_RA2I*SIGMA_RA2I));
 		//printf("p = %f\n", prob);
  	}
 	return prob;
@@ -2576,7 +2558,7 @@ double PoolParallel::p_I2RA(int i_I, int j_RA)
 		return 0;
 	else
 	{
-		prob = C_I2RA * exp(-d / LAMBDA_I2RA);
+		prob = B_I2RA * exp(-d*d / (2 * SIGMA_I2RA * SIGMA_I2RA));
 		//printf("p = %f\n", prob);
  	}
 	return prob;

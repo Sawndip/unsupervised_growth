@@ -15,7 +15,7 @@ int main(int argc, char** argv)
 
     double network_update, Ei, beta, beta_s, Ap, Ad, Ap_super, Ad_super, f0, activation, super_threshold, Gmax, Gie_mean, Tp, Td, tauP, tauD;
     int N_RA, num_inh_clusters_in_row, num_inh_in_cluster, N_ss, N_TR;
-	double a, b, c, lambdaRA_near, lambdaRA_far, lambdaI;
+	double a, b, s_rai, s_ira;
 
 	double sigma_soma; // white noise amplitude in soma compartment
 	double sigma_dend; // white noise amplitude in dendritic compartment
@@ -71,11 +71,9 @@ int main(int argc, char** argv)
 		training = atoi(argv[30]);
         network_update = atof(argv[31]);
 		a = atof(argv[32]);
-		b = atof(argv[33]);
-		lambdaRA_near = atof(argv[34]);
-		lambdaRA_far = atof(argv[35]);
-		c = atof(argv[36]);
-		lambdaI = atof(argv[37]);
+		s_rai = atof(argv[33]);
+		b = atof(argv[34]);
+		s_ira = atof(argv[35]);
 
         if (rank == 0)
             printf("Output directory is %s\n", outputDirectory.c_str());
@@ -122,7 +120,7 @@ int main(int argc, char** argv)
 
     int N_I = num_inh_clusters_in_row * num_inh_clusters_in_row * num_inh_in_cluster;
 	
-	PoolParallel pool(a, b, lambdaRA_near, lambdaRA_far, c, lambdaI, network_update, Ei, beta, beta_s, Tp, Td, tauP, tauD, Ap, Ad, Ap_super, Ad_super, f0, activation, super_threshold, Gmax, N_RA, num_inh_clusters_in_row, num_inh_in_cluster, N_ss, N_TR);
+	PoolParallel pool(a, s_rai, b, s_ira, network_update, Ei, beta, beta_s, Tp, Td, tauP, tauD, Ap, Ad, Ap_super, Ad_super, f0, activation, super_threshold, Gmax, N_RA, num_inh_clusters_in_row, num_inh_in_cluster, N_ss, N_TR);
 
 	pool.initialize_generator();
 
@@ -185,7 +183,7 @@ int main(int argc, char** argv)
     
 	string weightsFilename, pajekSuperFilename, pajekActiveFilename, pajekAllFilename, fileAllRAneurons, fileAllIneurons, fileMature;
    
-   	int synapses_trials_update = 20;
+   	int synapses_trials_update = 5;
 	int weights_trials_update = 70;
 
 	pool.write_sim_info(fileSimInfo.c_str(), synapses_trials_update, weights_trials_update);
@@ -224,11 +222,11 @@ int main(int argc, char** argv)
             pool.write_pajek_super(filePajekSuper.c_str());
             pool.write_pajek_active(filePajekActive.c_str());
            
-			//for (int i = 0; i < N_RA; i++)
-	    	//{
-	  		//	fileAllRAneurons = RAdir + "RA" + std::to_string(i) + ".bin";
-			//	pool.write_RA(fileAllRAneurons.c_str(), i);
-	    	//}
+			for (int i = 0; i < N_RA; i++)
+	    	{
+	  			fileAllRAneurons = RAdir + "RA" + std::to_string(i) + ".bin";
+				pool.write_RA(fileAllRAneurons.c_str(), i);
+	    	}
 
 			//pool.write_pajek_all(filePajekAll.c_str());
         }
