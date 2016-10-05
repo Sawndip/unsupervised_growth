@@ -13,11 +13,10 @@ const double HH2_final::G_channel = 50; // NMDA channel conductance in pS
 
 // number of NMDA receptors
 const int HH2_final::nmda_soma = 0; // in somatic compartment
-const int HH2_final::nmda_dend = 0; // in dendritic compartment
+const int HH2_final::nmda_dend = 5000; // in dendritic compartment
 
 // extracellular glutamate concentration
-const double HH2_final::T = 0.01; // mM 
-const double HH2_final::s0 = alpha*T/(alpha*T+beta); // fraction of open NMDA channels
+const double HH2_final::T0 = 0.001; // mM 
 // extracellular magnesium concentration
 const double HH2_final::C = 1; // mM
 
@@ -31,7 +30,7 @@ const double HH2_final::Gs_noise_inh = 0.0;
 const double HH2_final::Gd_noise_inh = 0.0;
 
 const double HH2_final::cm = 1;
-const double HH2_final::Rc = 0.085;
+const double HH2_final::Rc = 0.055;
 const double HH2_final::As = 50;
 const double HH2_final::GsL = 0.1;
 const double HH2_final::GsNa = 60;
@@ -48,8 +47,7 @@ const double HH2_final::EdCa = 120;
 const double HH2_final::EdK = -90;
 const double HH2_final::tExc = 5;
 const double HH2_final::tInh = 7;
-const double HH2_final::tNMDA = 200;
-
+const double HH2_final::t_glutamate = 1;// glutamate decay time in ms
 
 const double HH2_final::threshold = 0;
 const double HH2_final::threshold_dend = 0;
@@ -79,8 +77,6 @@ HH2_final::HH2_final()
 	stored_nmda_dend = 0; // stored dendritic nmda open fraction value
 
 	// noise
-	G_SPIKE = 0.0;
-
 	noise = true;
 	lambda_exc = 75;
 	lambda_inh = 100;
@@ -160,6 +156,7 @@ void HH2_final::set_dynamics(double interval, double tS)
 	s_soma.resize(size);
 	s_dend.resize(size);
     E_gaba.resize(size);
+	T.resize(size);
 
 	// set initial values
 	time[0] = 0;
@@ -177,8 +174,9 @@ void HH2_final::set_dynamics(double interval, double tS)
 	G_AMPA[0] = 0.0;
 	G_NMDA[0] = 0.0;
 	s_soma[0] = 0.0;
-	s_dend[0] = 0.0;
+	s_dend[0] = 0.01077;
 	E_gaba[0] = Ei;
+	T[0] = T0;
 
 	flag_soma[0] = 0;
  	flag_dend[0] = 0;
@@ -187,6 +185,7 @@ void HH2_final::set_dynamics(double interval, double tS)
 	Id[0] = IdExt(time[0]);
 	
 	// set constants for NMDA noise
+	/*
 	double tau = 1.0 / (alpha*T + beta); // time constant
 	double sInf = alpha*T*tau; // fraction of open channels at time = infinity
 	
@@ -201,6 +200,7 @@ void HH2_final::set_dynamics(double interval, double tS)
 		A_dend = sqrt(sInf*(1-sInf)/nmda_dend) * sqrt(1 - mu*mu);
 	else
 		A_dend = 0.0;
+	*/
 
 	//	initialize up noise
 
@@ -230,8 +230,9 @@ void HH2_final::set_to_rest()
 	G_AMPA[0] = 0.0;
 	G_NMDA[0] = 0.0;
 	s_soma[0] = 0.0;
-	s_dend[0] = 0.0;
+	s_dend[0] = 0.01077;
 	E_gaba[0] = Ei;
+	T[0] = T0;
 
 	flag_soma[0] = 0;
     flag_dend[0] = 0;
@@ -431,18 +432,18 @@ void HH2_final::writeToFile(const char * filename)
 		
 		double openSoma, openDend;
 		
-		if (nmda_soma > 0)
-			openSoma = s_soma[i] + s0;
-		else 
-			openSoma = 0.0;
+		//if (nmda_soma > 0)
+		//	openSoma = s_soma[i] + s0;
+		//else 
+		//	openSoma = 0.0;
 		
 		if (nmda_dend > 0)
-			openDend = s_dend[i] + s0;
+			openDend = s_dend[i];
 		else
 			openDend = 0.0;
 
-		output.write(reinterpret_cast<char*>(&openSoma), sizeof(openSoma));
 		output.write(reinterpret_cast<char*>(&openDend), sizeof(openDend));
+		output.write(reinterpret_cast<char*>(&T[i]), sizeof(T[i]));
 		output.write(reinterpret_cast<char*>(&flag_soma[i]), sizeof(flag_soma[i]));
 	}
 
@@ -453,7 +454,11 @@ void HH2_final::writeToFile(const char * filename)
 void HH2_final::raiseE(double G)
 {
 	G_AMPA[itime] = G_AMPA[itime] + G;
-	G_NMDA[itime] += G_SPIKE;
+}
+
+void HH2_final::raiseT(double release)
+{
+	T[itime] += release;
 }
 
 void HH2_final::raiseI(double G)
@@ -653,7 +658,7 @@ void HH2_final::glutamate_noise_check(double& g, double mean, double sigma, doub
 void HH2_final::Runge4_step()
 {
 	double n1, h1, c1, r1;	//	temporary values of gating variables
-	double vts, vtd, Cat;	//	temporary values of variables
+	double vts, vtd, Cat, s_td;	//	temporary values of variables
 	double k1Vs, k2Vs, k3Vs, k4Vs;
 	double k1Vd, k2Vd, k3Vd, k4Vd;
 	double k1Ca, k2Ca, k3Ca, k4Ca;
@@ -661,6 +666,7 @@ void HH2_final::Runge4_step()
 	double k1h, k2h, k3h, k4h;
 	double k1c, k2c, k3c, k4c;
 	double k1r, k2r, k3r, k4r;
+	double k1s, k2s, k3s, k4s;
 	double t;
 
 	vts = Vs[itime];
@@ -671,15 +677,16 @@ void HH2_final::Runge4_step()
 	c1 = c[itime];
 	Cat = Ca[itime];
 	t = time[itime];
-
+	s_td = s_dend[itime];
 
 	k1Vs = kVs(vts, vtd, n1, h1, t);
 	k1n = kn(vts, n1);
 	k1h = kh(vts, h1);
-	k1Vd = kVd(vts, vtd, r1, c1, Cat, t);
+	k1Vd = kVd(vts, vtd, r1, c1, Cat, s_td, t);
 	k1r = kr(vtd, r1);
 	k1c = kc(vtd, c1);
 	k1Ca = kCa(vtd, r1, Cat);
+	k1s = ks(s_td, t);
 
 	vts = Vs[itime] + timeStep * k1Vs / 3;
 	n1 = n[itime] + timeStep * k1n / 3;
@@ -688,17 +695,19 @@ void HH2_final::Runge4_step()
 	r1 = r[itime] + timeStep * k1r / 3;
 	c1 = c[itime] + timeStep * k1c / 3;
 	Cat = Ca[itime] + timeStep * k1Ca / 3;
+	s_td = s_dend[itime] + timeStep * k1s / 3;
 
 	t = time[itime] + timeStep / 3;
 
 	k2Vs = kVs(vts, vtd, n1, h1, t);
 	k2n = kn(vts, n1);
 	k2h = kh(vts, h1);
-	k2Vd = kVd(vts, vtd, r1, c1, Cat, t);
+	k2Vd = kVd(vts, vtd, r1, c1, Cat, s_td, t);
 	k2r = kr(vtd, r1);
 	k2c = kc(vtd, c1);
 	k2Ca = kCa(vtd, r1, Cat);
-	
+	k2s = ks(s_td, t);
+
 	vts = Vs[itime] + timeStep * (-k1Vs / 3 + k2Vs);
 	n1 = n[itime] + timeStep * (-k1n / 3 + k2n);
 	h1 = h[itime] + timeStep * (-k1h / 3 + k2h);
@@ -706,17 +715,18 @@ void HH2_final::Runge4_step()
 	r1 = r[itime] + timeStep * (-k1r / 3 + k2r);
 	c1 = c[itime] + timeStep * (-k1c / 3 + k2c);
 	Cat = Ca[itime] + timeStep * (-k1Ca / 3 + k2Ca);
+	s_td = s_dend[itime] + timeStep * (-k1s / 3 + k2s);
 
 	t = time[itime] + 2 * timeStep / 3;
 
 	k3Vs = kVs(vts, vtd, n1, h1, t);
 	k3n = kn(vts, n1);
 	k3h = kh(vts, h1);
-	k3Vd = kVd(vts, vtd, r1, c1, Cat, t);
+	k3Vd = kVd(vts, vtd, r1, c1, Cat, s_td, t);
 	k3r = kr(vtd, r1);
 	k3c = kc(vtd, c1);
 	k3Ca = kCa(vtd, r1, Cat);
-	
+	k3s = ks(s_td, t);
 
 	vts = Vs[itime] + timeStep * (k1Vs - k2Vs + k3Vs);
 	n1 = n[itime] + timeStep * (k1n - k2n + k3n);
@@ -725,16 +735,18 @@ void HH2_final::Runge4_step()
 	r1 = r[itime] + timeStep * (k1r - k2r + k3r);
 	c1 = c[itime] + timeStep * (k1c - k2c + k3c);
 	Cat = Ca[itime] + timeStep * (k1Ca - k2Ca + k3Ca);
+	s_td = s_dend[itime] + timeStep * (k1s - k2s + k3s);
 
 	t = time[itime] + timeStep;
 
 	k4Vs = kVs(vts, vtd, n1, h1, t);
 	k4n = kn(vts, n1);
 	k4h = kh(vts, h1);
-	k4Vd = kVd(vts, vtd, r1, c1, Cat, t);
+	k4Vd = kVd(vts, vtd, r1, c1, Cat, s_td, t);
 	k4r = kr(vtd, r1);
 	k4c = kc(vtd, c1);
 	k4Ca = kCa(vtd, r1, Cat);
+	k4s = ks(s_td, t);
 
 	time[itime + 1] = time[itime] + timeStep;
 	Vs[itime+1] = Vs[itime] + timeStep * (k1Vs + 3 * k2Vs + 3 * k3Vs + k4Vs) / 8;
@@ -745,8 +757,14 @@ void HH2_final::Runge4_step()
 	r[itime + 1] = r[itime] + timeStep * (k1r + 3 * k2r + 3 * k3r + k4r) / 8;
 	c[itime + 1] = c[itime] + timeStep * (k1c + 3 * k2c + 3 * k3c + k4c) / 8;
 	Ca[itime + 1] = Ca[itime] + timeStep * (k1Ca + 3 * k2Ca + 3 * k3Ca + k4Ca) / 8;
+	s_dend[itime + 1] = s_dend[itime] + timeStep * (k1s + 3 * k2s + 3 * k3s + k4s) / 8;
+	
+	G_NMDA[itime + 1] = Gd_NMDA(s_dend[itime + 1], Vd[itime + 1]);
+	T[itime + 1] = glutamate(time[itime + 1]);
+
 	Ginh_d[itime + 1] = Gi_d(time[itime + 1]);
 
+	/*
 	if (nmda_soma != 0)
 	{
 		//if ((itime + 1) % (int) round(bin_size_nmda/timeStep) == 0)
@@ -782,6 +800,8 @@ void HH2_final::Runge4_step()
 		s_dend[itime + 1] = 0.0;
 		G_NMDA[itime + 1] = 0.0;
 	}
+	*/
+
 	G_AMPA[itime + 1] = G_ampa(time[itime + 1]);
 	
 	Gexc_d[itime + 1] = G_AMPA[itime + 1] + G_NMDA[itime + 1];
@@ -793,6 +813,8 @@ void HH2_final::Runge4_step()
 	itime = itime + 1;
 }
 
+
+double HH2_final::glutamate(double t){return T0 + (T[itime] - T0) * exp(-(t - time[itime]) / t_glutamate);}
 double HH2_final::G_ampa(double t){return G_AMPA[itime] * exp(-(t - time[itime]) / tExc);}
 double HH2_final::Gi_s(double t){return Ginh_s[itime] * exp(-(t - time[itime]) / tInh);}
 double HH2_final::Gi_d(double t){return Ginh_d[itime] * exp(-(t - time[itime]) / tInh);}
@@ -802,12 +824,12 @@ double HH2_final::Gi_d(double t){return Ginh_d[itime] * exp(-(t - time[itime]) /
 
 double HH2_final::Gs_NMDA(double vs, int timeInd)
 {
-	return G_channel * (s_soma[timeInd] + s0) * HH2_final::B(vs) * nmda_soma / (1000 * As);
+	return G_channel * (s_soma[timeInd]) * HH2_final::B(vs) * nmda_soma / (1000 * As);
 }
 
-double HH2_final::Gd_NMDA(double vd, int timeInd)
+double HH2_final::Gd_NMDA(double sd, double vd)
 {
-	return G_channel * (s_dend[timeInd] + s0) * HH2_final::B(vd) * nmda_dend / (1000 * Ad);
+	return G_channel * sd * HH2_final::B(vd) * nmda_dend / (1000 * Ad);
 }
 
 /*double HH2_final::Gs_NMDA(double vs)
@@ -840,6 +862,11 @@ double HH2_final::Gd_NMDA(double vd)
 	}
 }*/
 
+double HH2_final::ks(double s, double t)
+{
+	return (- s * (alpha * glutamate(t) + beta) + alpha * glutamate(t)) / 1000; // divide by 1000 to convert units for alpha and beta from s to ms
+}
+
 double HH2_final::kVs(double vs, double vd, double n, double h, double t)
 {
 	double m3, n4;
@@ -849,13 +876,13 @@ double HH2_final::kVs(double vs, double vd, double n, double h, double t)
 	return (-GsL * (vs - EsL) - GsNa * m3 * h * (vs - EsNa) - GsK * n4 * (vs - EsK)
 		- Gs_NMDA(vs, itime) * vs - Gi_s(t) * (vs - Ei) + IsExt(t) / As + (vd - vs) / (Rc * As)) / cm;
 }
-double HH2_final::kVd(double vs, double vd, double r, double c, double ca, double t)
+double HH2_final::kVd(double vs, double vd, double r, double c, double ca, double sd, double t)
 {
 	double r2;
 
 	r2 = r * r;
 	return (-GdL * (vd - EdL) - GdCa * r2 * (vd - EdCa) - GdCaK * (vd - EdK) * c / (1 + 6 / ca)
-		- (Gd_NMDA(vd, itime) + G_ampa(t)) * vd - Gi_d(t) * (vd - Ei) + IdExt(t) / Ad + (vs - vd) / (Rc * Ad)) / cm;
+		- (Gd_NMDA(sd, vd) + G_ampa(t)) * vd - Gi_d(t) * (vd - Ei) + IdExt(t) / Ad + (vs - vd) / (Rc * Ad)) / cm;
 }
 
 double HH2_final::kn(double vs, double n){return (HH2_final::nInf(vs) - n) / HH2_final::tauN(vs);}

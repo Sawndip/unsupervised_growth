@@ -264,6 +264,9 @@ const double PoolParallel::DELAY_WINDOW = 35;
 // NMDA
 const double PoolParallel::g_KICK = 0.22; // glutamate kick for NMDA receptors
 
+// glutamate
+const double PoolParallel::T_SPIKE = 0.1; // glutamate release due to spike of some neuron in the pool; mM
+
 void PoolParallel::initialize_generator()
 {
     // prepare seeds and initialize each generator with different seed
@@ -1976,6 +1979,9 @@ void PoolParallel::trial(int training)
 
 	int some_I_neuron_fired_global;
 
+	int num_soma_spikes_local; // number of soma spikes in the process
+	int num_soma_spikes_global; // number of soma spikes in the network
+	
 	std::vector<unsigned> RA_neurons_fired_soma_local;
 	std::vector<unsigned> RA_neurons_fired_soma_global;
 	std::vector<unsigned> RA_neurons_fired_soma_realID;
@@ -2027,6 +2033,8 @@ void PoolParallel::trial(int training)
         update_Ge_I_global[i] = 0.0;
 	}
 
+	num_soma_spikes_local = 0;
+	num_soma_spikes_global = 0;
 
     // evolve dynamics
     for (unsigned t = 1; t < size; t++)
@@ -2062,6 +2070,7 @@ void PoolParallel::trial(int training)
             // if some neuron produced somatic spike, do LTD for all previous dendritic spikes
             if (HVCRA_local[i].get_fired_soma())
             {
+				num_soma_spikes_local += 1;
                 some_RA_neuron_fired_soma_local = 1;
                 spikes_in_trial_soma_local[i].push_back(internal_time);
                 last_soma_spikes_local[i].push_back(internal_time);
@@ -2190,10 +2199,11 @@ void PoolParallel::trial(int training)
 
         if (internal_time > network_time)
         {
-            MPI_Allreduce(&some_RA_neuron_fired_soma_local, &some_RA_neuron_fired_soma_global, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+            MPI_Allreduce(&some_RA_neuron_fired_soma_local, &some_RA_neuron_fired_soma_global, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
             MPI_Allreduce(&some_RA_neuron_fired_dend_local, &some_RA_neuron_fired_dend_global, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
             MPI_Allreduce(&some_I_neuron_fired_local, &some_I_neuron_fired_global, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
-        
+            MPI_Allreduce(&num_soma_spikes_local, &num_soma_spikes_global, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+        	
 
             if (some_I_neuron_fired_global > 0)
             {
@@ -2228,6 +2238,14 @@ void PoolParallel::trial(int training)
                 {
                     HVCI_local[i].raiseE(update_Ge_I_global[Id_I_local[i]]);
                 }
+
+				// update glutamate for all neurons
+				for (int i = 0; i < N_RA_local; i++)
+					HVCRA_local[i].raiseT(T_SPIKE * num_soma_spikes_global);
+
+				// reset number of spikes
+				num_soma_spikes_local = 0;
+				num_soma_spikes_global = 0;
 
             }
 

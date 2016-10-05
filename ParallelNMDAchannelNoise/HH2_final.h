@@ -63,7 +63,7 @@ public:
 	// change conductance
 	void raiseE(double G); // raise excitatory conductance
 	void raiseI(double G); // raise inhibitory conductance
-	void raiseGlutamate(double g); // raise dendritic glutamate
+	void raiseT(double release); // raise dendritic glutamate
 	// targets
 	void set_targetI(HHI_final* target, int n, double G); // set inhibitory target
 	void set_targetRA(HH2_final* target, int n, double G); // set excitatory target
@@ -91,7 +91,7 @@ protected:
 	double Ei;	//	inhibitory reverse potential
 	const static double tExc;	//	time constant for excitatory conductance
 	const static double tInh;	//	time constant for inhibitory conductance
-	const static double tNMDA; // time constant for NMDA excitatory conductance
+	const static double t_glutamate; // time constant for glutamate decay
 
 	// dynamic variables
 	vector<double> time; // time array
@@ -113,11 +113,12 @@ protected:
 	vector<double> E_gaba; // reverse GABA potential
 	vector<double> s_soma; // fluctuations in fraction of open somatic NMDA channels
 	vector<double> s_dend; // fluctuations in fraction of open dendritic NMDA channels
+	vector<double> T; // glutamate extracellular concentration
 	// constants
 	
 	const static double alpha; // transition rate to open state 
 	const static double beta; // transition rate to closed state
-	const static double T; // glutamate extracellular concentration
+	const static double T0; // glutamate extracellular concentration
 	const static double G_channel; // conductance of open NMDA channel
 	//const static double p0; // probability for a channel to be open
 	const static double s0; // fraction of open NMDA channels
@@ -126,7 +127,6 @@ protected:
 	const static double bin_size_nmda; // bin size for nmda fraction of open channels simulation
 	const static int nmda_soma; // number of NMDA extrasynaptic receptors in somatic compartment
 	const static int nmda_dend; // number of NMDA extrasynaptic receptors in dendritic compartment
-
 	//	thresholds
 	const static double threshold; // threshold for somatic spike
 	const static double threshold_dend; // threshold for dendritic spike
@@ -216,8 +216,9 @@ protected:
     int kick_time; // time to kick
 	//	Additional functions for Runge Kutta's method
 
+	double ks(double sd, double t);
 	double kVs(double vs, double vd, double n, double h, double t);
-	double kVd(double vs, double vd, double r, double c, double ca, double t);
+	double kVd(double vs, double vd, double r, double c, double ca, double sd, double t);
 	double kn(double vs,  double n);
 	double kh(double vs, double h);
 	double kr(double vd, double r);
@@ -225,9 +226,9 @@ protected:
 	double kCa(double vd, double r, double ca);
 
 	//	Conductance and current functions
-
+	double glutamate(double t);
 	double Gs_NMDA(double vs, int timeInd);
-	double Gd_NMDA(double vd, int timeInd);
+	double Gd_NMDA(double sd, double vd);
 
 	double Gi_s(double t);	//	inhibitory soma conductance
 	double Gi_d(double t);	//	inhibitory dendrite conductance

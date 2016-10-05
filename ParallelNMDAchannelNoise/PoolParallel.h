@@ -127,6 +127,7 @@ protected:
 		vector <double> xx_I_cluster; // x-coordinates of centers of inhibitory clusters
 		vector <double> yy_I_cluster; // y-coordinates of centers of inhibitory clusters
 
+		const static double T_SPIKE; // glutamate release after some neuron spikes in the pool
 		const static double g_KICK; // glutamate kick value
 		const static double CLUSTER_SIZE; // cluster size
         const static double MIN_INTERNEURON_DISTANCE; // minimum distance between neurons

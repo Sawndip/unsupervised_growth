@@ -43,7 +43,7 @@ SIZE_OF_INT = 4
 #print len(voltage)
 #print len(time)
 
-(t, Vs, Is, n, h, Vd, Id, r, c, Ca, Gexc_d, Ginh_d, Gexc_s, Ginh_s, s_s, s_d, Ei, flag, Nsoma, Ndend) = reading.read_hh2(simFileAbs)
+(t, Vs, Is, n, h, Vd, Id, r, c, Ca, Gexc_d, Ginh_d, Gexc_s, Ginh_s, s_d, g, Ei, flag, Nsoma, Ndend) = reading.read_hh2(simFileAbs)
 
 print Nsoma
 print "Vs", Vs
@@ -103,7 +103,7 @@ fig2 = plt.figure(2)
 ax1 = fig2.add_subplot(511)
 ax1.plot(t, n, 'r', linewidth = 2.0)
 ax1.set_ylabel("n")
-plt.title("Gating variables")
+plt.title("Gating variables"),
 
 ax2 = fig2.add_subplot(512)
 ax2.plot(t, h, 'b', linewidth = 2.0)
@@ -157,12 +157,12 @@ ax1.set_ylabel('Ei (mV)')
 fig5 = plt.figure(5)
 ax1 = fig5.add_subplot(211)
 ax1.plot(t, s_d, 'r', linewidth = 2.0)
-ax1.set_ylabel("s_d")
-plt.title('Fraction of open NMDA channels.')
+ax1.set_ylabel("fraction of open NMDA channels")
+plt.title('NMDA receptors.')
 
 ax2 = fig5.add_subplot(212)
-ax2.plot(t, s_s, 'b', linewidth = 2.0)
-ax2.set_ylabel("s_s")
+ax2.plot(t, g, 'b', linewidth = 2.0)
+ax2.set_ylabel("glutamate")
 #datacursor(formatter="x: {x:.3f}\ny: {y:.3f}".format)
 plt.show()
 

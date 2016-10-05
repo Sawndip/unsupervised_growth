@@ -181,8 +181,8 @@ def read_hh2(fileName):
     Ginh_d = np.zeros((dataPointsNumber, 1))
     Gexc_s = np.zeros((dataPointsNumber, 1))
     Ginh_s = np.zeros((dataPointsNumber, 1))
-    s_s = np.zeros((dataPointsNumber, 1))
     s_d = np.zeros((dataPointsNumber, 1))
+    g = np.zeros((dataPointsNumber, 1))
 
     flag = np.zeros((dataPointsNumber, 1))
     Ei = np.zeros((dataPointsNumber, 1))
@@ -204,8 +204,8 @@ def read_hh2(fileName):
         Ginh_d[i] = struct.unpack("<d", fileContent[(ind+11*SIZE_OF_DOUBLE):(ind+12*SIZE_OF_DOUBLE)])[0]        
         Gexc_s[i] = struct.unpack("<d", fileContent[(ind+12*SIZE_OF_DOUBLE):(ind+13*SIZE_OF_DOUBLE)])[0]
         Ginh_s[i] = struct.unpack("<d", fileContent[(ind+13*SIZE_OF_DOUBLE):(ind+14*SIZE_OF_DOUBLE)])[0]
-        s_s[i] = struct.unpack("<d", fileContent[(ind+15*SIZE_OF_DOUBLE):(ind+16*SIZE_OF_DOUBLE)])[0]
-        s_d[i] = struct.unpack("<d", fileContent[(ind+16*SIZE_OF_DOUBLE):(ind+17*SIZE_OF_DOUBLE)])[0]
+        s_d[i] = struct.unpack("<d", fileContent[(ind+15*SIZE_OF_DOUBLE):(ind+16*SIZE_OF_DOUBLE)])[0]
+        g[i] = struct.unpack("<d", fileContent[(ind+16*SIZE_OF_DOUBLE):(ind+17*SIZE_OF_DOUBLE)])[0]
      
         Ei[i] = struct.unpack("<d", fileContent[(ind+14*SIZE_OF_DOUBLE):(ind+15*SIZE_OF_DOUBLE)])[0]
        
@@ -219,7 +219,7 @@ def read_hh2(fileName):
 
         ind += 17*SIZE_OF_DOUBLE + SIZE_OF_INT
     
-    return (t, Vs, Is, n, h, Vd, Id, r, c, Ca, Gexc_d, Ginh_d, Gexc_s, Ginh_s, s_s, s_d, Ei, flag, Nsoma, Ndend)
+    return (t, Vs, Is, n, h, Vd, Id, r, c, Ca, Gexc_d, Ginh_d, Gexc_s, Ginh_s, s_d, g, Ei, flag, Nsoma, Ndend)
 
 
 
