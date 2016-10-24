@@ -34,6 +34,10 @@ public:
 	void initialize_equal_clusters(); // initialize equal clusters of neurons
 
     void initialize_connections(double Gei_mean, double Gei_var, double Gie_mean, double Gie_var); // initialize connections for neurons
+
+	void initialize_silent_synapses(double f); // initialize silent synapses with fraction f connections
+	void initialize_all2all_silent_synapses(); // initialize all to all silent connections
+
 	void initialize_connections_for_clusters(double Gei_mean, double Gei_var, double Gie_mean, double Gie_var); // initialize connections for neurons in equal clusters
 
     void initialize_connections_for_inhibitory_clusters(double Gei_mean, double Gei_var, double Gie_mean, double Gie_var); // initialize connections for inhibitory clusters
@@ -63,6 +67,7 @@ public:
 	// write to file functions
 	void gather_data(); // gather data from all processes
 
+	void write_silent_synapses(const char* filename); // write silent synapses to a file
 	void write_sim_info(const char* simInfoFile, int synapses_trials_update, int weights_trials_update); // write information about simulation and frequency of updates of synapses and weights
 	void write_num_synapses(const char* fileSynapses); // write amount of active synapses and supersynapses
 	void write_active_synapses(const char* RA_RA); // write RA to RA active connections
@@ -163,6 +168,7 @@ protected:
 		bool** active_global; // array of HVC(RA) neurons with active synapses
 		bool** supersynapses_global; // indicator array for active supersynapses;
 		double** weights_global; // array of synaptic strength of all connections between RA neurons
+		vector<int>* silent_synapses_global; // vector with silent NMDA synapses
 		vector<double>* weights_RA_I_global; // array with synapses from RA to I neurons
 		vector<double>* weights_I_RA_global; // array with senapses from I to RA neurons
 		vector<unsigned>* syn_ID_RA_I_global; // array with synaptic ID numbers from RA to I neurons
@@ -170,18 +176,6 @@ protected:
 
 		vector<unsigned>* active_synapses_global; // array of vectors with IDs of active synapses
 		vector<unsigned>* active_supersynapses_global; // array of vectors with IDs of supersynapses
-
-		// update array for conductances and glutamate
-
-		double* update_Ge_RA_local;
-        double* update_Gi_RA_local;
-		double* update_g_local;
-        double* update_Ge_I_local;
-
-        double* update_Ge_RA_global;
-        double* update_Gi_RA_global;
-		double* update_g_global;
-        double* update_Ge_I_global;
 
 		// spatial info
 		int* N_cluster; // number of RA neurons per inhibitory center
@@ -212,15 +206,33 @@ protected:
 		int* mature_global; // global array of indicators if neuron is mature due to supersynaptic acquisition 
 		
 		vector<double>* spikes_in_trial_local; // local rray with spike times of single trial
+		vector<int>* silent_synapses_local; // array with silent NMDA synapses
 		vector<double>* weights_RA_I_local; // array with synapses from RA to I neurons
 		vector<double>* weights_I_RA_local; // array with senapses from I to RA neurons
 		vector<unsigned>* syn_ID_RA_I_local; // array with synaptic ID numbers from RA to I neurons
 		vector<unsigned>* syn_ID_I_RA_local; // array with synaptic ID numbers from I to RA neurons
+		
+		int* num_strong_inputs; // number of strong inputs
+		int* new_strong_inputs_global; // total number of new strong inputs for all processes
+		int* new_strong_inputs_local; // number of new strong inputs for local process
 
 		vector<unsigned>* active_synapses_local; // array of vectors with IDs of active synapses
 		vector<unsigned>* active_supersynapses_local; // array of vectors with IDs of supersynapses
 		unsigned* Id_RA_local; // Id of RA neurons in each process
 		unsigned* Id_I_local; // Id of I neurons in each process
+
+		// update conductances and glutamate
+		double* update_Ge_RA_local;
+		double* update_Gi_RA_local;
+		double* update_g_local;
+		double* update_Ge_I_local;
+	
+		double* update_Ge_RA_global;
+		double* update_Gi_RA_global;
+		double* update_g_global;
+		double* update_Ge_I_global;
+
+
 
 		//const static double ACTIVATION; // activation threshold for synapses
 		double p_RA2I(int i, int j); // probability of connection from RA to I neuron
@@ -270,7 +282,7 @@ protected:
 		void STDP_one2one(unsigned i, unsigned j); // apply STDP rules for connection from neuron i to neuron j
 		void STDP_saturated(unsigned n); // apply STDP rules for saturated neuron
 		void update_synapse(int i, int j, double w); // update synapse from neuron i to neuron j
-		void update_all_synapses(); // update synapses between RA neurons and apply potentiation decay
+		void update_all_synapses(int& some_input_changed); // update synapses between RA neurons and apply potentiation decay
 		void axon_remodeling(int i); // remove all targets from neuron i except for supersynapses
 
         // MPI support

@@ -86,18 +86,11 @@ PoolParallel::PoolParallel(double a, double s_rai, double b, double s_ira, doubl
     Id_RA_local = new unsigned[N_RA_local];
     Id_I_local = new unsigned[N_I_local];
 
-    update_Ge_RA_local = new double[N_RA];
-    update_Gi_RA_local = new double[N_RA];
-	update_g_local = new double[N_RA];
-    update_Ge_I_local = new double[N_I];
-
-    update_Ge_RA_global = new double[N_RA];
-    update_Gi_RA_global = new double[N_RA];
-	update_g_global = new double[N_RA];
-    update_Ge_I_global = new double[N_I];
-
-	//active_local = new bool*[N_RA];
+    	//active_local = new bool*[N_RA];
 	//active_supersynapses_local = new bool*[N_RA_local];
+	silent_synapses_local = new std::vector<int>[N_RA_local];
+	silent_synapses_global = new std::vector<int>[N_RA];
+	
 	weights_RA_I_local = new std::vector<double>[N_RA_local];
 	weights_I_RA_local = new std::vector<double>[N_I_local];
 	syn_ID_RA_I_local = new std::vector<unsigned>[N_RA_local];
@@ -120,6 +113,20 @@ PoolParallel::PoolParallel(double a, double s_rai, double b, double s_ira, doubl
     active_supersynapses_local = new std::vector<unsigned>[N_RA_local];
 	active_synapses_local = new std::vector<unsigned>[N_RA_local];
 
+	num_strong_inputs = new int[N_RA];
+	new_strong_inputs_global = new int[N_RA];
+	new_strong_inputs_local = new int[N_RA];
+
+	update_Ge_RA_local = new double[N_RA];
+    update_Gi_RA_local = new double[N_RA];
+	update_g_local = new double[N_RA];
+    update_Ge_I_local = new double[N_I];
+
+    update_Ge_RA_global = new double[N_RA];
+    update_Gi_RA_global = new double[N_RA];
+	update_g_global = new double[N_RA];
+    update_Ge_I_global = new double[N_I];
+	
 	last_soma_spikes_local = new std::deque<double>[N_RA];
 	last_soma_spikes_global = new std::deque<double>[N_RA];
 
@@ -141,9 +148,8 @@ PoolParallel::PoolParallel(double a, double s_rai, double b, double s_ira, doubl
         active_local[i] = new bool[N_RA];
         supersynapses_local[i] = new bool[N_RA];
         remodeled_local[i] = false;
-		mature_local[i] = 0;
-
-        for (int j = 0; j < N_RA; j++)
+	
+	    for (int j = 0; j < N_RA; j++)
         {
             weights_local[i][j] = 0.0;
             active_local[i][j] = false;
@@ -178,6 +184,15 @@ PoolParallel::PoolParallel(double a, double s_rai, double b, double s_ira, doubl
 		weights_global[i] = new double[N_RA];
 
 	}
+	
+	// set training neurons to be mature, all other neurons are immature
+	for (int i = 0; i < N_RA_local; i++)
+	{
+		if (Id_RA_local[i] < N_TR)
+			mature_local[i] = 1;
+		else
+			mature_local[i] = 0;
+	}
 
 	for (int i = 0; i < N_RA; i++)
 	{
@@ -189,6 +204,10 @@ PoolParallel::PoolParallel(double a, double s_rai, double b, double s_ira, doubl
 
 		}
         spike_times_dend_global[i] = -100.0;
+		
+		num_strong_inputs[i] = 0;
+		new_strong_inputs_global[i] = 0;
+		new_strong_inputs_local[i] = 0;
 
 	}
 }
@@ -233,6 +252,10 @@ PoolParallel::~PoolParallel()
 	delete[] update_Gi_RA_global;
 	delete[] update_g_global;
 	delete[] update_Ge_I_global;
+
+	delete[] num_strong_inputs;
+	delete[] new_strong_inputs_global;
+	delete[] new_strong_inputs_local;
 //	MPI_Finalize();
 }
 
@@ -265,7 +288,7 @@ const double PoolParallel::DELAY_WINDOW = 35;
 const double PoolParallel::g_KICK = 0.22; // glutamate kick for NMDA receptors
 
 // glutamate
-const double PoolParallel::T_SPIKE = 0.1; // glutamate release due to spike of some neuron in the pool; mM
+const double PoolParallel::T_SPIKE = 1.0; // glutamate release due to spike of some neuron in the pool; mM
 
 void PoolParallel::initialize_generator()
 {
@@ -1465,15 +1488,18 @@ void PoolParallel::send_connections()
 	int* displs_syn_num_I;
 	int* syn_num_RA;
 	int* syn_num_I;
+	int* syn_num_silent;
 	int* syn_num_RA_local = new int[N_RA_local];
 	int* syn_num_I_local = new int[N_I_local];
-	
+	int* syn_num_silent_local = new int[N_RA_local];
+
 	if (MPI_rank == 0)
 	{
 		sendcounts_syn_num_RA = new int[MPI_size];
 		sendcounts_syn_num_I = new int[MPI_size];
 		syn_num_RA = new int[N_RA];
 		syn_num_I = new int[N_I];
+		syn_num_silent = new int[N_RA];
 
 		displs_syn_num_RA = new int[MPI_size];
 		displs_syn_num_I = new int[MPI_size];
@@ -1496,6 +1522,7 @@ void PoolParallel::send_connections()
 		for (int i = 0; i < N_RA; i++)
 		{
 			syn_num_RA[i] = syn_ID_RA_I_global[i].size();
+			syn_num_silent[i] = silent_synapses_global[i].size();
 			//printf("Master process; syn_num_RA[%d] = %d\n", i, syn_num_RA[i]);
 		}
 
@@ -1516,6 +1543,8 @@ void PoolParallel::send_connections()
 	MPI_Scatterv(&syn_num_I[0], sendcounts_syn_num_I, displs_syn_num_I, MPI_INT,
 		&syn_num_I_local[0], N_I_local, MPI_INT, 0, MPI_COMM_WORLD);
 
+	MPI_Scatterv(&syn_num_silent[0], sendcounts_syn_num_RA, displs_syn_num_RA, MPI_INT,
+		&syn_num_silent_local[0], N_RA_local, MPI_INT, 0, MPI_COMM_WORLD);
 	//for (int i = 0; i < N_RA_local; i++)
 		//printf("My rank = %d; sun_num_RA[%d] = %d\n", MPI_rank, i, syn_num_RA_local[i]);
 
@@ -1523,6 +1552,7 @@ void PoolParallel::send_connections()
 	{
 		syn_ID_RA_I_local[i].resize(syn_num_RA_local[i]);
 		weights_RA_I_local[i].resize(syn_num_RA_local[i]);
+		silent_synapses_local[i].resize(syn_num_silent_local[i]);
 	}
 
 	for (int i = 0; i < N_I_local; i++)
@@ -1539,7 +1569,7 @@ void PoolParallel::send_connections()
 		{
 			weights_RA_I_local[i] = weights_RA_I_global[i];
 			syn_ID_RA_I_local[i] = syn_ID_RA_I_global[i];
-
+			silent_synapses_local[i] = silent_synapses_global[i];
 		}
 
 		for (int i = 0; i < N_I_local; i++)
@@ -1560,7 +1590,7 @@ void PoolParallel::send_connections()
 				//printf("Master. Here!\n");
 				MPI_Send(&syn_ID_RA_I_global[offset_RA+j][0], syn_num_RA[offset_RA+j], MPI_INT, i, 0, MPI_COMM_WORLD);
                 MPI_Send(&weights_RA_I_global[offset_RA+j][0], syn_num_RA[offset_RA+j], MPI_DOUBLE, i, 0, MPI_COMM_WORLD);
-
+                MPI_Send(&silent_synapses_global[offset_RA+j][0], syn_num_silent[offset_RA+j], MPI_INT, i, 0, MPI_COMM_WORLD);
 				//for (int k = 0; k < syn_num_RA[offset_RA+j]; k++)
 				//	printf("Master. RA neuron %d; RA2I %d; w = %f\n", offset_RA+j, syn_ID_RA_I_global[offset_RA+j][k],
                  //       weights_RA_I_global[offset_RA+j][k]);
@@ -1594,6 +1624,7 @@ void PoolParallel::send_connections()
 			//printf("Rank = %d. Here!\n", MPI_rank);
 			MPI_Recv(&syn_ID_RA_I_local[i][0], syn_num_RA_local[i], MPI_INT, 0, 0, MPI_COMM_WORLD, &status);
 			MPI_Recv(&weights_RA_I_local[i][0], syn_num_RA_local[i], MPI_DOUBLE, 0, 0, MPI_COMM_WORLD, &status);
+			MPI_Recv(&silent_synapses_local[i][0], syn_num_silent_local[i], MPI_INT, 0, 0, MPI_COMM_WORLD, &status);
 
 			//for (int j = 0; j < syn_num_RA_local[i]; j++)
 			//	printf("My rank = %d; RA neuron %d; RA2I %d; w = %f\n", MPI_rank, Id_RA_local[i], syn_ID_RA_I_local[i][j],
@@ -1619,6 +1650,10 @@ void PoolParallel::send_connections()
         delete [] sendcounts_syn_num_I;
         delete [] syn_num_RA;
         delete [] syn_num_I;
+        delete [] syn_num_silent;
+        delete [] syn_num_RA_local;
+        delete [] syn_num_I_local;
+        delete [] syn_num_silent_local;
         delete [] displs_syn_num_RA;
         delete [] displs_syn_num_I;
     }
@@ -1748,6 +1783,40 @@ void PoolParallel::initialize_connections_for_clusters(double Gei_mean, double G
 	}
 }
 
+void PoolParallel::initialize_all2all_silent_synapses()
+{
+	if (MPI_rank == 0)
+	{
+		for (int i = 0; i < N_RA; i++)
+		{
+			for (int j = 0; j < N_RA; j++)
+			{
+				if (j!=i)
+				{
+					silent_synapses_global[i].push_back(j);
+				}
+			}
+		}
+	}
+}
+
+void PoolParallel::initialize_silent_synapses(double f)
+{
+	if (MPI_rank == 0)
+	{
+		for (int i = 0; i < N_RA; i++)
+		{
+			for (int j = 0; j < N_RA; j++)
+			{
+				if ((i!=j) && (generator.random(1.0) < f))
+					silent_synapses_global[i].push_back(j);
+			}
+		}
+	}
+
+}
+
+
 void PoolParallel::initialize_connections(double Gei_mean, double Gei_var, double Gie_mean, double Gie_var)
 {
 
@@ -1767,6 +1836,7 @@ void PoolParallel::initialize_connections(double Gei_mean, double Gei_var, doubl
 		             syn_ID_RA_I_global[i].push_back(j);
 		         }
 			 }
+
 		 }
 		// connections for HVC(I) neurons
 
@@ -1979,6 +2049,9 @@ void PoolParallel::trial(int training)
 
 	int some_I_neuron_fired_global;
 
+	int some_input_changed_local; // local indicator that number of inputs changed
+	int some_input_changed_global; // global indicator that number of inputs changed
+	
 	int num_soma_spikes_local; // number of soma spikes in the process
 	int num_soma_spikes_global; // number of soma spikes in the network
 	
@@ -1991,6 +2064,8 @@ void PoolParallel::trial(int training)
     std::vector<unsigned> RA_neurons_fired_dend_realID;
 
 	std::vector<unsigned> I_neurons_fired;
+
+
 
     trial_number++;
     
@@ -2018,13 +2093,20 @@ void PoolParallel::trial(int training)
     some_I_neuron_fired_local = 0;
     some_I_neuron_fired_global = 0;
 	
+	some_input_changed_local = 0;
+	some_input_changed_global = 0;
+
 	// initialize update arrays
 	for (int i = 0; i < N_RA; i++)
 	{
 		update_Ge_RA_local[i] = 0.0;
         update_Gi_RA_local[i] = 0.0;
+        update_g_local[i] = 0.0;
+		new_strong_inputs_local[i] = 0;
         update_Ge_RA_global[i] = 0.0;
         update_Gi_RA_global[i] = 0.0;
+        update_g_global[i] = 0.0;
+		new_strong_inputs_global[i] = 0;
     }
 
 	for (int i = 0; i < N_I; i++)
@@ -2032,9 +2114,6 @@ void PoolParallel::trial(int training)
         update_Ge_I_local[i] = 0.0;
         update_Ge_I_global[i] = 0.0;
 	}
-
-	num_soma_spikes_local = 0;
-	num_soma_spikes_global = 0;
 
     // evolve dynamics
     for (unsigned t = 1; t < size; t++)
@@ -2059,7 +2138,7 @@ void PoolParallel::trial(int training)
             int syn_num = active_synapses_local[i].size();
 
             // set GABA potential
-            if ((mature_local[i] > 0)||(syn_num >= N_MATURATION)||(Id_RA_local[i] < N_TR))
+            if (mature_local[i] > 0)
                 HVCRA_local[i].set_Ei(E_GABA_MATURE);
             else
 		        HVCRA_local[i].set_Ei(E_GABA_IMMATURE);
@@ -2070,7 +2149,6 @@ void PoolParallel::trial(int training)
             // if some neuron produced somatic spike, do LTD for all previous dendritic spikes
             if (HVCRA_local[i].get_fired_soma())
             {
-				num_soma_spikes_local += 1;
                 some_RA_neuron_fired_soma_local = 1;
                 spikes_in_trial_soma_local[i].push_back(internal_time);
                 last_soma_spikes_local[i].push_back(internal_time);
@@ -2090,6 +2168,33 @@ void PoolParallel::trial(int training)
                     update_Ge_I_local[syn_ID] += weights_RA_I_local[fired_ID][j];
 
                 }
+				
+				// if neuron is mature
+				if (mature_local[i] > 0)
+				{
+					// if neuron is saturated, raise glutamate only for supersynapses
+					if ((int) active_supersynapses_local[fired_ID].size() == Nss)
+					{
+						int num_silent_synapses = (int) active_supersynapses_local[fired_ID].size();
+						for (int j = 0; j < num_silent_synapses; j++)
+						{
+							int syn_ID = active_supersynapses_local[fired_ID][j];
+							update_g_local[syn_ID] += T_SPIKE;
+
+						}
+					}
+					else
+					{
+						// loop over all silent synapses
+						int num_silent_synapses = (int) silent_synapses_local[fired_ID].size();
+						for (int j = 0; j < num_silent_synapses; j++)
+						{
+							int syn_ID = silent_synapses_local[fired_ID][j];
+							update_g_local[syn_ID] += T_SPIKE;
+
+						}
+					}
+				}
 
                 // loop over all excitatory targets
                 int num_RA_targets = active_synapses_local[fired_ID].size();
@@ -2117,7 +2222,11 @@ void PoolParallel::trial(int training)
 			    	//spike_times_soma_local[fired_ID], spike_times_dend_global[target_ID]);
                             LTD(weights_local[fired_ID][target_ID], dt);
                             update_synapse(fired_ID, target_ID, weights_local[fired_ID][target_ID]);
-                        }
+                       		
+							// if strong number of strong inputs to a target neuron changes
+							if (new_strong_inputs_local[target_ID] != 0)
+								some_input_changed_local = 1;
+					   	}
                     }
                 }
                 // if not saturated apply LTD rule with the last dendritic spike of all neurons and add glutamate to all neuron except the fired one
@@ -2137,6 +2246,10 @@ void PoolParallel::trial(int training)
 		//	    	spike_times_soma_local[fired_ID], spike_times_dend_global[j]);
                            		LTD(weights_local[fired_ID][j], dt);
                            		update_synapse(fired_ID, j, weights_local[fired_ID][j]);
+								
+								// if number of strong inputs to a target neuron changes
+								if (new_strong_inputs_local[j] != 0)
+									some_input_changed_local = 1;
 							}
                         }
                     }
@@ -2202,9 +2315,7 @@ void PoolParallel::trial(int training)
             MPI_Allreduce(&some_RA_neuron_fired_soma_local, &some_RA_neuron_fired_soma_global, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
             MPI_Allreduce(&some_RA_neuron_fired_dend_local, &some_RA_neuron_fired_dend_global, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
             MPI_Allreduce(&some_I_neuron_fired_local, &some_I_neuron_fired_global, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
-            MPI_Allreduce(&num_soma_spikes_local, &num_soma_spikes_global, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
-        	
-
+        
             if (some_I_neuron_fired_global > 0)
             {
             // sum update array and send to all processes
@@ -2227,6 +2338,7 @@ void PoolParallel::trial(int training)
 
                 MPI_Allreduce(&update_Ge_RA_local[0], &update_Ge_RA_global[0], N_RA, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
                 MPI_Allreduce(&update_Ge_I_local[0], &update_Ge_I_global[0], N_I, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+                MPI_Allreduce(&update_g_local[0], &update_g_global[0], N_RA, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
                 // now update excitatory conductances of all neurons
                 for (int i = 0; i < N_RA_local; i++)
@@ -2241,11 +2353,7 @@ void PoolParallel::trial(int training)
 
 				// update glutamate for all neurons
 				for (int i = 0; i < N_RA_local; i++)
-					HVCRA_local[i].raiseT(T_SPIKE * num_soma_spikes_global);
-
-				// reset number of spikes
-				num_soma_spikes_local = 0;
-				num_soma_spikes_global = 0;
+					HVCRA_local[i].raiseT(update_g_global[Id_RA_local[i]]);
 
             }
 
@@ -2340,7 +2448,11 @@ void PoolParallel::trial(int training)
          //                             printf("LTP from neuron %d onto %d; somatic spike at %f; dendritic spike at %f\n", Id_RA_local[i], fired_ID,
              //                                               last_soma_spikes_local[i][k], spike_times_dend_global[fired_ID]);
                                         update_synapse(i, fired_ID, weights_local[i][fired_ID]);
-                                    }
+                                   
+								   		// if number of strong inputs to a fired neuron changes
+										if (new_strong_inputs_local[fired_ID] != 0)
+											some_input_changed_local = 1;
+									}
                                 }
                             }
                         }
@@ -2366,7 +2478,11 @@ void PoolParallel::trial(int training)
                             //                                last_soma_spikes_local[i][k], spike_times_dend_global[fired_ID]);
                                         LTP(weights_local[i][fired_ID], dt);
                                         update_synapse(i, fired_ID, weights_local[i][fired_ID]);
-                                   }
+                                  		
+										// if number of strong inputs to a fired neuron changes
+										if (new_strong_inputs_local[fired_ID] != 0)
+											some_input_changed_local = 1;
+									}
                                 }
                             }
                         }
@@ -2381,7 +2497,10 @@ void PoolParallel::trial(int training)
                     if ((active_supersynapses_local[i].size()==Nss)&&(!remodeled_local[i]))
                     {
 					    this->axon_remodeling(i);
-					    mature_local[i] = 1;
+
+						// set silent synapses to be only supersynapses
+						//silent_synapses_local[i] = active_supersynapses_local[i];
+					    //mature_local[i] = 1;
 				    }
                 }
             }
@@ -2406,6 +2525,8 @@ void PoolParallel::trial(int training)
                 update_Gi_RA_local[i] = 0.0;
                 update_Ge_RA_global[i] = 0.0;
                 update_Gi_RA_global[i] = 0.0;
+				update_g_local[i] = 0.0;
+				update_g_global[i] = 0.0;
             }
 
 	        for (int i = 0; i < N_I; i++)
@@ -2425,8 +2546,39 @@ void PoolParallel::trial(int training)
     }
     this->potentiation_decay();
     //printf("After potentiation decay")
-    this->update_all_synapses();
-	//printf("internal time = %f\n", internal_time);
+    this->update_all_synapses(some_input_changed_local);
+	
+	MPI_Allreduce(&some_input_changed_local, &some_input_changed_global, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+
+	if (some_input_changed_global > 0)
+	{
+		// sum number of new inputs
+        MPI_Allreduce(&new_strong_inputs_local[0], &new_strong_inputs_global[0], N_RA, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+
+		// update number of inputs
+		for (int i = 0; i < N_RA; i++)
+		{	
+			num_strong_inputs[i] += new_strong_inputs_global[i];
+			
+			if (MPI_rank == 0)
+				printf("%d\t", num_strong_inputs[i]);
+
+		}
+		
+		for (int i = 0; i < N_RA_local; i++)
+		{
+			// if number of strong inputs is equal to max allowed number of supersynapses
+			// set it mature forever;
+			if (num_strong_inputs[Id_RA_local[i]] == Nss)
+			{
+				mature_local[i] = 1;
+				printf("\nnum_strong_inputs[%d] = %d\n", Id_RA_local[i], num_strong_inputs[Id_RA_local[i]]);
+			}
+		}
+
+	}
+
+//printf("internal time = %f\n", internal_time);
 	//printf("t*timeStep = %f\n", t*timeStep);
 }
 
@@ -2486,7 +2638,7 @@ void PoolParallel::axon_remodeling(int i)
     remodeled_local[i] = true;
 }
 
-void PoolParallel::update_all_synapses()
+void PoolParallel::update_all_synapses(int& some_input_changed)
 {
     //printf("Process %d; Updating all synapses after potentiation decay\n", MPI_rank);
     for (int i = 0; i < N_RA_local; i++)
@@ -2494,6 +2646,10 @@ void PoolParallel::update_all_synapses()
         for (int j = 0; j < N_RA; j++)
         {
             this->update_synapse(i, j, weights_local[i][j]);
+			
+			// if number of new inputs to neuron j changed
+			if (new_strong_inputs_local[j] != 0)
+				some_input_changed = 1;
         }
     }
 
@@ -2513,6 +2669,7 @@ void PoolParallel::update_synapse(int i, int j, double w)
        // printf("Activated supersynapse from %d onto %d; weight = %f\n", Id_RA_local[i], j, w);
         supersynapses_local[i][j] = true;
         active_supersynapses_local[i].push_back(j);
+		new_strong_inputs_local[j] += 1;
     }
 
     if ((w < SUPERSYNAPSE_THRESHOLD)&&(supersynapses_local[i][j]))
@@ -2520,6 +2677,7 @@ void PoolParallel::update_synapse(int i, int j, double w)
        // printf("Deactivated supersynapse from %d onto %d; weight = %f\n", Id_RA_local[i], j, w);
         supersynapses_local[i][j] = false;
         remodeled_local[i] = false;
+		new_strong_inputs_local[j] -= 1;
         std::vector<unsigned>::iterator pos = std::find(active_supersynapses_local[i].begin(),
                                                     active_supersynapses_local[i].end(), j);
 
@@ -3479,6 +3637,43 @@ void PoolParallel::write_dend_time_info(const char* filename)
     }
 }
 
+
+void PoolParallel::write_silent_synapses(const char *filename)
+{
+   if (MPI_rank == 0)
+    {
+        std::ofstream out;
+        int size;
+        // open files
+        out.open(filename, std::ios::binary | std::ios::out);
+
+        // write number of neurons
+        out.write(reinterpret_cast<char *>(&N_RA), sizeof(N_RA));
+
+        // write silent synapses
+        for (int i = 1; i <= N_RA; i++)
+        {
+            size = silent_synapses_global[i-1].size();
+
+            out.write(reinterpret_cast<char *>(&i), sizeof(i));
+            out.write(reinterpret_cast<char *>(&size), sizeof(size)); // write neuron's ID
+
+            for (int j = 0; j < size; j++)
+            {
+                int k = silent_synapses_global[i-1][j];
+                double G = T_SPIKE;
+
+                out.write(reinterpret_cast<char *>(&k), sizeof(k));
+                out.write(reinterpret_cast<char *>(&G), sizeof(G));
+
+            }
+
+        }
+		out.close();
+	}
+
+
+}
 
 void PoolParallel::write_invariable_synapses(const char* RA_I, const char* I_RA)
 {

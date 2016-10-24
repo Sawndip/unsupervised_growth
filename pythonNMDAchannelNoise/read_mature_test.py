@@ -7,7 +7,7 @@ Created on Mon Aug  1 11:32:11 2016
 
 import reading
 
-fileMature = "/home/eugene/Output/mature13.bin"
+fileMature = "/home/eugene/Output/mature45.bin"
 
 mature = reading.read_mature(fileMature)
 

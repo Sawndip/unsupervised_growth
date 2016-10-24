@@ -15,7 +15,7 @@ int main(int argc, char** argv)
 
     double network_update, Ei, beta, beta_s, Ap, Ad, Ap_super, Ad_super, f0, activation, super_threshold, Gmax, Gie_mean, Tp, Td, tauP, tauD;
     int N_RA, num_inh_clusters_in_row, num_inh_in_cluster, N_ss, N_TR;
-	double a, b, s_rai, s_ira;
+	double a, b, s_rai, s_ira, f;
 
 	double sigma_soma; // white noise amplitude in soma compartment
 	double sigma_dend; // white noise amplitude in dendritic compartment
@@ -74,6 +74,7 @@ int main(int argc, char** argv)
 		s_rai = atof(argv[33]);
 		b = atof(argv[34]);
 		s_ira = atof(argv[35]);
+		f = atof(argv[36]);
 
         if (rank == 0)
             printf("Output directory is %s\n", outputDirectory.c_str());
@@ -97,6 +98,7 @@ int main(int argc, char** argv)
     string fileRAxy = outputDirectory + "RA_xy.bin";
     string fileRA2I = outputDirectory + "RA_I_connections.bin";
     string fileI2RA = outputDirectory + "I_RA_connections.bin";
+	string fileSilent = outputDirectory + "silent.bin";
     string fileTimeInfo = outputDirectory + "timeInfo.bin";
     
 	string fileSimInfo = outputDirectory + "sim_info.bin";
@@ -154,11 +156,14 @@ int main(int argc, char** argv)
 		{
 			pool.initialize_coordinates();
 			pool.initialize_connections(Gei_mean, Gei_var, Gie_mean, Gie_var);
+			//pool.initialize_silent_synapses(f);
+			pool.initialize_all2all_silent_synapses();
 		}
 
 		pool.send_connections();
     	pool.write_coordinates(fileRAxy.c_str(), fileIxy.c_str());
     	pool.write_invariable_synapses(fileRA2I.c_str(), fileI2RA.c_str());
+		pool.write_silent_synapses(fileSilent.c_str());
     	pool.write_pajek_fixed(filePajekFixed.c_str());
 	}
 	
@@ -183,7 +188,7 @@ int main(int argc, char** argv)
     
 	string weightsFilename, pajekSuperFilename, pajekActiveFilename, pajekAllFilename, fileAllRAneurons, fileAllIneurons, fileMature;
    
-   	int synapses_trials_update = 5;
+   	int synapses_trials_update = 15;
 	int weights_trials_update = 70;
 
 	pool.write_sim_info(fileSimInfo.c_str(), synapses_trials_update, weights_trials_update);
@@ -193,7 +198,8 @@ int main(int argc, char** argv)
     bool data_gathered; // indicator if data was already gathered
 
 	while (true)
-    {	
+    {
+		//break;
 		data_gathered = false;
 		//break;
         pool.trial(training);
@@ -205,6 +211,8 @@ int main(int argc, char** argv)
             printf("Trial %d\n", trial_number);
         
         //pool.statistics();
+
+		std::vector<int> RAtoWrite{0, 1, 2, 3, 65, 275, 107, 67, 189, 16, 77};
 
         if (trial_number % synapses_trials_update == 0)
         {
@@ -222,12 +230,14 @@ int main(int argc, char** argv)
             pool.write_pajek_super(filePajekSuper.c_str());
             pool.write_pajek_active(filePajekActive.c_str());
            
-			for (int i = 0; i < N_RA; i++)
-	    	{
-	  			fileAllRAneurons = RAdir + "RA" + std::to_string(i) + ".bin";
-				pool.write_RA(fileAllRAneurons.c_str(), i);
-	    	}
+			//for (int i = 0; i < (int) RAtoWrite.size(); i++)
+	    	//{
+	  		//	fileAllRAneurons = RAdir + "RA" + std::to_string(RAtoWrite[i]) + ".bin";
+			//	pool.write_RA(fileAllRAneurons.c_str(), RAtoWrite[i]);
+	    	//}
 
+			//fileMature = fileMaturePerm + "mature" + std::to_string(count) + ".bin";
+			//pool.write_mature(fileMature.c_str());
 			//pool.write_pajek_all(filePajekAll.c_str());
         }
 	
@@ -261,7 +271,7 @@ int main(int argc, char** argv)
 	    	count++;
 		}
 		
-		    
+		//break;    
 		//for (int i = 0; i < N_I; i++)
 	    //{
 	      //  fileAllIneurons = Idir + "I" + std::to_string(i) + ".bin";
