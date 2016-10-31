@@ -13,7 +13,7 @@ int main(int argc, char** argv)
     double timeStep = 0.01;
     int trials = 100000;
 
-    double network_update, Ei, beta, beta_s, Ap, Ad, Ap_super, Ad_super, f0, activation, super_threshold, Gmax, Gie_mean, Tp, Td, tauP, tauD;
+    double network_update, NMDA_kick, Ei, beta, beta_s, Ap, Ad, Ap_super, Ad_super, f0, activation, super_threshold, Gmax, Gie_mean, Tp, Td, tauP, tauD;
     int N_RA, num_inh_clusters_in_row, num_inh_in_cluster, N_ss, N_TR;
 	double a, b, s_rai, s_ira, f;
 
@@ -44,37 +44,38 @@ int main(int argc, char** argv)
 		mu_dend = atof(argv[3]);
 		sigma_dend = atof(argv[4]);
         Gie_mean = atof(argv[5]);
-		Ei = atof(argv[6]);
-        beta = atof(argv[7]);
-        beta_s = atof(argv[8]);
-		Tp = atof(argv[9]);
-		Td = atof(argv[10]);
-		tauP = atof(argv[11]);
-		tauD = atof(argv[12]);
-        Ap = atof(argv[13]);
-        Ad = atof(argv[14]);
-        Ap_super = atof(argv[15]);
-        Ad_super = atof(argv[16]);
-		f0 = atof(argv[17]);
-        activation = atof(argv[18]);
-        super_threshold = atof(argv[19]);
-        Gmax = atof(argv[20]);
-        N_RA = atoi(argv[21]);
-        num_inh_clusters_in_row = atoi(argv[22]);
-        num_inh_in_cluster = atoi(argv[23]);
-        N_ss = atoi(argv[24]);
-        N_TR = atoi(argv[25]);
-        outputDirectory = argv[26];
-		reading = atoi(argv[27]);
-		filenumber = argv[28];
-		testing = atoi(argv[29]);
-		training = atoi(argv[30]);
-        network_update = atof(argv[31]);
-		a = atof(argv[32]);
-		s_rai = atof(argv[33]);
-		b = atof(argv[34]);
-		s_ira = atof(argv[35]);
-		f = atof(argv[36]);
+		NMDA_kick = atof(argv[6]);
+		Ei = atof(argv[7]);
+        beta = atof(argv[8]);
+        beta_s = atof(argv[9]);
+		Tp = atof(argv[10]);
+		Td = atof(argv[11]);
+		tauP = atof(argv[12]);
+		tauD = atof(argv[13]);
+        Ap = atof(argv[14]);
+        Ad = atof(argv[15]);
+        Ap_super = atof(argv[16]);
+        Ad_super = atof(argv[17]);
+		f0 = atof(argv[18]);
+        activation = atof(argv[19]);
+        super_threshold = atof(argv[20]);
+        Gmax = atof(argv[21]);
+        N_RA = atoi(argv[22]);
+        num_inh_clusters_in_row = atoi(argv[23]);
+        num_inh_in_cluster = atoi(argv[24]);
+        N_ss = atoi(argv[25]);
+        N_TR = atoi(argv[26]);
+        outputDirectory = argv[27];
+		reading = atoi(argv[28]);
+		filenumber = argv[29];
+		testing = atoi(argv[30]);
+		training = atoi(argv[31]);
+        network_update = atof(argv[32]);
+		a = atof(argv[33]);
+		s_rai = atof(argv[34]);
+		b = atof(argv[35]);
+		s_ira = atof(argv[36]);
+		f = atof(argv[37]);
 
         if (rank == 0)
             printf("Output directory is %s\n", outputDirectory.c_str());
@@ -122,7 +123,7 @@ int main(int argc, char** argv)
 
     int N_I = num_inh_clusters_in_row * num_inh_clusters_in_row * num_inh_in_cluster;
 	
-	PoolParallel pool(a, s_rai, b, s_ira, network_update, Ei, beta, beta_s, Tp, Td, tauP, tauD, Ap, Ad, Ap_super, Ad_super, f0, activation, super_threshold, Gmax, N_RA, num_inh_clusters_in_row, num_inh_in_cluster, N_ss, N_TR);
+	PoolParallel pool(a, s_rai, b, s_ira, network_update, NMDA_kick, Ei, beta, beta_s, Tp, Td, tauP, tauD, Ap, Ad, Ap_super, Ad_super, f0, activation, super_threshold, Gmax, N_RA, num_inh_clusters_in_row, num_inh_in_cluster, N_ss, N_TR);
 
 	pool.initialize_generator();
 
@@ -188,7 +189,7 @@ int main(int argc, char** argv)
     
 	string weightsFilename, pajekSuperFilename, pajekActiveFilename, pajekAllFilename, fileAllRAneurons, fileAllIneurons, fileMature;
    
-   	int synapses_trials_update = 15;
+   	int synapses_trials_update = 10;
 	int weights_trials_update = 70;
 
 	pool.write_sim_info(fileSimInfo.c_str(), synapses_trials_update, weights_trials_update);

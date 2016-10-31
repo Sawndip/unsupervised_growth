@@ -18,7 +18,7 @@ using std::vector;
 class PoolParallel
 {
 public:
-	PoolParallel(double a, double s_rai, double b, double sigma_ira, double network_update, double Ei, double beta, double beta_s, double Tp, double Td, double tauP, double tauD, double Ap, double Ad, double Ap_super, double Ad_super, double f0, double activation, double super_threshold, double Gmax, int N_ra, int Nic, int NiInC, int N_ss, int N_tr);
+	PoolParallel(double a, double s_rai, double b, double sigma_ira, double network_update, double e_kick, double Ei, double beta, double beta_s, double Tp, double Td, double tauP, double tauD, double Ap, double Ad, double Ap_super, double Ad_super, double f0, double activation, double super_threshold, double Gmax, int N_ra, int Nic, int NiInC, int N_ss, int N_tr);
 	~PoolParallel();
 
 	void read_from_file(const char* RA_xy, const char* I_xy, const char* RA_RA_all, const char* RA_RA_active, const char* RA_RA_super, const char* RA_I, const char* I_RA, const char* mature, const char* timeInfo); // read network structure from files
@@ -132,8 +132,7 @@ protected:
 		vector <double> xx_I_cluster; // x-coordinates of centers of inhibitory clusters
 		vector <double> yy_I_cluster; // y-coordinates of centers of inhibitory clusters
 
-		const static double T_SPIKE; // glutamate release after some neuron spikes in the pool
-		const static double g_KICK; // glutamate kick value
+		double NMDA_kick; // NMDA kick value
 		const static double CLUSTER_SIZE; // cluster size
         const static double MIN_INTERNEURON_DISTANCE; // minimum distance between neurons
 		double A_RA2I; // constant for nearby connections
@@ -222,14 +221,14 @@ protected:
 		unsigned* Id_I_local; // Id of I neurons in each process
 
 		// update conductances and glutamate
-		double* update_Ge_RA_local;
+		double* update_Ge_AMPA_RA_local;
+		double* update_Ge_NMDA_RA_local;
 		double* update_Gi_RA_local;
-		double* update_g_local;
 		double* update_Ge_I_local;
 	
-		double* update_Ge_RA_global;
+		double* update_Ge_AMPA_RA_global;
+		double* update_Ge_NMDA_RA_global;
 		double* update_Gi_RA_global;
-		double* update_g_global;
 		double* update_Ge_I_global;
 
 

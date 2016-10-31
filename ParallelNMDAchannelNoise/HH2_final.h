@@ -35,11 +35,12 @@ public:
 	double get_spike_time(); // get time of the last spike
 	int get_spike_number_soma(); // get number of somatic spikes
 	int get_spike_number_dend(); // get number of dendritic spikes
+	std::vector<double> get_Vs(); // get voltage of somatic compartment
+	std::vector<double> get_Vd(); // get voltage of dendritic compartment
 
 	// noise
 	void set_noise(double Gs_exc, double Gs_inh, double Gd_exc, double Gd_inh); // set noise for the neuron
 	void set_Ei(double E); // set GABA reverse potential
-	void set_glutamate(double g); // set dendritic glutamate
 	void set_no_noise(); // disable Poisson point noisy spikes
 	void set_noise_generator(Poisson_noise* g); // set Poisson noise generator
 	void set_white_noise_soma(); // set white noise to somatic compartment
@@ -61,13 +62,14 @@ public:
     void R4_soma_kick(); // Runge Kutta step with kicks in inhibitory somatic conductance every kick_time
 
 	// change conductance
-	void raiseE(double G); // raise excitatory conductance
+	void raise_AMPA(double G); // raise excitatory AMPA conductance
+	void raise_NMDA(double G); // raise excitatory NMDA conductance
 	void raiseI(double G); // raise inhibitory conductance
-	void raiseT(double release); // raise dendritic glutamate
 	// targets
 	void set_targetI(HHI_final* target, int n, double G); // set inhibitory target
 	void set_targetRA(HH2_final* target, int n, double G); // set excitatory target
 
+	void set_silent_targetRA(HH2_final* target, int n, double G); // set excitatory silent NMDA target
 
 protected:
 	// model parameters
@@ -91,7 +93,6 @@ protected:
 	double Ei;	//	inhibitory reverse potential
 	const static double tExc;	//	time constant for excitatory conductance
 	const static double tInh;	//	time constant for inhibitory conductance
-	const static double t_glutamate; // time constant for glutamate decay
 
 	// dynamic variables
 	vector<double> time; // time array
@@ -111,22 +112,12 @@ protected:
 	vector<double> G_NMDA; // NMDA conductance of dendritic compartment
 	vector<double> G_AMPA; // AMPA conductance of dendritic compartment
 	vector<double> E_gaba; // reverse GABA potential
-	vector<double> s_soma; // fluctuations in fraction of open somatic NMDA channels
-	vector<double> s_dend; // fluctuations in fraction of open dendritic NMDA channels
-	vector<double> T; // glutamate extracellular concentration
 	// constants
 	
-	const static double alpha; // transition rate to open state 
 	const static double beta; // transition rate to closed state
-	const static double T0; // glutamate extracellular concentration
-	const static double G_channel; // conductance of open NMDA channel
-	//const static double p0; // probability for a channel to be open
-	const static double s0; // fraction of open NMDA channels
 	const static double C; // magnesium extracellular concentration
 	const static double bin_size; // bin size for current white noise stimulus
 	const static double bin_size_nmda; // bin size for nmda fraction of open channels simulation
-	const static int nmda_soma; // number of NMDA extrasynaptic receptors in somatic compartment
-	const static int nmda_dend; // number of NMDA extrasynaptic receptors in dendritic compartment
 	//	thresholds
 	const static double threshold; // threshold for somatic spike
 	const static double threshold_dend; // threshold for dendritic spike
@@ -202,6 +193,10 @@ protected:
 	vector<HH2_final*> targets_RA;	//	all neuron's connections to subsequent neurons
 	vector<int> targetsID_RA;	//	vector which contains all ID numbers of target neurons
 	vector<double> targetsG_RA;	//	vector with conductances of all target synapses
+	vector<HH2_final*> silent_targets_RA;	//	all neuron's silent connections to subsequent neurons
+	vector<int> silent_targetsID_RA;	//	vector which contains all ID numbers of silent target neurons
+	vector<double> silent_targetsG_RA;	//	vector with conductances of all silent target synapses
+
 
 	vector<HHI_final*> targets_I;	//	all neuron's connections to inhibitory HVC neurons;
 	vector<int> targetsID_I;	//	vector which contains all ID numbers of target HVCI neurons
@@ -216,9 +211,8 @@ protected:
     int kick_time; // time to kick
 	//	Additional functions for Runge Kutta's method
 
-	double ks(double sd, double t);
 	double kVs(double vs, double vd, double n, double h, double t);
-	double kVd(double vs, double vd, double r, double c, double ca, double sd, double t);
+	double kVd(double vs, double vd, double r, double c, double ca, double t);
 	double kn(double vs,  double n);
 	double kh(double vs, double h);
 	double kr(double vd, double r);
@@ -226,9 +220,7 @@ protected:
 	double kCa(double vd, double r, double ca);
 
 	//	Conductance and current functions
-	double glutamate(double t);
-	double Gs_NMDA(double vs, int timeInd);
-	double Gd_NMDA(double sd, double vd);
+	double G_NMDA_future(double vd, double t);
 
 	double Gi_s(double t);	//	inhibitory soma conductance
 	double Gi_d(double t);	//	inhibitory dendrite conductance
