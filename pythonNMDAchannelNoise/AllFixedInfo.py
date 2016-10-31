@@ -98,7 +98,7 @@ def get_number_I_inputs_from_group(group, RAtargets, Itargets):
 
 def get_average_number_I_inputs(groupSize, RAtargets, Itargets, nRepeats):
     """ 
-    Function finds average number of connections pool RA neurons rerecive due to indirect 
+    Function finds average number of connections pool RA neurons receive due to indirect 
     connections through interneurons from the group of randomly selected neurons
     Here we ignore multiple connections from neurons in the group to the same interneuron.    
     """

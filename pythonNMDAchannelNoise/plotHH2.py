@@ -23,6 +23,19 @@ simFileAbs = "/home/eugene/Output/RAneurons/RA189.bin"	#	datafile name
 #testFileRel = "1.bin"
 SIZE_OF_DOUBLE = 8
 SIZE_OF_INT = 4
+
+def print_steady_params():
+    print "Steady state parameters:"
+    print "Vs = ",Vs[-1]
+    print "n = ",n[-1]
+    print "h = ",h[-1]
+    print "Vd = ",Vd[-1]
+    print "r = ",r[-1]
+    print "c = ",c[-1]
+    print "Ca = ",Ca[-1]
+
+    
+
 #	open file and read all its content to fileContent variable
 
 
@@ -43,15 +56,17 @@ SIZE_OF_INT = 4
 #print len(voltage)
 #print len(time)
 
-(t, Vs, Is, n, h, Vd, Id, r, c, Ca, Gexc_d, Ginh_d, Gexc_s, Ginh_s, s_d, g, Ei, flag, Nsoma, Ndend) = reading.read_hh2(simFileAbs)
+(t, Vs, Is, n, h, Vd, Id, r, c, Ca, Gexc_d, Ginh_d, Gexc_s, Ginh_s, G_NMDA, Ei, flag, Nsoma, Ndend) = reading.read_hh2(simFileAbs)
 
 print Nsoma
-print "Vs", Vs
+#print "Vs", Vs
 
 #print "s_soma", s_s
 #print "s_dend", s_d
 
 print "Ei = ", Ei[100]
+print_steady_params()
+
 
 #print(len(Vd))
 #print(n[0])
@@ -68,7 +83,7 @@ for i in range(Is.size):
     Is[i] /= 1000
     Id[i] /= 1000
 
-print Is
+#print Is
 
 fig1 = plt.figure(1)
 ax1 = fig1.add_subplot(511)
@@ -79,7 +94,7 @@ plt.title("Hodgkin-Huxley 2-compartment Neuron Model")
 
 ax2 = fig1.add_subplot(512)
 ax2.plot(t, Is, 'b', linewidth = 2.0)
-ax2.set_ylabel("Is, ext (nA)")
+ax2.set_ylabel("Is (nA)")
 
 ax3 = fig1.add_subplot(513)
 ax3.plot(t, Vd, 'r', linewidth = 2.0)
@@ -127,42 +142,31 @@ plt.grid(True)
 
 
 fig3 = plt.figure(3)
-ax1 = fig3.add_subplot(411)
+ax1 = fig3.add_subplot(511)
 ax1.plot(t, Gexc_d, 'r', linewidth = 2.0)
-ax1.set_ylabel("Gexc_d")
+ax1.set_ylabel("$G_{exc}^{d}$")
 plt.title('Synaptic conductances. s - refers to soma, d - to dendrite compartments.')
 
-ax2 = fig3.add_subplot(412)
-ax2.plot(t, Ginh_d, 'b', linewidth = 2.0)
-ax2.set_ylabel("Ginh_d")
+ax2 = fig3.add_subplot(512)
+ax2.plot(t, G_NMDA, 'b', linewidth = 2.0)
+ax2.set_ylabel("$G_{NMDA}$")
 
-ax3 = fig3.add_subplot(413)
-ax3.plot(t, Gexc_s, 'm', linewidth = 2.0)
-ax3.set_ylabel("Gexc_s")
+ax3 = fig3.add_subplot(513)
+ax3.plot(t, Ginh_d, 'm', linewidth = 2.0)
+ax3.set_ylabel("$G_{inh}^{d}$")
 
-ax4 = fig3.add_subplot(414)
-ax4.plot(t, Ginh_s, 'g', linewidth = 2.0)
-ax4.set_ylabel("Ginh_s")
+ax4 = fig3.add_subplot(514)
+ax4.plot(t, Gexc_s, 'y', linewidth = 2.0)
+ax4.set_ylabel("$G_{exc}^{s}$")
+
+ax5 = fig3.add_subplot(515)
+ax5.plot(t, Ginh_s, 'g', linewidth = 2.0)
+ax5.set_ylabel("$G_{inh}^{s}$")
 
 ax4.set_xlabel("t (ms)")
 
 plt.grid(True)
 
-fig4 = plt.figure(4)
-ax1 = fig4.add_subplot(111)
-ax1.plot(t, Ei)
-ax1.set_xlabel('t (ms)')
-ax1.set_ylabel('Ei (mV)')
-
-fig5 = plt.figure(5)
-ax1 = fig5.add_subplot(211)
-ax1.plot(t, s_d, 'r', linewidth = 2.0)
-ax1.set_ylabel("fraction of open NMDA channels")
-plt.title('NMDA receptors.')
-
-ax2 = fig5.add_subplot(212)
-ax2.plot(t, g, 'b', linewidth = 2.0)
-ax2.set_ylabel("glutamate")
 #datacursor(formatter="x: {x:.3f}\ny: {y:.3f}".format)
 plt.show()
 

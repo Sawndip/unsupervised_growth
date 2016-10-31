@@ -181,9 +181,8 @@ def read_hh2(fileName):
     Ginh_d = np.zeros((dataPointsNumber, 1))
     Gexc_s = np.zeros((dataPointsNumber, 1))
     Ginh_s = np.zeros((dataPointsNumber, 1))
-    s_d = np.zeros((dataPointsNumber, 1))
-    g = np.zeros((dataPointsNumber, 1))
-
+    G_NMDA = np.zeros((dataPointsNumber, 1))
+    
     flag = np.zeros((dataPointsNumber, 1))
     Ei = np.zeros((dataPointsNumber, 1))
 
@@ -204,22 +203,21 @@ def read_hh2(fileName):
         Ginh_d[i] = struct.unpack("<d", fileContent[(ind+11*SIZE_OF_DOUBLE):(ind+12*SIZE_OF_DOUBLE)])[0]        
         Gexc_s[i] = struct.unpack("<d", fileContent[(ind+12*SIZE_OF_DOUBLE):(ind+13*SIZE_OF_DOUBLE)])[0]
         Ginh_s[i] = struct.unpack("<d", fileContent[(ind+13*SIZE_OF_DOUBLE):(ind+14*SIZE_OF_DOUBLE)])[0]
-        s_d[i] = struct.unpack("<d", fileContent[(ind+15*SIZE_OF_DOUBLE):(ind+16*SIZE_OF_DOUBLE)])[0]
-        g[i] = struct.unpack("<d", fileContent[(ind+16*SIZE_OF_DOUBLE):(ind+17*SIZE_OF_DOUBLE)])[0]
-     
-        Ei[i] = struct.unpack("<d", fileContent[(ind+14*SIZE_OF_DOUBLE):(ind+15*SIZE_OF_DOUBLE)])[0]
+        G_NMDA[i] = struct.unpack("<d", fileContent[(ind+14*SIZE_OF_DOUBLE):(ind+15*SIZE_OF_DOUBLE)])[0]
+        
+        Ei[i] = struct.unpack("<d", fileContent[(ind+15*SIZE_OF_DOUBLE):(ind+16*SIZE_OF_DOUBLE)])[0]
        
  #print Ei[i]
 	
 #	if i // 100 == 0:
 #		print t[i]
-        flag[i] = struct.unpack("<i", fileContent[(ind+17*SIZE_OF_DOUBLE):(ind+17*SIZE_OF_DOUBLE+SIZE_OF_INT)])[0]
+        flag[i] = struct.unpack("<i", fileContent[(ind+16*SIZE_OF_DOUBLE):(ind+16*SIZE_OF_DOUBLE+SIZE_OF_INT)])[0]
         
         
 
-        ind += 17*SIZE_OF_DOUBLE + SIZE_OF_INT
+        ind += 16*SIZE_OF_DOUBLE + SIZE_OF_INT
     
-    return (t, Vs, Is, n, h, Vd, Id, r, c, Ca, Gexc_d, Ginh_d, Gexc_s, Ginh_s, s_d, g, Ei, flag, Nsoma, Ndend)
+    return (t, Vs, Is, n, h, Vd, Id, r, c, Ca, Gexc_d, Ginh_d, Gexc_s, Ginh_s, G_NMDA, Ei, flag, Nsoma, Ndend)
 
 
 
@@ -359,4 +357,51 @@ def read_simTime_info(filename):
     network_time = struct.unpack("<d", data[(SIZE_OF_INT + SIZE_OF_DOUBLE):(SIZE_OF_INT + 2*SIZE_OF_DOUBLE)])[0]
         
     return trial_number, internal_time, network_time
+    
+def read_kick_response(filename):
+    with open(filename, "rb") as file:
+        data = file.read()
+        file.close()
+    
+    N_RA = struct.unpack("<i", data[:SIZE_OF_INT])[0]  
+    mu_soma = struct.unpack("<d", data[SIZE_OF_INT:(SIZE_OF_INT + SIZE_OF_DOUBLE)])[0] 
+    sigma_soma = struct.unpack("<d", data[(SIZE_OF_INT + SIZE_OF_DOUBLE):(SIZE_OF_INT + 2*SIZE_OF_DOUBLE)])[0] 
+    mu_dend = struct.unpack("<d", data[(SIZE_OF_INT + 2*SIZE_OF_DOUBLE):(SIZE_OF_INT + 3*SIZE_OF_DOUBLE)])[0] 
+    sigma_dend = struct.unpack("<d", data[(SIZE_OF_INT + 3*SIZE_OF_DOUBLE):(SIZE_OF_INT + 4*SIZE_OF_DOUBLE)])[0] 
+    Ei = struct.unpack("<d", data[(SIZE_OF_INT + 4*SIZE_OF_DOUBLE):(SIZE_OF_INT + 5*SIZE_OF_DOUBLE)])[0] 
+    inh_kick = struct.unpack("<d", data[(SIZE_OF_INT + 5*SIZE_OF_DOUBLE):(SIZE_OF_INT + 6*SIZE_OF_DOUBLE)])[0] 
+    NMDA_kick = struct.unpack("<d", data[(SIZE_OF_INT + 6*SIZE_OF_DOUBLE):(SIZE_OF_INT + 7*SIZE_OF_DOUBLE)])[0] 
+
+    kick_number = struct.unpack("<i", data[(SIZE_OF_INT + 7*SIZE_OF_DOUBLE):(2*SIZE_OF_INT + 7*SIZE_OF_DOUBLE)])[0]
+    num_soma_spikes = struct.unpack("<i", data[(2*SIZE_OF_INT + 7*SIZE_OF_DOUBLE):(3*SIZE_OF_INT + 7*SIZE_OF_DOUBLE)])[0]
+    num_dend_spikes = struct.unpack("<i", data[(3*SIZE_OF_INT + 7*SIZE_OF_DOUBLE):(4*SIZE_OF_INT + 7*SIZE_OF_DOUBLE)])[0]
+    average_dend_spike_time = struct.unpack("<d", data[(4*SIZE_OF_INT + 7*SIZE_OF_DOUBLE):(4*SIZE_OF_INT + 8*SIZE_OF_DOUBLE)])[0]
+    std_dend_spike_time = struct.unpack("<d", data[(4*SIZE_OF_INT + 8*SIZE_OF_DOUBLE):(4*SIZE_OF_INT + 9*SIZE_OF_DOUBLE)])[0]
+        
+    return N_RA, mu_soma, sigma_soma, mu_dend, sigma_dend, Ei, inh_kick, NMDA_kick, kick_number, num_soma_spikes, \
+            num_dend_spikes, average_dend_spike_time, std_dend_spike_time
+
+def read_noise_check(filename):
+    with open(filename, "rb") as file:
+        data = file.read()
+        file.close()
+    
+    N_RA = struct.unpack("<i", data[:SIZE_OF_INT])[0]  
+    mu_soma = struct.unpack("<d", data[SIZE_OF_INT:(SIZE_OF_INT + SIZE_OF_DOUBLE)])[0] 
+    sigma_soma = struct.unpack("<d", data[(SIZE_OF_INT + SIZE_OF_DOUBLE):(SIZE_OF_INT + 2*SIZE_OF_DOUBLE)])[0] 
+    mu_dend = struct.unpack("<d", data[(SIZE_OF_INT + 2*SIZE_OF_DOUBLE):(SIZE_OF_INT + 3*SIZE_OF_DOUBLE)])[0] 
+    sigma_dend = struct.unpack("<d", data[(SIZE_OF_INT + 3*SIZE_OF_DOUBLE):(SIZE_OF_INT + 4*SIZE_OF_DOUBLE)])[0] 
+    
+    num_soma_spikes = struct.unpack("<i", data[(SIZE_OF_INT + 4*SIZE_OF_DOUBLE):(2*SIZE_OF_INT + 4*SIZE_OF_DOUBLE)])[0]
+    num_dend_spikes = struct.unpack("<i", data[(2*SIZE_OF_INT + 4*SIZE_OF_DOUBLE):(3*SIZE_OF_INT + 4*SIZE_OF_DOUBLE)])[0]
+    
+    total_sim_time = struct.unpack("<d", data[(3*SIZE_OF_INT + 4*SIZE_OF_DOUBLE):(3*SIZE_OF_INT + 5*SIZE_OF_DOUBLE)])[0]        
+    mean_vs = struct.unpack("<d", data[(3*SIZE_OF_INT + 5*SIZE_OF_DOUBLE):(3*SIZE_OF_INT + 6*SIZE_OF_DOUBLE)])[0]
+    std_vs = struct.unpack("<d", data[(3*SIZE_OF_INT + 6*SIZE_OF_DOUBLE):(3*SIZE_OF_INT + 7*SIZE_OF_DOUBLE)])[0]
+    mean_vd = struct.unpack("<d", data[(3*SIZE_OF_INT + 7*SIZE_OF_DOUBLE):(3*SIZE_OF_INT + 8*SIZE_OF_DOUBLE)])[0]
+    std_vd = struct.unpack("<d", data[(3*SIZE_OF_INT + 8*SIZE_OF_DOUBLE):(3*SIZE_OF_INT + 9*SIZE_OF_DOUBLE)])[0]
+    
+    
+    return N_RA, mu_soma, sigma_soma, mu_dend, sigma_dend, num_soma_spikes, num_dend_spikes, total_sim_time,\
+            mean_vs, std_vs, mean_vd, std_vd
     

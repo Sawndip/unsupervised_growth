@@ -79,6 +79,7 @@ public:
 	void write_weights(const char * filename); // write weights of all synapses in network
     void write_soma_time_info(const char* filename); // write somatic spike information to a file
     void write_dend_time_info(const char* filename); // write dendritic spike information to a file
+    void write_interneuron_time_info(const char* filename); // write interneuron spike information to a file
 	void write_mature(const char* filename); // write mature neurons
     void write_time_info(const char* filename); // write simulation time information
 
@@ -186,10 +187,12 @@ protected:
         std::deque<double>* last_soma_spikes_global; // last NUM_SOMA_SPIKES spikes in somatic compartment
 
         double* spike_times_soma_local; // local array with neurons somatic spike times
-		double* spike_times_dend_local; // local array with neurons sdendritic pike times
+		double* spike_times_dend_local; // local array with neurons dendritic spike times
+		double* spike_times_interneuron_local; // local array with neurons interneuron spike times
 
 		double* spike_times_soma_global; // array with the most recent somatic spike times of neurons
 		double* spike_times_dend_global; // array with the most recent dendritic spike times of neurons
+		double* spike_times_interneuron_global; // array with the most recent interneuron spike times of neurons
 
         vector<double>* spikes_in_trial_soma_global; // array with somatic spike times in the last trial
 		vector<double>* spikes_in_trial_dend_global; // array with dendritic spike times in the last trial

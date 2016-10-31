@@ -133,9 +133,11 @@ PoolParallel::PoolParallel(double a, double s_rai, double b, double s_ira, doubl
     spikes_in_trial_soma_global = new std::vector<double>[N_RA];
     spike_times_dend_global = new double[N_RA];
     spikes_in_trial_dend_global = new std::vector<double>[N_RA];
+    spikes_in_trial_interneuron_global = new std::vector<double>[N_I];
 
     spikes_in_trial_soma_local = new std::vector<double>[N_RA_local];
     spikes_in_trial_dend_local = new std::vector<double>[N_RA_local];
+    spikes_in_trial_interneuron_local = new std::vector<double>[N_I_local];
 
 	remodeled_local = new bool[N_RA_local];
 	mature_local = new int[N_RA_local];
@@ -1872,6 +1874,9 @@ void PoolParallel::reset_after_trial()
         spikes_in_trial_dend_global[i].clear();
     }
 
+	for (int i = 0; i < N_I; i++)	
+		spikes_in_trial_interneuron_global[i].clear();
+
     for (int i = 0; i < N_RA_local; i++)
     {
         HVCRA_local[i].reset();
@@ -1880,7 +1885,10 @@ void PoolParallel::reset_after_trial()
 
     }
     for (int i = 0; i < N_I_local; i++)
+	{
         HVCI_local[i].reset();
+		spikes_in_trial_interneuron_local[i].clear();
+	}
 }
 
 void PoolParallel::randomize_after_trial()
@@ -2286,7 +2294,8 @@ void PoolParallel::trial(int training)
             {
                 //printf("My rank = %d; I neuron %d fired; spike_time = %f\n", MPI_rank, Id_I_local[i], internal_time);
                 some_I_neuron_fired_local = 1;
-                
+                spikes_in_trial_interneuron_local[i].push_back(internal_time);
+
                 int fired_ID = i;
 
                 int num_RA_targets = syn_ID_I_RA_local[fired_ID].size();
@@ -2856,20 +2865,35 @@ void PoolParallel::gather_data()
     int *spike_num_soma_global = new int[N_RA];
     int *spike_num_dend_local = new int[N_RA_local];
     int *spike_num_dend_global = new int[N_RA];
+    int *spike_num_interneuron_local = new int[N_I_local];
+    int *spike_num_interneuron_global = new int[N_I];
 
-    int *recvcounts = new int[MPI_size];
-    int *displs = new int[MPI_size];
+    int *recvcounts_RA = new int[MPI_size];
+    int *displs_RA = new int[MPI_size];
+	int *recvcounts_I = new int[MPI_size];
+    int *displs_I = new int[MPI_size];
+
 
     if (MPI_rank == 0)
     {
-        recvcounts[0] = N_RA_sizes[0];
-        displs[0] = 0;
+        recvcounts_RA[0] = N_RA_sizes[0];
+        displs_RA[0] = 0;
 
         for (int i = 1; i < MPI_size; i++)
         {
-            recvcounts[i] = N_RA_sizes[i];
-            displs[i] = displs[i-1] + recvcounts[i-1];
+            recvcounts_RA[i] = N_RA_sizes[i];
+            displs_RA[i] = displs_RA[i-1] + recvcounts_RA[i-1];
         }
+		
+		recvcounts_I[0] = N_I_sizes[0];
+        displs_I[0] = 0;
+
+        for (int i = 1; i < MPI_size; i++)
+        {
+            recvcounts_I[i] = N_I_sizes[i];
+            displs_I[i] = displs_I[i-1] + recvcounts_I[i-1];
+        }
+
     }
 
     for (int i = 0; i < N_RA_local; i++)
@@ -2884,22 +2908,27 @@ void PoolParallel::gather_data()
         //printf("Rank = %d, spike_num_local[%d] = %d\n", MPI_rank, Id_RA_local[i], spike_num_local[i]);
     }
 
+	for (int i = 0; i < N_I_local; i++)
+		spike_num_interneuron_local[i] = (int) spikes_int_trial_interneuron_local[i].size();
+
     MPI_Gatherv(&supersyn_sizes_local[0], N_RA_local, MPI_INT,
-        &supersyn_sizes_global[0], recvcounts, displs, MPI_INT, 0, MPI_COMM_WORLD);
+        &supersyn_sizes_global[0], recvcounts_RA, displs_RA, MPI_INT, 0, MPI_COMM_WORLD);
 
     MPI_Gatherv(&syn_sizes_local[0], N_RA_local, MPI_INT,
-        &syn_sizes_global[0], recvcounts, displs, MPI_INT, 0, MPI_COMM_WORLD);
-
+        &syn_sizes_global[0], recvcounts_RA, displs_RA, MPI_INT, 0, MPI_COMM_WORLD);
+	
+	MPI_Gatherv(&spike_num_interneuron_local[0], N_I_local, MPI_INT,
+        &spike_num_interneuron_global[0], recvcounts_I, displs_I, MPI_INT, 0, MPI_COMM_WORLD);
 
     MPI_Gatherv(&spike_num_soma_local[0], N_RA_local, MPI_INT,
-        &spike_num_soma_global[0], recvcounts, displs, MPI_INT, 0, MPI_COMM_WORLD);
+        &spike_num_soma_global[0], recvcounts_RA, displs_RA, MPI_INT, 0, MPI_COMM_WORLD);
 
     MPI_Gatherv(&spike_num_dend_local[0], N_RA_local, MPI_INT,
-        &spike_num_dend_global[0], recvcounts, displs, MPI_INT, 0, MPI_COMM_WORLD);
+        &spike_num_dend_global[0], recvcounts_RA, displs_RA, MPI_INT, 0, MPI_COMM_WORLD);
 
 	// gather maturation indicator
     MPI_Gatherv(&mature_local[0], N_RA_local, MPI_INT,
-        &mature_global[0], recvcounts, displs, MPI_INT, 0, MPI_COMM_WORLD);
+        &mature_global[0], recvcounts_RA, displs_RA, MPI_INT, 0, MPI_COMM_WORLD);
     
 	if (MPI_rank == 0)
     {
@@ -2934,8 +2963,13 @@ void PoolParallel::gather_data()
                 //        active_synapses_global[i][k]);
         }
 
-
-        for (int i = 0; i < N_RA_local; i++)
+		for (int i = 0; i < N_I; i++)
+			spikes_in_trial_interneuron_global[i].resize(spike_num_interneuron_global[i]);
+        
+		for (int i = 0; i < N_I_local; i++)
+			spikes_in_trial_interneuron_global[i] = spikes_in_trial_interneuron_local[i];
+		
+		for (int i = 0; i < N_RA_local; i++)
         {
             for (int j = 0; j < N_RA; j++)
             {
@@ -3058,9 +3092,58 @@ void PoolParallel::gather_data()
         }
     }
 
+	// gather spikes of interneurons
+	int N = N_I_sizes[0]; // number of I neurons in the processes with lower rank
 
-    delete [] recvcounts;
-    delete [] displs;
+        for (int i = 1; i < MPI_size; i++)
+        {
+
+            for (int j = 0; j < N_I_sizes[i]; j++)
+            {
+                int count;
+				int receive_index = N + j;
+
+                if (spike_num_interneuron_global[receive_index] != 0)
+                {
+                    MPI_Recv(&spikes_in_trial_interneuron_global[receive_index][0],
+                        spike_num_interneuron_global[receive_index], MPI_DOUBLE, i, 0, MPI_COMM_WORLD, &status);
+
+                    MPI_Get_count(&status, MPI_INT, &count);
+                    //printf("Recv spikes in trial; from i = %d  count = %d\n", i, count);
+                }
+
+               // for (int k = 0; k < spikes_in_trial_global[N_RA_local + (i-1)*offset + j].size(); k++)
+                   // printf("Master; spikes_in_trial_global[%d][%d] = %f\n", N_RA_local + (i-1)*offset + j, k,
+                      //  spikes_in_trial_global[N_RA_local + (i-1)*offset + j][k]);
+            }
+
+			N += N_I_sizes[i];
+        }
+
+    }
+
+    else
+    {
+        for (int i = 0; i < N_I_local; i++)
+        {
+            if (spike_num_interneuron_local[i] != 0)
+                MPI_Send(&spikes_in_trial_interneuron_local[i][0],
+                        spike_num_interneuron_local[i], MPI_DOUBLE, 0, 0, MPI_COMM_WORLD);
+
+           // for (int k = 0; k < active_supersynapses_local[i].size(); k++)
+               // printf("Rank %d; active_supersynapses_local[%d][%d] = %u\n", MPI_rank,
+                 //   Id_RA_local[i], k, active_supersynapses_local[i][k]);
+
+
+        }
+    }
+
+
+
+    delete [] recvcounts_RA;
+    delete [] displs_RA;
+    delete [] recvcounts_I;
+    delete [] displs_I;
     delete [] supersyn_sizes_global;
     delete [] supersyn_sizes_local;
     delete [] syn_sizes_global;
@@ -3069,7 +3152,8 @@ void PoolParallel::gather_data()
     delete [] spike_num_soma_global;
     delete [] spike_num_dend_local;
     delete [] spike_num_dend_global;
-
+	delete [] spike_num_interneuron_local;
+	delete [] spike_num_interneuron_global;
 }
 
 void PoolParallel::get_neuronRA_location(unsigned n, int* rank, int* shift)
@@ -3618,6 +3702,40 @@ void PoolParallel::write_dend_time_info(const char* filename)
 	    {
                 //out.write(reinterpret_cast<char *>(&spikes_in_trial_dend_global[i][j]), sizeof(double));
 	        double relative_spike_time = spikes_in_trial_dend_global[i][j] - (trial_number - 1) * trial_duration;
+        	out.write(reinterpret_cast<char *>(&relative_spike_time), sizeof(double));
+			//printf("Neuron %d; relative spike time = %f\n", i, relative_spike_time);
+	    }
+	}
+        //out.write(reinterpret_cast<char *>(spike_times), N_RA*sizeof(double));
+
+        out.close();
+    }
+}
+
+void PoolParallel::write_interneuron_time_info(const char* filename)
+{
+    if (MPI_rank == 0)
+    {
+        std::ofstream out;
+
+        out.open(filename, std::ios::out | std::ios::binary );
+        out.write(reinterpret_cast<char *>(&trial_number), sizeof(trial_number));
+        out.write(reinterpret_cast<char *>(&internal_time), sizeof(internal_time));
+        out.write(reinterpret_cast<char *>(&N_I), sizeof(N_I));
+
+        //for (unsigned i = 0; i < N_RA; i++)
+        //    printf("spike_times[%d] = %f\n", i, spike_times[i]);
+        // write spike times
+        for (unsigned i = 0; i < N_I; i++)
+        {
+            int spike_array_size = spikes_in_trial_interneuron_global[i].size();
+            //printf("Neuron %d; number of dendritic spikes in trial: %d\n", i, spike_array_size);
+            out.write(reinterpret_cast<char *>(&spike_array_size), sizeof(int));
+	    
+            for (int j = 0; j < spike_array_size; j++)
+	    {
+                //out.write(reinterpret_cast<char *>(&spikes_in_trial_dend_global[i][j]), sizeof(double));
+	        double relative_spike_time = spikes_in_trial_interneuron_global[i][j] - (trial_number - 1) * trial_duration;
         	out.write(reinterpret_cast<char *>(&relative_spike_time), sizeof(double));
 			//printf("Neuron %d; relative spike time = %f\n", i, relative_spike_time);
 	    }

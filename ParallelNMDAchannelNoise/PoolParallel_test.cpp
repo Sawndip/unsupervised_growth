@@ -115,6 +115,7 @@ int main(int argc, char** argv)
     string fileSuper = outputDirectory + "RA_RA_super_connections.bin";
     string fileTimeSoma = outputDirectory + "time_info_soma.bin";
     string fileTimeDend = outputDirectory + "time_info_dend.bin";
+    string fileTimeInterneuron = outputDirectory + "time_info_interneuron.bin";
 
     string fileWeights = outputDirectory + "weights.bin";
     string fileWeightsPerm = outputDirectory;
@@ -223,6 +224,7 @@ int main(int argc, char** argv)
            	pool.write_num_synapses(fileSynapticInfo.c_str());
 		    pool.write_soma_time_info(fileTimeSoma.c_str());
             pool.write_dend_time_info(fileTimeDend.c_str());
+            pool.write_interneuron_time_info(fileTimeInterneuron.c_str());
             pool.write_weights(fileWeights.c_str());
             pool.write_active_synapses(fileActive.c_str());
 	    	pool.write_supersynapses(fileSuper.c_str());
@@ -231,11 +233,11 @@ int main(int argc, char** argv)
             pool.write_pajek_super(filePajekSuper.c_str());
             pool.write_pajek_active(filePajekActive.c_str());
            
-			//for (int i = 0; i < (int) RAtoWrite.size(); i++)
-	    	//{
-	  		//	fileAllRAneurons = RAdir + "RA" + std::to_string(RAtoWrite[i]) + ".bin";
-			//	pool.write_RA(fileAllRAneurons.c_str(), RAtoWrite[i]);
-	    	//}
+			for (int i = 0; i < (int) RAtoWrite.size(); i++)
+	    	{
+	  			fileAllRAneurons = RAdir + "RA" + std::to_string(RAtoWrite[i]) + ".bin";
+				pool.write_RA(fileAllRAneurons.c_str(), RAtoWrite[i]);
+	    	}
 
 			//fileMature = fileMaturePerm + "mature" + std::to_string(count) + ".bin";
 			//pool.write_mature(fileMature.c_str());
