@@ -188,17 +188,17 @@ protected:
 
         double* spike_times_soma_local; // local array with neurons somatic spike times
 		double* spike_times_dend_local; // local array with neurons dendritic spike times
-		double* spike_times_interneuron_local; // local array with neurons interneuron spike times
 
 		double* spike_times_soma_global; // array with the most recent somatic spike times of neurons
 		double* spike_times_dend_global; // array with the most recent dendritic spike times of neurons
-		double* spike_times_interneuron_global; // array with the most recent interneuron spike times of neurons
 
         vector<double>* spikes_in_trial_soma_global; // array with somatic spike times in the last trial
 		vector<double>* spikes_in_trial_dend_global; // array with dendritic spike times in the last trial
+		vector<double>* spikes_in_trial_interneuron_global; // array with interneuron spike times in the last trial
 
         vector<double>* spikes_in_trial_soma_local; // array with somatic spike times in the last trial
 		vector<double>* spikes_in_trial_dend_local; // array with dendritic spike times in the last trial
+		vector<double>* spikes_in_trial_interneuron_local; // array with interneuron spike times in the last trial
 
 		bool** active_local; // array of HVC(RA) neurons with active synapses
 		bool** supersynapses_local; // indicator array for active supersynapses;
