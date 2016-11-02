@@ -18,9 +18,11 @@ print "trial_duration", trial_duration
 print "synapses_trials_update", synapses_trials_update
 print "weights_trials_update", weights_trials_update
 
-(num_active, num_super) = read_synaptic_info(fileSynapticInfo)
-t_synapses = [i*trial_duration*synapses_trials_update/1000 for i in  xrange(len(num_active))]
+(trial_num, num_active, num_super) = read_synaptic_info(fileSynapticInfo)
+t_synapses = [t*trial_duration / 1000 for t in trial_num]
 
+
+print t_synapses
 print "num_active", num_active
 
 f = plt.figure()

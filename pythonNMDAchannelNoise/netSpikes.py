@@ -19,7 +19,7 @@ N = 300 # number of neurons
 fileDend = "/home/eugene/Output/time_info_dend.bin"
 fileSoma = "/home/eugene/Output/time_info_soma.bin"
 
-
+TRIAL_DURATION = 1000
 
 (trial_number, simulation_time, spike_times_dend, neuron_fired_dend) = reading.read_time_info(fileDend)
 (trial_number, simulation_time, spike_times_soma, neuron_fired_soma) = reading.read_time_info(fileSoma)
@@ -54,7 +54,7 @@ for i in range(len(spike_times_dend)):
 #ax1.set_yticks(random_ID)
 
 #plt.yticks(random_ID, neuron_fired)
-ax1.set_xlim([-5, max(spike_times_dend)+5])
+ax1.set_xlim([-5, TRIAL_DURATION])
 ax1.set_ylabel("neuron ID")
 ax1.set_xlabel("relative spike time (ms)")
 ax1.set_title("Dendritic spikes")
@@ -70,7 +70,7 @@ for i in range(len(spike_times_soma)):
 #ax1.set_yticks(random_ID)
 
 #plt.yticks(random_ID, neuron_fired)
-ax2.set_xlim([-5, max(spike_times_soma)+5])
+ax2.set_xlim([-5, TRIAL_DURATION])
 ax2.set_ylim([0, N])
 ax2.set_ylabel("neuron ID")
 ax2.set_xlabel("relative spike time (ms)")

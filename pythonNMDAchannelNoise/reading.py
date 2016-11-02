@@ -320,19 +320,21 @@ def read_synaptic_info(filename):
         data = file.read()
         file.close()
         
-    num_datapoints = len(data) / (2*SIZE_OF_INT) # number of datapoints in file
+    num_datapoints = len(data) / (3*SIZE_OF_INT) # number of datapoints in file
 
+    trial_num = [] # trial number
     num_active = [] # numver of active synapses
     num_super = [] # number os supersynapses
 
     ind = 0 
     
     for i in xrange(num_datapoints):
-        num_active.append(struct.unpack("<i", data[ind:(ind + SIZE_OF_INT)])[0])
-        num_super.append(struct.unpack("<i", data[(ind + SIZE_OF_INT):(ind + 2*SIZE_OF_INT)])[0])
-        ind += 2*SIZE_OF_INT
+        trial_num.append(struct.unpack("<i", data[ind:(ind + SIZE_OF_INT)])[0])
+        num_active.append(struct.unpack("<i", data[(ind + SIZE_OF_INT):(ind + 2*SIZE_OF_INT)])[0])
+        num_super.append(struct.unpack("<i", data[(ind + 2*SIZE_OF_INT):(ind + 3*SIZE_OF_INT)])[0])
+        ind += 3*SIZE_OF_INT
     
-    return (num_active, num_super)
+    return (trial_num, num_active, num_super)
     
 def read_mature(filename):
     with open(filename, "rb") as file:
