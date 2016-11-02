@@ -15,6 +15,7 @@ import numpy as np
 import math
 
 N = 100 # number of neurons
+TRIAL_DURATION = 1000
 
 fileInterneuron = "/home/eugene/Output/time_info_interneuron.bin"
 
@@ -38,7 +39,7 @@ for i in range(len(spike_times_interneuron)):
 #ax1.set_yticks(random_ID)
 
 #plt.yticks(random_ID, neuron_fired)
-ax1.set_xlim([-5, max(spike_times_interneuron)+5])
+ax1.set_xlim([-5, TRIAL_DURATION])
 ax1.set_ylabel("neuron ID")
 ax1.set_xlabel("relative spike time (ms)")
 ax1.set_title("Interneuron spikes")
