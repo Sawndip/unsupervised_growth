@@ -17,7 +17,6 @@ class HHI_final
 {
 public:
 	HHI_final();
-	HHI_final(bool white_noise);
 	HHI_final(DDfunction f);
 	
 	// print
@@ -39,11 +38,12 @@ public:
 	void Runge4_step();	//	do one step of Runge-Kutta order 4
 	
 	// noise
-	void set_no_noise();	//	turn off the noise
-	void set_noise_generator(Poisson_noise* g);	//	set pointer to Poisson noise generator 
-	void set_white_noise(); // set white-noise injected current
-	void set_white_noise_distribution(double mu, double sigma); // set parameters of white noise distribution
-	
+	void set_no_poisson_noise(); //	turn off Poisson noise
+	void set_no_white_noise(); // turn off white noise
+    void set_noise_generator(Poisson_noise* g);	//	set pointer to Poisson noise generator 
+	void set_white_noise(double m, double s); // set white-noise injected current
+    void set_poisson_noise(); // enable Poisson noise
+
 	// miscalleneous
 	void set_target(HH2_final* target, int ID, double G);	//	function to set a target for neuron
 	void set_dynamics(double interval, double tS);	//	function to set the dynamic range of neuron (time step and time interval)
@@ -124,17 +124,22 @@ protected:
 	//	Noise
 	
 	Poisson_noise* generator;	//	pointer to Poisson noise generator
-	
-	bool noise = true;	//	true for noise on, false for noise off
+
+    // poisson noise
+	bool poisson_noise;	//	indicator for Poisson noise
 	int noise_inh;	//	time of inhibitory noisy spike rounded to the time grid
 	int noise_exc;	//	time of excitatory noisy spike rounded to the time grid
-	double G_noise;	//	maximum noise conductance added to either inhibitory
-							//	or excitatory conductance of neuron
+	double G_noise;	//	maximum noise conductance added to either inhibitory							//	or excitatory conductance of neuron
 	double lambda;	//	parameter of Poisson point process
 	
 	void initialize_noise(int& noise_time); // initialize noise spike times
-	bool sampled_this_iteration; // indicator for white noise generator
-	//	External current
+
+    // white noise
+    bool white_noise; // indicator for white noise
+    double mu; // white noise mean
+    double sigma; // white noise standard deviation
+
+    //	External current
 
 	DDfunction Iext; // function that defines external injected current
 	
@@ -146,7 +151,6 @@ protected:
 	
 	double bin_size; // bin size for white noise generator
 	double stored; // stored number for white noise generator
-	int count; // counter for white-noise sampling
 	// support functions for Runge-Kutta method
 	
 	double kV(double v, double t, double h, double w, double m3, double n4);
@@ -156,7 +160,6 @@ protected:
 	double kw(double v, double w);
 	double kexc(double gexc);
 	double kinh(double ginh);	
-
 
 	static double an(double v){return 0.05*(v + 15) / (1 - exp(-(v + 15) / 10));}
 	static double bn(double v){return 0.1 * exp(-(v + 25) / 80);}

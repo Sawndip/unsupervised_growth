@@ -18,7 +18,7 @@ using std::vector;
 class PoolParallel
 {
 public:
-	PoolParallel(double a, double s_rai, double b, double sigma_ira, double network_update, double e_kick, double Ei, double beta, double beta_s, double Tp, double Td, double tauP, double tauD, double Ap, double Ad, double Ap_super, double Ad_super, double f0, double activation, double super_threshold, double Gmax, int N_ra, int Nic, int NiInC, int N_ss, int N_tr);
+	PoolParallel(double a, double s_rai, double b, double sigma_ira, double network_update, double Ei, double beta, double beta_s, double Tp, double Td, double tauP, double tauD, double Ap, double Ad, double Ap_super, double Ad_super, double f0, double activation, double super_threshold, double Gmax, int N_ra, int Nic, int NiInC, int N_ss, int N_tr);
 	~PoolParallel();
 
 	void read_from_file(const char* RA_xy, const char* I_xy, const char* RA_RA_all, const char* RA_RA_active, const char* RA_RA_super, const char* RA_I, const char* I_RA, const char* mature, const char* timeInfo); // read network structure from files
@@ -34,9 +34,6 @@ public:
 	void initialize_equal_clusters(); // initialize equal clusters of neurons
 
     void initialize_connections(double Gei_mean, double Gei_var, double Gie_mean, double Gie_var); // initialize connections for neurons
-
-	void initialize_silent_synapses(double f); // initialize silent synapses with fraction f connections
-	void initialize_all2all_silent_synapses(); // initialize all to all silent connections
 
 	void initialize_connections_for_clusters(double Gei_mean, double Gei_var, double Gie_mean, double Gie_var); // initialize connections for neurons in equal clusters
 
@@ -67,7 +64,6 @@ public:
 	// write to file functions
 	void gather_data(); // gather data from all processes
 
-	void write_silent_synapses(const char* filename); // write silent synapses to a file
 	void write_sim_info(const char* simInfoFile, int synapses_trials_update, int weights_trials_update); // write information about simulation and frequency of updates of synapses and weights
 	void write_num_synapses(const char* fileSynapses); // write amount of active synapses and supersynapses
 	void write_active_synapses(const char* RA_RA); // write RA to RA active connections
@@ -92,13 +88,7 @@ public:
 	void set_generator(Poisson_noise* g); // set poisson noise generator
 	void set_generator4neurons(); // set noise generator for all neurons
 	void set_dynamics(double interval, double tS); // set dynamics range for all neurons
-	void set_no_noise(); // disable Poisson noise for all neurons
-	void set_no_noise_RA(); // disable noise for RA neurons
-	void set_no_noise_I(); // disable noise for I neurons
-    void set_white_noise_distribution_soma(double mu, double sigma); // set white noise distribution for somatic compartment of RA neurons
-    void set_white_noise_distribution_dend(double mu, double sigma); // set white noise distribution for dendritic compartment of RA neurons
-    void set_white_noise_soma(); // set white noise for somatic compartment of RA neurons
-    void set_white_noise_dend(); // set white noise for dendritic compartment of RA neurons
+    void set_white_noise_RA(double mu_s, double sigma_s, double mu_d, double sigma_d); // set white noise for RA neurons
    
    // motivation
     void enable_motivation_noise(); // switch on dc component of the input noise
@@ -133,7 +123,6 @@ protected:
 		vector <double> xx_I_cluster; // x-coordinates of centers of inhibitory clusters
 		vector <double> yy_I_cluster; // y-coordinates of centers of inhibitory clusters
 
-		double NMDA_kick; // NMDA kick value
 		const static double CLUSTER_SIZE; // cluster size
         const static double MIN_INTERNEURON_DISTANCE; // minimum distance between neurons
 		double A_RA2I; // constant for nearby connections
@@ -168,7 +157,6 @@ protected:
 		bool** active_global; // array of HVC(RA) neurons with active synapses
 		bool** supersynapses_global; // indicator array for active supersynapses;
 		double** weights_global; // array of synaptic strength of all connections between RA neurons
-		vector<int>* silent_synapses_global; // vector with silent NMDA synapses
 		vector<double>* weights_RA_I_global; // array with synapses from RA to I neurons
 		vector<double>* weights_I_RA_global; // array with senapses from I to RA neurons
 		vector<unsigned>* syn_ID_RA_I_global; // array with synaptic ID numbers from RA to I neurons
@@ -208,7 +196,6 @@ protected:
 		int* mature_global; // global array of indicators if neuron is mature due to supersynaptic acquisition 
 		
 		vector<double>* spikes_in_trial_local; // local rray with spike times of single trial
-		vector<int>* silent_synapses_local; // array with silent NMDA synapses
 		vector<double>* weights_RA_I_local; // array with synapses from RA to I neurons
 		vector<double>* weights_I_RA_local; // array with senapses from I to RA neurons
 		vector<unsigned>* syn_ID_RA_I_local; // array with synaptic ID numbers from RA to I neurons
@@ -225,12 +212,10 @@ protected:
 
 		// update conductances and glutamate
 		double* update_Ge_AMPA_RA_local;
-		double* update_Ge_NMDA_RA_local;
 		double* update_Gi_RA_local;
 		double* update_Ge_I_local;
 	
 		double* update_Ge_AMPA_RA_global;
-		double* update_Ge_NMDA_RA_global;
 		double* update_Gi_RA_global;
 		double* update_Ge_I_global;
 

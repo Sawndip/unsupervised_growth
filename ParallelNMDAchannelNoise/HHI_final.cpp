@@ -3,6 +3,7 @@
 #include "poisson_noise.h"
 #include <fstream>
 #include <iostream>
+#include "exception.h"
 
 using namespace std::placeholders;
 
@@ -28,34 +29,27 @@ HHI_final::HHI_final()
 
 	threshold = -20;	//	mV
 
-	// initial values for dynamics variables
-
-
 	// internal state
 
 	itime = 0;
 	Nspikes = 0;
 
 	// noise
-	// Poisson noise
+	generator = nullptr;
+
+    // Poisson noise
 	G_noise = 0.2;	//	maximum noise conductance
-	noise = true;	//	turn on the noise
+	poisson_noise = false;	//	turn on the noise
 
 	lambda = 250; // intensity parameter for Poisson noise
 
 	// white noise
-	bin_size = 0.1;
-	count = 1;
+	bin_size = 1;
 	stored = 0;
+    white_noise = false;
 
 	// external current
 	Iext = std::bind(&HHI_final::I_default, this, _1); // set external current to default function
-}
-
-HHI_final::HHI_final(bool white_noise) : HHI_final()
-{
-	if (white_noise)
-		Iext = std::bind(&HHI_final::I_white_noise, this, _1);
 }
 
 HHI_final::HHI_final(DDfunction f) : HHI_final()
@@ -159,19 +153,47 @@ void HHI_final::set_noise_generator(Poisson_noise* g)
 	generator = g;
 }
 
-void HHI_final::set_white_noise_distribution(double mu, double sigma)
+void HHI_final::set_white_noise(double m, double s)
 {
-	generator->set_normal_distribution(mu, sigma);
+    try
+    {
+        if (generator == nullptr)
+        {
+            throw NoGenerator("Noise generator is not set for HHI neuron!\n");
+        }
+        else
+        {
+            white_noise = true;
+            
+            mu = m;
+            sigma = s;
+            
+            Iext = std::bind(&HHI_final::I_white_noise, this, _1);
+        }
+    }
+
+    catch (NoGenerator const& e)
+    {
+        std::cerr << "NoGenerator Exception: " << e.what() << std::endl;
+    }
 }
 
-void HHI_final::set_no_noise()
+void HHI_final::set_poisson_noise()
 {
-	noise = false;
+    poisson_noise = true;
+            
+    this->initialize_noise(noise_exc);
+	this->initialize_noise(noise_inh);
 }
 
-void HHI_final::set_white_noise()
+void HHI_final::set_no_white_noise()
 {
-	Iext = std::bind(&HHI_final::I_white_noise, this, _1);
+    white_noise = false;
+}
+
+void HHI_final::set_no_poisson_noise()
+{
+	poisson_noise = false;
 }
 
 void HHI_final::set_dynamics(double interval, double tS)
@@ -205,8 +227,11 @@ void HHI_final::set_dynamics(double interval, double tS)
 	I[0] = Iext(time[0]);
 
 	//	set up noise
-	this->initialize_noise(noise_exc);
-	this->initialize_noise(noise_inh);
+    if (poisson_noise)
+    {
+	    this->initialize_noise(noise_exc);
+	    this->initialize_noise(noise_inh);
+    }
 }
 
 void HHI_final::set_to_rest()
@@ -226,15 +251,35 @@ void HHI_final::set_to_rest()
 	I[0] = Iext(time[0]);
 
 	//	set up noise
-	this->initialize_noise(noise_exc);
-	this->initialize_noise(noise_inh);
+    if (poisson_noise)
+    {
+	    this->initialize_noise(noise_exc);
+	    this->initialize_noise(noise_inh);
+    }
 }
 
 void HHI_final::initialize_noise(int& noise_time)
 {
-	noise_time = (int) round(1000 * generator->get_spike_time(lambda) / timeStep);
-	while (noise_time == 0)
-		noise_time = (int) round(1000 * generator->get_spike_time(lambda) / timeStep);
+    try
+    {
+        if (generator == nullptr)
+        {
+            throw NoGenerator("Noise generator is not set for HHI neuron!\n");
+        }
+        else
+        {
+        	noise_time = (int) round(1000 * generator->get_spike_time(lambda) / timeStep);
+	        
+            while (noise_time == 0)
+		        noise_time = (int) round(1000 * generator->get_spike_time(lambda) / timeStep);
+        }
+    }
+
+    catch (NoGenerator const& e)
+    {
+        std::cerr << "NoGenerator Exception: " << e.what() << std::endl;
+    }
+
 }
 
 void HHI_final::set_target(HH2_final* target, int ID, double G)
@@ -248,7 +293,7 @@ void HHI_final::state_noise_check()
 {
 	this->state_check();
 
-	if (noise)
+	if (poisson_noise)
 	{
 		this->noise_check(Gexc[itime], noise_exc);
 		this->noise_check(Ginh[itime], noise_inh);
@@ -299,15 +344,14 @@ void HHI_final::R4_step_with_target_update()
 
 	if (this->get_fired())
 		this->postsyn_update();
-	sampled_this_iteration = false;
-	this->Runge4_step();
+	
+    this->Runge4_step();
 
 }
 
 void HHI_final::R4_step_no_target_update()
 {
 	this->state_noise_check();
-	sampled_this_iteration = false;
 	//printf("I[%d] = %f\n", itime, I[itime]);
 	this->Runge4_step();
 }
@@ -421,14 +465,12 @@ void HHI_final::postsyn_update()
 
 double HHI_final::I_white_noise(double t)
 {
-	if (((itime+1)*timeStep > bin_size * count)&&(!sampled_this_iteration))
+	if (itime % (int) round((bin_size / timeStep)) == 0)
 	{
 		//printf("(itime+1)*timeStep = %f\tbin size * count = %f\n", (itime + 1)*timeStep, bin_size*count);
 		//printf("bin_size = %f\tcount = %d\n", bin_size, count);
 
-		stored = generator->normal_distribution();
-		sampled_this_iteration = true;
-		count++;
+		stored = mu + sigma * generator->normal_distribution();
 		//printf("stored = %f\n", stored);
 		//printf("Sample new\titime = %d\n", itime);
 		return stored;

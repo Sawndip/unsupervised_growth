@@ -16,7 +16,6 @@ class HH2_final
 {
 public:
 	HH2_final();
-	HH2_final(bool white_noise_soma, bool white_noise_dendrite);
 	HH2_final(DDfunction fs, DDfunction fd);
 
 	// print
@@ -24,10 +23,6 @@ public:
 	void print_targets(); // print targets of a neuron
 
 	void writeToFile(const char * filename); // write data to a binary file
-
-	// set external injected current
-	void set_soma_current(DDfunction fs); // set current to somatic compartment
-	void set_dend_current(DDfunction fd); // set current to dendritic compartment
 
 	// get internal state
 	bool get_fired_soma(); // get neuron's somatic fired state
@@ -37,18 +32,21 @@ public:
 	int get_spike_number_dend(); // get number of dendritic spikes
 	std::vector<double> get_Vs(); // get voltage of somatic compartment
 	std::vector<double> get_Vd(); // get voltage of dendritic compartment
-
-	// noise
-	void set_noise(double Gs_exc, double Gs_inh, double Gd_exc, double Gd_inh); // set noise for the neuron
+    
+    // set functions
 	void set_Ei(double E); // set GABA reverse potential
-	void set_no_noise(); // disable Poisson point noisy spikes
-	void set_noise_generator(Poisson_noise* g); // set Poisson noise generator
-	void set_white_noise_soma(); // set white noise to somatic compartment
-	void set_white_noise_dend(); // set white noise to denndritic compartment
-	void set_white_noise_distribution_soma(double mu, double sigma); // set parameters of white noise distribution for somatic compartment
-    void set_white_noise_distribution_dend(double mu, double sigma); // set parameters of white noise distribution for dendritic compartment
+	
+    void set_soma_current(DDfunction fs); // set current to somatic compartment
+	void set_dend_current(DDfunction fd); // set current to dendritic compartment
 
-    void set_kick(double G); // set the amplitude of the inhibitory kick conductance
+
+    // noise
+    void set_no_poisson_noise(); // disable Poisson point noisy spikes
+	void set_poisson_noise(); // enable Poisson point noisy spikes
+	void set_no_white_noise(); // disable white noise
+	void set_white_noise(double mu_s, double sigma_s, double mu_d, double sigma_d); // enable white noise
+
+    void set_noise_generator(Poisson_noise* g); // set Poisson noise generator
 
 	// set dynamics
 	void set_dynamics(double interval, double tS); // set sizes of all arrays
@@ -58,18 +56,14 @@ public:
 	void Runge4_step(); // one step of Runge Kutta order 4
 	void R4_step_no_target_update(); // Runge Kutta step with no update of targets
 	void R4_step_with_target_update(); // Runge Kutta step with update of targets
-    void R4_dend_kick(); // Runge Kutta step with kicks in inhibitory dendritic conductance every kick_time
-    void R4_soma_kick(); // Runge Kutta step with kicks in inhibitory somatic conductance every kick_time
 
 	// change conductance
 	void raise_AMPA(double G); // raise excitatory AMPA conductance
-	void raise_NMDA(double G); // raise excitatory NMDA conductance
 	void raiseI(double G); // raise inhibitory conductance
-	// targets
+
+    // targets
 	void set_targetI(HHI_final* target, int n, double G); // set inhibitory target
 	void set_targetRA(HH2_final* target, int n, double G); // set excitatory target
-
-	void set_silent_targetRA(HH2_final* target, int n, double G); // set excitatory silent NMDA target
 
 protected:
 	// model parameters
@@ -109,15 +103,11 @@ protected:
 	vector<double> Ginh_s;	//	inhibitory soma conductance
 	vector<double> Gexc_d; //	excitatory dendrite conductance
 	vector<double> Ginh_d;	//	inhibitory dendrite conductance
-	vector<double> G_NMDA; // NMDA conductance of dendritic compartment
 	vector<double> G_AMPA; // AMPA conductance of dendritic compartment
 	vector<double> E_gaba; // reverse GABA potential
 	// constants
 	
-	const static double beta; // transition rate to closed state
-	const static double C; // magnesium extracellular concentration
 	const static double bin_size; // bin size for current white noise stimulus
-	const static double bin_size_nmda; // bin size for nmda fraction of open channels simulation
 	//	thresholds
 	const static double threshold; // threshold for somatic spike
 	const static double threshold_dend; // threshold for dendritic spike
@@ -141,7 +131,6 @@ protected:
 
 	// functions to check internal state
 	void noise_check(double& G, double G_noise, double lambda, int& noise_time); // check if noisy spike came to the neuron's input
-	void glutamate_noise_check(double& g, double mean, double sigma, double lambda, int& noise_time); // check if glutamate noisy spikes arrived
 	void state_check(); // check if neuron crossed potential threshold
 	void state_noise_check(); // check both noise and state
 
@@ -162,41 +151,27 @@ protected:
 	double lambda_exc; // parameter of Poisson point process for excitatory kicks
 	const static double Gs_noise_inh;	//	maximum amplitude of inhibitory noise added to somatic compartment conductances
 	const static double Gd_noise_inh;	//	maximum amplitude of inhibitory noise added to dendritic compartment conductances
-	bool noise;	//	true for noise on, false for noise off
-    double G_kick; // amplitude of inhibitory kick conductance
+	const static double Gs_noise_exc;	//	maximum amplitude of excitatory noise added to somatic compartment conductances
+	const static double Gd_noise_exc;	//	maximum amplitude of excitatory noise added to dendritic compartment conductances
+	bool poisson_noise;	//	true for noise on, false for noise off
 
-	double G_SPIKE; // kick to NMDA receptors in dendritic compartment after spike of presynaptic neuron
-
-
-	void initialize_noise(int& noise_time, double lambda); // initialize noise
+	void initialize_poisson_noise(int& noise_time, double lambda); // initialize noise
 
 	// white noise
 	double stored_dend;
 	double stored_soma;
-	double stored_nmda_soma;
-	double stored_nmda_dend;
 	double mu_soma;
 	double mu_dend;
 	double sigma_soma;
 	double sigma_dend;
 	int count;
-	bool white_noise_soma; // indicator for white noise to somatic compartment
-	bool white_noise_dend; // indicator for white noise to dendritic compartment
-
-	// NMDA channel noise
-	double mu;
-	double A_soma;
-	double A_dend;
+	bool white_noise; // indicator for white noise
 
 	// targets
 
 	vector<HH2_final*> targets_RA;	//	all neuron's connections to subsequent neurons
 	vector<int> targetsID_RA;	//	vector which contains all ID numbers of target neurons
 	vector<double> targetsG_RA;	//	vector with conductances of all target synapses
-	vector<HH2_final*> silent_targets_RA;	//	all neuron's silent connections to subsequent neurons
-	vector<int> silent_targetsID_RA;	//	vector which contains all ID numbers of silent target neurons
-	vector<double> silent_targetsG_RA;	//	vector with conductances of all silent target synapses
-
 
 	vector<HHI_final*> targets_I;	//	all neuron's connections to inhibitory HVC neurons;
 	vector<int> targetsID_I;	//	vector which contains all ID numbers of target HVCI neurons
@@ -204,11 +179,6 @@ protected:
 
 	void postsyn_update();	//	change all postsynaptic conductances
 
-    // kick
-    void kick_dend_Ginh();  // add G_kick to inhibitory dendritic conductance
-    void kick_soma_Ginh();  // add G_kick to inhibitory somatic conductance
-
-    int kick_time; // time to kick
 	//	Additional functions for Runge Kutta's method
 
 	double kVs(double vs, double vd, double n, double h, double t);
@@ -220,8 +190,9 @@ protected:
 	double kCa(double vd, double r, double ca);
 
 	//	Conductance and current functions
-	double G_NMDA_future(double vd, double t);
 
+	double Ge_s(double t);	//	excitatory soma conductance
+	double Ge_d(double t);	//	excitatory dendrite conductance
 	double Gi_s(double t);	//	inhibitory soma conductance
 	double Gi_d(double t);	//	inhibitory dendrite conductance
 	double G_ampa(double t); // excitatory AMPA conductance of dendritic compartment
@@ -233,13 +204,12 @@ protected:
 	double I_white_noise_soma(double t); // external white noise current to somatic compartment
     double I_white_noise_dend(double t); // external white noise current to dendritic compartment
 
-	static double B(double v){return 1.0 / (1 + exp(-0.062 * v) * C / 3.57);}
 	static double nInf(double v){return 1 / (1 + exp(-(v + 35) / 10));}
 	static double tauN(double v){return 0.1 + 0.5 / (1 + exp((v + 27) / 15));}
 	static double hInf(double v){return 1 / (1 + exp((v + 45) / 7));}
 	static double tauH(double v){return 0.1 + 0.75 / (1 + exp((v + 40.5) / 6));}
 	static double mInf(double v){return 1 / (1 + exp(-(v + 30) / 9.5));}
-	static double rInf(double v){return 1 / (1 + exp(-(v + 5) / 10));}
+	static double rInf(double v){return 1 / (1 + exp(-(v + 10) / 10));}
 	static double tauR(double v){return 1;}
 	static double cInf(double v){return 1 / (1 + exp(-(v - 10) / 7));}
 	static double tauC(double v){return 10;}

@@ -1,24 +1,20 @@
 #include "poisson_noise.h"
 #include "HH2_final.h"
 #include "HHI_final.h"
+#include "exception.h"
 #include <iostream>
 #include <fstream>
 
 using namespace std::placeholders;
 
-// NMDA extrasynaptic channel kinetics
-const double HH2_final::beta = 6.6; // s^-1
-
-// extracellular magnesium concentration
-const double HH2_final::C = 1; // mM
-
-// time bins for white noise
-const double HH2_final::bin_size = 1.0; // bin size for current white noise stimulus
-const double HH2_final::bin_size_nmda = 0.01; // bin size for simulating fraction of NMDA open channels
+// white noise bin size
+const double HH2_final::bin_size = 1; // in ms
 
 // noise conductances
-const double HH2_final::Gs_noise_inh = 0.0;
-const double HH2_final::Gd_noise_inh = 0.0;
+const double HH2_final::Gs_noise_inh = 0.010;
+const double HH2_final::Gd_noise_inh = 0.010;
+const double HH2_final::Gs_noise_exc = 0.010;
+const double HH2_final::Gd_noise_exc = 0.010;
 
 const double HH2_final::cm = 1;
 const double HH2_final::Rc = 0.055;
@@ -55,31 +51,22 @@ HH2_final::HH2_final()
 	Nspikes_dend = 0;
 	fired_dend = false;
 
-	G_kick = 0.3;
-	kick_time = 45000;
-
 	// white_noise
 
 	stored_soma = 0; // stored somatic current value
 	stored_dend = 0; // stored dendritic current value
 
-	stored_nmda_soma = 0; // stored somatic nmda open fraction value
-	stored_nmda_dend = 0; // stored dendritic nmda open fraction value
-
 	// noise
-	noise = true;
+	poisson_noise = false;
+    white_noise = false;
+
 	lambda_exc = 75;
 	lambda_inh = 100;
 
 	training_dend = false;
 	training_soma = false;
 
-	white_noise_soma = false;
-	white_noise_dend = false;
-
-	// external current
-	//IsExt = std::bind(&HH2_final::Is_default, this, _1);
-	//IdExt = std::bind(&HH2_final::Id_default, this, _1);
+    generator = nullptr;
 }
 
 
@@ -95,23 +82,73 @@ void HH2_final::set_dend_current(DDfunction fd)
 	Id_training = fd;
 }
 
-void HH2_final::set_no_noise()
+void HH2_final::set_white_noise(double mu_s, double sigma_s, double mu_d, double sigma_d)
 {
-	noise = false;
+    try
+    {
+        if (generator == nullptr)
+            throw NoGenerator("Noise generator is not set up!\n");
+        else
+        {
+	        white_noise = true;
+    
+            mu_soma = mu_s;
+            sigma_soma = sigma_s;
+            mu_dend = mu_d;
+            sigma_dend = sigma_d;
+        }
+    }
+
+    catch (NoGenerator const& e)
+    {
+        std::cerr << "NoGenerator Exception: " << e.what() << std::endl;
+
+    }
+
 }
 
-void HH2_final::initialize_noise(int& noise_time, double lambda)
+void HH2_final::set_no_white_noise()
 {
-	noise_time = (int) round(1000 * generator->get_spike_time(lambda) / timeStep);
-	while (noise_time == 0)
-		noise_time = (int) round(1000 * generator->get_spike_time(lambda) / timeStep);
+    white_noise = false;
 }
 
-void HH2_final::set_kick(double G)
+void HH2_final::set_poisson_noise()
 {
-    G_kick = G;
+    poisson_noise = true;
+    
+    this->initialize_poisson_noise(noise_exc_soma, lambda_exc);
+	this->initialize_poisson_noise(noise_inh_soma, lambda_inh);
+	this->initialize_poisson_noise(noise_exc_dend, lambda_exc);
+	this->initialize_poisson_noise(noise_inh_dend, lambda_inh);
+ 
 }
 
+void HH2_final::set_no_poisson_noise()
+{
+	poisson_noise = false;
+}
+
+void HH2_final::initialize_poisson_noise(int& noise_time, double lambda)
+{
+    try
+    {
+        if (generator == nullptr)
+            throw NoGenerator("Noise generator is not set up!\n");
+        else
+        {
+	        noise_time = (int) round(1000 * generator->get_spike_time(lambda) / timeStep);
+	        while (noise_time == 0)
+		        noise_time = (int) round(1000 * generator->get_spike_time(lambda) / timeStep);
+        }
+    }
+
+    catch (NoGenerator const& e)
+    {
+        std::cerr << "NoGenerator Exception: " << e.what() << std::endl;
+
+    }
+
+}
 
 void HH2_final::set_Ei(double E)
 {
@@ -138,7 +175,6 @@ void HH2_final::set_dynamics(double interval, double tS)
 	Gexc_s.resize(size);
 	Ginh_s.resize(size);
 	G_AMPA.resize(size);
-	G_NMDA.resize(size);
 	Gexc_d.resize(size);
 	Ginh_d.resize(size);
 	flag_soma.resize(size);
@@ -159,7 +195,6 @@ void HH2_final::set_dynamics(double interval, double tS)
 	Ginh_d[0] = 0.0;
 	Gexc_d[0] = 0.0;
 	G_AMPA[0] = 0.0;
-	G_NMDA[0] = 0.0;
 	E_gaba[0] = Ei;
 
 	flag_soma[0] = 0;
@@ -168,30 +203,14 @@ void HH2_final::set_dynamics(double interval, double tS)
 	Is[0] = IsExt(time[0]);
 	Id[0] = IdExt(time[0]);
 	
-	// set constants for NMDA noise
-	/*
-	double tau = 1.0 / (alpha*T + beta); // time constant
-	double sInf = alpha*T*tau; // fraction of open channels at time = infinity
-	
-	mu = exp(-timeStep / tau);
-
-	if (nmda_soma > 0)
-		A_soma = sqrt(sInf*(1-sInf)/nmda_soma) * sqrt(1 - mu*mu);
-	else
-		A_soma = 0.0;
-	
-	if (nmda_dend > 0)
-		A_dend = sqrt(sInf*(1-sInf)/nmda_dend) * sqrt(1 - mu*mu);
-	else
-		A_dend = 0.0;
-	*/
-
 	//	initialize up noise
-
-	this->initialize_noise(noise_exc_soma, lambda_exc);
-	this->initialize_noise(noise_inh_soma, lambda_inh);
-	this->initialize_noise(noise_exc_dend, lambda_exc);
-	this->initialize_noise(noise_inh_dend, lambda_inh);
+    if (poisson_noise)
+    {
+	    this->initialize_poisson_noise(noise_exc_soma, lambda_exc);
+	    this->initialize_poisson_noise(noise_inh_soma, lambda_inh);
+	    this->initialize_poisson_noise(noise_exc_dend, lambda_exc);
+	    this->initialize_poisson_noise(noise_inh_dend, lambda_inh);
+    }
 
 }
 
@@ -212,7 +231,6 @@ void HH2_final::set_to_rest()
 	Ginh_d[0] = 0.0;
 	Gexc_d[0] = 0.0;
 	G_AMPA[0] = 0.0;
-	G_NMDA[0] = 0.0;
 	E_gaba[0] = Ei;
 
 	flag_soma[0] = 0;
@@ -222,11 +240,13 @@ void HH2_final::set_to_rest()
 	Id[0] = IdExt(time[0]);
 
 	//	initialize up noise
-
-	this->initialize_noise(noise_exc_soma, lambda_exc);
-	this->initialize_noise(noise_inh_soma, lambda_inh);
-	this->initialize_noise(noise_exc_dend, lambda_exc);
-	this->initialize_noise(noise_inh_dend, lambda_inh);
+    if (poisson_noise)
+    {
+	    this->initialize_poisson_noise(noise_exc_soma, lambda_exc);
+	    this->initialize_poisson_noise(noise_inh_soma, lambda_inh);
+	    this->initialize_poisson_noise(noise_exc_dend, lambda_exc);
+	    this->initialize_poisson_noise(noise_inh_dend, lambda_inh);
+    }
 
 }
 
@@ -235,37 +255,15 @@ void HH2_final::set_noise_generator(Poisson_noise* g)
 	generator = g;
 }
 
-void HH2_final::set_white_noise_distribution_soma(double mu, double sigma)
-{
-	mu_soma = mu;
-	sigma_soma = sigma;
-}
-
-void HH2_final::set_white_noise_distribution_dend(double mu, double sigma)
-{
-	mu_dend = mu;
-	sigma_dend = sigma;
-}
-
-void HH2_final::set_white_noise_soma()
-{
-	white_noise_soma = true;
-}
-
-void HH2_final::set_white_noise_dend()
-{
-	white_noise_dend = true;
-}
-
 double HH2_final::IdExt(double t)
 {
-	if ((white_noise_dend)&&(training_dend))
+	if ((white_noise)&&(training_dend))
 	{
 		return I_white_noise_dend(t) + Id_training(t);
 	}
 	else
 	{
-		if (white_noise_dend)
+		if (white_noise)
 			return I_white_noise_dend(t);
 		else
 			return Id_default(t);
@@ -275,27 +273,17 @@ double HH2_final::IdExt(double t)
 
 double HH2_final::IsExt(double t)
 {
-	if ((white_noise_soma)&&(training_soma))
+	if ((white_noise)&&(training_soma))
 	{
 		return I_white_noise_soma(t) + Is_training(t);
 	}
 	else
 	{
-		if (white_noise_soma)
+		if (white_noise)
 			return I_white_noise_soma(t);
 		else
 			return Is_default(t);
 	}
-}
-
-void HH2_final::kick_dend_Ginh()
-{
-    Ginh_d[itime] += G_kick;
-}
-
-void HH2_final::kick_soma_Ginh()
-{
-    Ginh_s[itime] += G_kick;
 }
 
 void HH2_final::set_targetRA(HH2_final *target, int n, double G)
@@ -303,13 +291,6 @@ void HH2_final::set_targetRA(HH2_final *target, int n, double G)
 	targets_RA.push_back(target);
 	targetsID_RA.push_back(n);
 	targetsG_RA.push_back(G);
-}
-
-void HH2_final::set_silent_targetRA(HH2_final *target, int n, double G)
-{
-	silent_targets_RA.push_back(target);
-	silent_targetsID_RA.push_back(n);
-	silent_targetsG_RA.push_back(G);
 }
 
 void HH2_final::set_targetI(HHI_final *target, int n, double G)
@@ -419,7 +400,6 @@ void HH2_final::writeToFile(const char * filename)
 		output.write(reinterpret_cast<char*>(&Ginh_d[i]), sizeof(Ginh_d[i]));
 		output.write(reinterpret_cast<char*>(&Gexc_s[i]), sizeof(Gexc_s[i]));
 		output.write(reinterpret_cast<char*>(&Ginh_s[i]), sizeof(Ginh_s[i]));
-		output.write(reinterpret_cast<char*>(&G_NMDA[i]), sizeof(G_NMDA[i]));
 		output.write(reinterpret_cast<char*>(&E_gaba[i]), sizeof(E_gaba[i]));
 		output.write(reinterpret_cast<char*>(&flag_soma[i]), sizeof(flag_soma[i]));
 	}
@@ -431,11 +411,7 @@ void HH2_final::writeToFile(const char * filename)
 void HH2_final::raise_AMPA(double G)
 {
 	G_AMPA[itime] = G_AMPA[itime] + G;
-}
-
-void HH2_final::raise_NMDA(double G)
-{
-	G_NMDA[itime] = G_NMDA[itime] + G * HH2_final::B(Vd[itime]);
+    Gexc_d[itime] += G;
 }
 
 void HH2_final::raiseI(double G)
@@ -450,37 +426,10 @@ void HH2_final::postsyn_update()
 		targets_RA[i]->raise_AMPA(targetsG_RA[i]);
 	}
 
-	for (int i = 0; i < silent_targets_RA.size(); i++)
-	{
-		silent_targets_RA[i]->raise_NMDA(silent_targetsG_RA[i]);
-	}
-
-
 	for (int i = 0; i < targets_I.size(); i++)
 	{
 		targets_I[i]->raiseE(targetsG_I[i]);
 	}
-}
-
-
-void HH2_final::R4_dend_kick()
-{
-	if (itime % kick_time == 0)
-        this->kick_dend_Ginh();
-
-	this->state_noise_check();
-
-	this->Runge4_step();
-}
-
-void HH2_final::R4_soma_kick()
-{
-	if (itime % kick_time == 0)
-        this->kick_soma_Ginh();
-
-	this->state_noise_check();
-
-	this->Runge4_step();
 }
 
 double HH2_final::I_white_noise_soma(double t)
@@ -546,12 +495,12 @@ void HH2_final::state_noise_check()
 {
 	this->state_check();
 
-	if (noise)
+	if (poisson_noise)
 	{
-		//this->noise_check(gs[itime], MEAN_gs, SIGMA_gs, lambda_exc, noise_exc_soma);
 		this->noise_check(Ginh_s[itime], Gs_noise_inh, lambda_inh, noise_inh_soma);
-		//this->glutamate_noise_check(gd[itime], MEAN_gd, SIGMA_gd, lambda_exc, noise_exc_dend);
 		this->noise_check(Ginh_d[itime], Gd_noise_inh, lambda_inh, noise_inh_dend);
+		this->noise_check(Gexc_s[itime], Gs_noise_exc, lambda_exc, noise_exc_soma);
+		this->noise_check(Gexc_d[itime], Gd_noise_exc, lambda_exc, noise_exc_dend);
 	}
 }
 
@@ -610,31 +559,6 @@ void HH2_final::noise_check(double& G, double G_noise, double lambda, int& noise
 			}
 			noise_time = noise_time + random;
 		}
-
-}
-
-
-void HH2_final::glutamate_noise_check(double& g, double mean, double sigma, double lambda, int& noise_time)
-{
-
-	if (itime == noise_time)
-		{
-			double random_g = mean + sigma * generator->normal_distribution();
-			int random_time = round(1000 * generator->get_spike_time(lambda) / timeStep);
-			
-
-			while (random_time == 0)
-			{
-					random_time = round(1000 * generator->get_spike_time(lambda) / timeStep);
-					random_g = mean + sigma * generator->normal_distribution();
-			}
-
-			noise_time = noise_time + random_time;
-
-			if (random_g > g)
-				g = random_g;
-		}
-
 
 }
 
@@ -733,11 +657,13 @@ void HH2_final::Runge4_step()
 	c[itime + 1] = c[itime] + timeStep * (k1c + 3 * k2c + 3 * k3c + k4c) / 8;
 	Ca[itime + 1] = Ca[itime] + timeStep * (k1Ca + 3 * k2Ca + 3 * k3Ca + k4Ca) / 8;
 	
-	G_NMDA[itime + 1] = G_NMDA_future(Vd[itime + 1], time[itime + 1]);
 	G_AMPA[itime + 1] = G_ampa(time[itime + 1]);
 	
-	Gexc_d[itime + 1] = G_AMPA[itime + 1] + G_NMDA[itime + 1];
+	Gexc_d[itime + 1] = Ge_d(time[itime + 1]);
+    Gexc_s[itime + 1] = Ge_s(time[itime + 1]);
+
 	Ginh_d[itime + 1] = Gi_d(time[itime + 1]);
+	Ginh_s[itime + 1] = Gi_s(time[itime + 1]);
 	
 	Id[itime + 1] = IdExt(time[itime + 1]);
 	Is[itime + 1] = IsExt(time[itime + 1]);
@@ -750,44 +676,10 @@ void HH2_final::Runge4_step()
 double HH2_final::G_ampa(double t){return G_AMPA[itime] * exp(-(t - time[itime]) / tExc);}
 double HH2_final::Gi_s(double t){return Ginh_s[itime] * exp(-(t - time[itime]) / tInh);}
 double HH2_final::Gi_d(double t){return Ginh_d[itime] * exp(-(t - time[itime]) / tInh);}
+double HH2_final::Ge_d(double t){return Gexc_d[itime] * exp(-(t - time[itime]) / tExc);}
+double HH2_final::Ge_s(double t){return Gexc_s[itime] * exp(-(t - time[itime]) / tExc);}
+//double HH2_final::Gi_d(double t){return Ginh_d[itime];}
 
-
-//double HH2_final::B(double v){return 1.0 / (1 + exp(-0.062 * v) * C / 3.57);}
-
-double HH2_final::G_NMDA_future(double vd, double t)
-{
-	return G_NMDA[itime] * HH2_final::B(vd) * exp(- beta * (t - time[itime]) / 1000.0) / HH2_final::B(Vd[itime]);
-}
-
-/*double HH2_final::Gs_NMDA(double vs)
-{
-	
-	if (itime % (int) round(bin_size_nmda/timeStep) == 0)
-	{
-
-		stored_nmda_soma = G_channel * (nmda_soma*p0 + generator->normal_distribution()*sqrt(nmda_soma*p0*(1-p0))) / ((1 + exp(-0.062 * vs) * C / 3.57) * (1000 * As));
-		return stored_nmda_soma;
-	}
-	else
-	{
-		return stored_nmda_soma;
-	}
-}
-
-double HH2_final::Gd_NMDA(double vd)
-{
-	
-	if (itime % (int) round(bin_size_nmda/timeStep) == 0)
-	{
-
-		stored_nmda_dend = G_channel * (nmda_dend*p0 + generator->normal_distribution()*sqrt(nmda_dend*p0*(1-p0))) / ((1 + exp(-0.062 * vd) * C / 3.57) * (1000*Ad));
-		return stored_nmda_dend;
-	}
-	else
-	{
-		return stored_nmda_dend;
-	}
-}*/
 double HH2_final::kVs(double vs, double vd, double n, double h, double t)
 {
 	double m3, n4;
@@ -795,7 +687,7 @@ double HH2_final::kVs(double vs, double vd, double n, double h, double t)
 	m3 = mInf(vs) * mInf(vs) * mInf(vs);
 	n4 = n * n * n * n;
 	return (-GsL * (vs - EsL) - GsNa * m3 * h * (vs - EsNa) - GsK * n4 * (vs - EsK)
-		 - Gi_s(t) * (vs - Ei) + IsExt(t) / As + (vd - vs) / (Rc * As)) / cm;
+		 - Gi_s(t) * (vs - Ei) - Ge_s(t) * vs + IsExt(t) / As + (vd - vs) / (Rc * As)) / cm;
 }
 double HH2_final::kVd(double vs, double vd, double r, double c, double ca, double t)
 {
@@ -803,7 +695,7 @@ double HH2_final::kVd(double vs, double vd, double r, double c, double ca, doubl
 
 	r2 = r * r;
 	return (-GdL * (vd - EdL) - GdCa * r2 * (vd - EdCa) - GdCaK * (vd - EdK) * c / (1 + 6 / ca)
-		- (G_NMDA_future(vd, t) + G_ampa(t)) * vd - Gi_d(t) * (vd - Ei) + IdExt(t) / Ad + (vs - vd) / (Rc * Ad)) / cm;
+		- Ge_d(t) * vd - Gi_d(t) * (vd - Ei) + IdExt(t) / Ad + (vs - vd) / (Rc * Ad)) / cm;
 }
 
 double HH2_final::kn(double vs, double n){return (HH2_final::nInf(vs) - n) / HH2_final::tauN(vs);}
