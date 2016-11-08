@@ -29,7 +29,6 @@ RA_xy = "/home/eugene/Output/RA_xy.bin"
 I_xy = "/home/eugene/Output/I_xy.bin"
 RA2I = "/home/eugene/Output/RA_I_connections.bin"
 I2RA = "/home/eugene/Output/I_RA_connections.bin"
-fileSilent = "/home/eugene/Output/silent.bin"
 
 import reading
 import math
@@ -41,31 +40,6 @@ import random
 SQUARE_SIDE = 100
 SIDE = SQUARE_SIDE * math.sqrt(2)
 
-def get_distribution_for_combined(n, synapses):
-    """
-    Function calculates distribution of I inputs due to training group for neurons
-    with number of convergent silent connections = n
-    """
-    numI = []
-    
-    for keys, values in synapses.iteritems():
-        if values[0] == n:
-            numI.append(values[1])
-            
-    return Counter(numI)
-
-def combine_silent_and_I_inputs_from_group(targetedSilent, targetedThroughI):
-    """
-    Funcrion estimates how many silent synapses and I inputs neuron reveive from training group
-    """
-    synapses = {}
-    
-    for i in xrange(len(targetedSilent)):
-        for j in xrange(len(targetedSilent[i])):
-            for k in xrange(len(targetedThroughI)):
-                if targetedSilent[i][j] in targetedThroughI[k]:
-                    synapses[targetedSilent[i][j]] = (i, k)
-    return synapses
 
 def get_number_I_inputs_from_group(group, RAtargets, Itargets):
     """
@@ -238,17 +212,13 @@ def std(x):
 
 (N_RA, RA_targets, RA_targets_G) = reading.read_connections(RA2I)
 (N_I, I_targets, I_targets_G) = reading.read_connections(I2RA)
-(N_RA, RA_silent_targets, RA_silent_targets_G) = reading.read_connections(fileSilent)
 
 num_targetsRAI = [len(t) for t in RA_targets]
 num_targetsIRA = [len(t) for t in I_targets]
-num_silent_targets = [len(t) for t in RA_silent_targets]
 
 targetsRAI = [t for sublist in RA_targets for t in sublist]
 targetsIRA = [t for sublist in I_targets for t in sublist]
-silentTargets = [t for sublist in RA_silent_targets for t in sublist]
 
-print RA_silent_targets[3]
 
 # for each neuron calculate how number of its indirect links via interneurons decays with distance
 
@@ -361,22 +331,7 @@ print "distribution of number of I inputs pool neurons receive through indirect 
 averageIinputsFromGroup = get_average_number_I_inputs(groupSize, RA_targets, I_targets, repeat)
 print "Average distribution of number of I inputs pool neurons receive through interneurons: ",averageIinputsFromGroup
 
-# calculate convergence of silent inputs
-targetedSilentFromTraining = get_convergent_silent_inputs_from_group(trainingGroup, RA_silent_targets)
-#print targetedSilentFromTraining
 
-# check how many inputs through I do targeted silent have
-synapses = combine_silent_and_I_inputs_from_group(targetedSilentFromTraining, targetedThroughIFromTraining)
-print synapses
-
-# get distribution for all numbers of convergent silent inputs
-distCombined = []
-
-for i in xrange(groupSize):    
-    distCombined.append(get_distribution_for_combined(i+1, synapses))
-print distCombined
-#print distances
-#print nIinputs
 # Here we calculate mean distance between all RA and I neurons
 
 all_dist_RAandI = []
@@ -567,44 +522,6 @@ ax2.set_ylabel("# of occurences")
 ax2.set_xlabel("# of I inputs from group")
 ax2.set_title("Average distribution of number of inputs to RA neurons through interneurons from group")
 
-
-# plot distribution of combined distribution
-width = 0.25
-numBins = 50
-numPlots = groupSize
-nrows = int(math.sqrt(numPlots))
-ncol = numPlots/nrows
-
-#print minIinputs
-#print maxIinputs
-
-if numPlots % nrows != 0:
-    ncol = ncol + 1
-
-#print nrows
-#print ncol
-
-f, axarr = plt.subplots(nrows, ncol)
-
-for i in xrange(len(distCombined)):
-    
-    #ax.scatter(spaceBins, averageIinputs)
-    axarr[i/ncol, i%ncol].bar(distCombined[i].keys(), distCombined[i].values(), width)
-    axarr[i/ncol, i%ncol].set_xlim([0, max(distCombined[i].keys())+1])
-    axarr[i/ncol, i%ncol].set_ylim([0, max(distCombined[i].values()) +1])
-    axarr[i/ncol, i%ncol].set_ylabel("# of occurences")
-    axarr[i/ncol, i%ncol].set_xlabel("# of I inputs")
-    #ax.set_ylim([0, max(averageIinputs) +1])
-    axarr[i/ncol, i%ncol].set_title("{0} convergent silent inputs".format(i+1))
-
-
-#numBins = 25
-
-#f = plt.figure()
-#ax = f.add_subplot(111)
-#ax.hist(num_silent_targets, numBins)
-#ax.set_xlabel("# of output")
-#ax.set_title("Distribution of silent outputs from RA")
 
 
 

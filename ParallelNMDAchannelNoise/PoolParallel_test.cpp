@@ -222,11 +222,11 @@ int main(int argc, char** argv)
             pool.write_pajek_super(filePajekSuper.c_str());
             pool.write_pajek_active(filePajekActive.c_str());
            
-			for (int i = 0; i < (int) RAtoWrite.size(); i++)
-	    	{
-	  			fileAllRAneurons = RAdir + "RA" + std::to_string(RAtoWrite[i]) + ".bin";
-				pool.write_RA(fileAllRAneurons.c_str(), RAtoWrite[i]);
-	    	}
+			//for (int i = 0; i < (int) RAtoWrite.size(); i++)
+	    	//{
+	  		//	fileAllRAneurons = RAdir + "RA" + std::to_string(RAtoWrite[i]) + ".bin";
+			//	pool.write_RA(fileAllRAneurons.c_str(), RAtoWrite[i]);
+	    	//}
 
 			//fileMature = fileMaturePerm + "mature" + std::to_string(count) + ".bin";
 			//pool.write_mature(fileMature.c_str());

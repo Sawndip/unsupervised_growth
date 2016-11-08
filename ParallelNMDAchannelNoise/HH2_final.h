@@ -209,9 +209,9 @@ protected:
 	static double hInf(double v){return 1 / (1 + exp((v + 45) / 7));}
 	static double tauH(double v){return 0.1 + 0.75 / (1 + exp((v + 40.5) / 6));}
 	static double mInf(double v){return 1 / (1 + exp(-(v + 30) / 9.5));}
-	static double rInf(double v){return 1 / (1 + exp(-(v + 10) / 10));}
+	static double rInf(double v){return 1 / (1 + exp(-(v + 15) / 10));}
 	static double tauR(double v){return 1;}
-	static double cInf(double v){return 1 / (1 + exp(-(v - 10) / 7));}
+	static double cInf(double v){return 1 / (1 + exp(-(v - 0) / 7));}
 	static double tauC(double v){return 10;}
 };
 
