@@ -2429,8 +2429,8 @@ void PoolParallel::trial(int training)
 		{	
 			num_strong_inputs[i] += new_strong_inputs_global[i];
 			
-			if (MPI_rank == 0)
-				printf("%d\t", num_strong_inputs[i]);
+			//if (MPI_rank == 0)
+			//	printf("%d\t", num_strong_inputs[i]);
 
 		}
 		
@@ -2438,7 +2438,7 @@ void PoolParallel::trial(int training)
 		{
 			// if number of strong inputs is equal to max allowed number of supersynapses
 			// set it mature forever;
-			if (num_strong_inputs[Id_RA_local[i]] == Nss)
+			if ((num_strong_inputs[Id_RA_local[i]] >= Nss)&&(mature_local[i] < 1))
 			{
 				mature_local[i] = 1;
 				printf("\nnum_strong_inputs[%d] = %d\n", Id_RA_local[i], num_strong_inputs[Id_RA_local[i]]);
