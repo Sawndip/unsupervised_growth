@@ -17,7 +17,7 @@ const double HH2_final::Gs_noise_exc = 0.010;
 const double HH2_final::Gd_noise_exc = 0.010;
 
 const double HH2_final::cm = 1;
-const double HH2_final::Rc = 0.055;
+const double HH2_final::Rc = 0.115; // original = 0.055
 const double HH2_final::As = 50;
 const double HH2_final::GsL = 0.1;
 const double HH2_final::GsNa = 60;
