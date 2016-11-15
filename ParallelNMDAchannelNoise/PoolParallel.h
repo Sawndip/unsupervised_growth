@@ -18,10 +18,16 @@ using std::vector;
 class PoolParallel
 {
 public:
-	PoolParallel(double a, double s_rai, double b, double sigma_ira, double network_update, double Ei, double beta, double beta_s, double Tp, double Td, double tauP, double tauD, double Ap, double Ad, double Ap_super, double Ad_super, double f0, double activation, double super_threshold, double Gmax, int N_ra, int Nic, int NiInC, int N_ss, int N_tr);
+	PoolParallel(double a, double s_rai, double b, double sigma_ira, double network_update, double Ei,
+				 double beta, double beta_s, double Tp, double Td, double tauP, double tauD, double Ap,
+				 double Ad, double Ap_super, double Ad_super, double f0, double activation, double super_threshold, 
+				 double maturation_threshold,  double Gmax, int N_ra, int Nic, int NiInC, int N_ss, int N_tr);
+	
 	~PoolParallel();
 
-	void read_from_file(const char* RA_xy, const char* I_xy, const char* RA_RA_all, const char* RA_RA_active, const char* RA_RA_super, const char* RA_I, const char* I_RA, const char* mature, const char* timeInfo); // read network structure from files
+	void read_from_file(const char* RA_xy, const char* I_xy, const char* RA_RA_all, const char* RA_RA_active,
+						const char* RA_RA_super, const char* RA_I, const char* I_RA, const char* mature, const char* timeInfo); // read network structure from files
+	
 	void read_connections_from_net(const char *filename, std::vector<unsigned int>** target_id, std::vector<double>** target_G); // read connection from .net file
 	void read_all_connections_from_net(const char *filename, double*** weights); // read connection from .net file
     void read_all_connections(const char *filename, double** weights); // read all connections between RA neurons from binary file
@@ -201,9 +207,8 @@ protected:
 		vector<unsigned>* syn_ID_RA_I_local; // array with synaptic ID numbers from RA to I neurons
 		vector<unsigned>* syn_ID_I_RA_local; // array with synaptic ID numbers from I to RA neurons
 		
-		int* num_strong_inputs; // number of strong inputs
-		int* new_strong_inputs_global; // total number of new strong inputs for all processes
-		int* new_strong_inputs_local; // number of new strong inputs for local process
+		double* input_supersynaptic_weight_local; // supersynaptic input weight to neuron in each process
+		double* input_supersynaptic_weight_global; // total supersynaptic input weight to neuron
 
 		vector<unsigned>* active_synapses_local; // array of vectors with IDs of active synapses
 		vector<unsigned>* active_supersynapses_local; // array of vectors with IDs of supersynapses
@@ -239,19 +244,20 @@ protected:
 		const static double LTP_WINDOW; // window for LTP beyond which we ignore all somatic spikes
 		const static double LTD_WINDOW; // window for LTD beyond which we ignore all somatic spikes
 
-        double ACTIVATION;
-        double SUPERSYNAPSE_THRESHOLD;
-        double BETA;
-        double BETA_SUPERSYNAPSE;
-        double G_MAX;
-        double A_D;
-        double A_P;
-		double A_P_SUPER;
-		double A_D_SUPER;
-		double T_P;
-		double TAU_P;
-		double T_D;
-		double TAU_D;
+        double ACTIVATION; // threshold for synapse activation
+        double SUPERSYNAPSE_THRESHOLD; // threshold for supersynapse activation
+		double MATURATION_THRESHOLD; // threshold for neuron maturation
+        double BETA; // potentiation decay parameter
+        double BETA_SUPERSYNAPSE; // potentiation decay parameter for supersynapse
+        double G_MAX; // maximum synaptic weight
+        double A_D; // LTD amplitude 
+        double A_P; // LTP amplitude
+		double A_P_SUPER; // LTP amplitude for supersynapse
+		double A_D_SUPER; // LTD amplitude for supersynapse
+		double T_P; // time for the most efficient LTP
+		double TAU_P; // LTP decay time
+		double T_D; // time for the most efficient LTD
+		double TAU_D; // LTD decay
 
 
 		//const static double A_P;
@@ -259,17 +265,14 @@ protected:
 
 		//const static double A_D;
 
-		const static double R;
-		double F_0;
+		const static double R; // learning rate
+		double F_0; // constant to prevent connections within the same chain group
 
 		void LTD(double &w, double t); // long-term depression STDP rule
 		void LTP(double &w, double t); // long-term potentiation STDP rule
 		void potentiation_decay(); // apply potentiation decay to all RA-RA synapses
-		void STDP(int i, int j, double ti, double tj); // STDP rule for connection from neuron i to neuron j
-		void STDP_one2one(unsigned i, unsigned j); // apply STDP rules for connection from neuron i to neuron j
-		void STDP_saturated(unsigned n); // apply STDP rules for saturated neuron
 		void update_synapse(int i, int j, double w); // update synapse from neuron i to neuron j
-		void update_all_synapses(int& some_input_changed); // update synapses between RA neurons and apply potentiation decay
+		void update_all_synapses(); // update synapses between RA neurons and apply potentiation decay
 		void axon_remodeling(int i); // remove all targets from neuron i except for supersynapses
 
         // MPI support

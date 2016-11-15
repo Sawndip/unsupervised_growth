@@ -17,10 +17,12 @@ int main(int argc, char** argv)
     int N_RA, num_inh_clusters_in_row, num_inh_in_cluster, N_ss, N_TR;
 	double a, b, s_rai, s_ira;
 
+	double maturation_threshold; // maturation threshold for a neuron
+
 	double sigma_soma; // white noise amplitude in soma compartment
 	double sigma_dend; // white noise amplitude in dendritic compartment
-	double mu_soma;
-	double mu_dend;
+	double mu_soma; // white noise mean in soma
+	double mu_dend; // white noise mean in dend
 
     string outputDirectory;
 	string filenumber; // string containing number of the files from which to read network connectivity
@@ -58,22 +60,23 @@ int main(int argc, char** argv)
 		f0 = atof(argv[17]);
         activation = atof(argv[18]);
         super_threshold = atof(argv[19]);
-        Gmax = atof(argv[20]);
-        N_RA = atoi(argv[21]);
-        num_inh_clusters_in_row = atoi(argv[22]);
-        num_inh_in_cluster = atoi(argv[23]);
-        N_ss = atoi(argv[24]);
-        N_TR = atoi(argv[25]);
-        outputDirectory = argv[26];
-		reading = atoi(argv[27]);
-		filenumber = argv[28];
-		testing = atoi(argv[29]);
-		training = atoi(argv[30]);
-        network_update = atof(argv[31]);
-		a = atof(argv[32]);
-		s_rai = atof(argv[33]);
-		b = atof(argv[34]);
-		s_ira = atof(argv[35]);
+        maturation_threshold = atof(argv[20]);
+        Gmax = atof(argv[21]);
+        N_RA = atoi(argv[22]);
+        num_inh_clusters_in_row = atoi(argv[23]);
+        num_inh_in_cluster = atoi(argv[24]);
+        N_ss = atoi(argv[25]);
+        N_TR = atoi(argv[26]);
+        outputDirectory = argv[27];
+		reading = atoi(argv[28]);
+		filenumber = argv[29];
+		testing = atoi(argv[30]);
+		training = atoi(argv[31]);
+        network_update = atof(argv[32]);
+		a = atof(argv[33]);
+		s_rai = atof(argv[34]);
+		b = atof(argv[35]);
+		s_ira = atof(argv[36]);
 
         if (rank == 0)
             printf("Output directory is %s\n", outputDirectory.c_str());
@@ -121,7 +124,8 @@ int main(int argc, char** argv)
 
     int N_I = num_inh_clusters_in_row * num_inh_clusters_in_row * num_inh_in_cluster;
 	
-	PoolParallel pool(a, s_rai, b, s_ira, network_update, Ei, beta, beta_s, Tp, Td, tauP, tauD, Ap, Ad, Ap_super, Ad_super, f0, activation, super_threshold, Gmax, N_RA, num_inh_clusters_in_row, num_inh_in_cluster, N_ss, N_TR);
+	PoolParallel pool(a, s_rai, b, s_ira, network_update, Ei, beta, beta_s, Tp, Td, tauP, tauD, Ap, Ad, Ap_super, Ad_super, 
+					  f0, activation, super_threshold, maturation_threshold, Gmax, N_RA, num_inh_clusters_in_row, num_inh_in_cluster, N_ss, N_TR);
 
 	pool.initialize_generator();
 

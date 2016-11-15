@@ -13,12 +13,13 @@ using namespace std::placeholders;
 
 PoolParallel::PoolParallel(double a, double s_rai, double b, double s_ira, double network_update,
 						double Ei, double beta, double beta_s, double Tp, double Td, double tauP, double tauD, double Ap, double Ad, double Ap_super, 
-						double Ad_super, double f0, double activation, double super_threshold, 
+						double Ad_super, double f0, double activation, double super_threshold, double maturation_threshold, 
                         double Gmax, int N_ra, int Nic, int NiInC, int N_ss, int N_tr) : A_RA2I(a), 
 						SIGMA_RA2I(s_rai), B_I2RA(b), SIGMA_I2RA(s_ira), network_update_frequency(network_update),
 						E_GABA_IMMATURE(Ei), BETA(beta), BETA_SUPERSYNAPSE(beta_s), A_P(Ap), A_D(Ad), T_P(Tp), T_D(Td), TAU_P(tauP), 
 						TAU_D(tauD), A_P_SUPER(Ap_super),
-						A_D_SUPER(Ad_super), F_0(f0), ACTIVATION(activation), SUPERSYNAPSE_THRESHOLD(super_threshold), G_MAX(Gmax),
+						A_D_SUPER(Ad_super), F_0(f0), ACTIVATION(activation), SUPERSYNAPSE_THRESHOLD(super_threshold), 
+						MATURATION_THRESHOLD(maturation_threshold), G_MAX(Gmax),
 				        N_RA(N_ra), num_inh_clusters(Nic), num_inh_in_cluster(NiInC), Nss(N_ss), N_TR(N_tr)
 {
 
@@ -111,10 +112,9 @@ PoolParallel::PoolParallel(double a, double s_rai, double b, double s_ira, doubl
     active_supersynapses_local = new std::vector<unsigned>[N_RA_local];
 	active_synapses_local = new std::vector<unsigned>[N_RA_local];
 
-	num_strong_inputs = new int[N_RA];
-	new_strong_inputs_global = new int[N_RA];
-	new_strong_inputs_local = new int[N_RA];
-
+	input_supersynaptic_weight_local = new double[N_RA]; // supersynaptic input weight in the proceess
+	input_supersynaptic_weight_global = new double[N_RA]; // total supersynaptic input weight
+	
 	update_Ge_AMPA_RA_local = new double[N_RA];
     update_Gi_RA_local = new double[N_RA];
     update_Ge_I_local = new double[N_I];
@@ -203,10 +203,6 @@ PoolParallel::PoolParallel(double a, double s_rai, double b, double s_ira, doubl
 		}
         spike_times_dend_global[i] = -100.0;
 		
-		num_strong_inputs[i] = 0;
-		new_strong_inputs_global[i] = 0;
-		new_strong_inputs_local[i] = 0;
-
 	}
 }
 
@@ -249,9 +245,8 @@ PoolParallel::~PoolParallel()
 	delete[] update_Gi_RA_global;
 	delete[] update_Ge_I_global;
 
-	delete[] num_strong_inputs;
-	delete[] new_strong_inputs_global;
-	delete[] new_strong_inputs_local;
+	delete[] input_supersynaptic_weight_local;
+	delete[] input_supersynaptic_weight_global;
 //	MPI_Finalize();
 }
 
@@ -273,8 +268,8 @@ const double PoolParallel::G_P = 0.1;
 
 const double PoolParallel::R = 1;
 
-const double PoolParallel::LTP_WINDOW = 50;
-const double PoolParallel::LTD_WINDOW = 50;
+const double PoolParallel::LTP_WINDOW = 100;
+const double PoolParallel::LTD_WINDOW = 100;
 
 const double PoolParallel::DELAY_WINDOW = 35;
 
@@ -1148,6 +1143,7 @@ void PoolParallel::print_simulation_parameters()
 		printf("A_D_SUPER = %f\n", A_D_SUPER);
 		printf("ACTIVATION = %f\n", ACTIVATION);
 		printf("SUPERSYNAPSE_THRESHOLD = %f\n", SUPERSYNAPSE_THRESHOLD);
+		printf("MATURATION_THRESHOLD = %f\n", MATURATION_THRESHOLD);
 		printf("Gmax = %f\n", G_MAX);
 
 	}
@@ -1956,9 +1952,6 @@ void PoolParallel::trial(int training)
 
 	int some_I_neuron_fired_global;
 
-	int some_input_changed_local; // local indicator that number of inputs changed
-	int some_input_changed_global; // global indicator that number of inputs changed
-	
 	int num_soma_spikes_local; // number of soma spikes in the process
 	int num_soma_spikes_global; // number of soma spikes in the network
 	
@@ -1971,7 +1964,6 @@ void PoolParallel::trial(int training)
     std::vector<unsigned> RA_neurons_fired_dend_realID;
 
 	std::vector<unsigned> I_neurons_fired;
-
 
 
     trial_number++;
@@ -2000,18 +1992,15 @@ void PoolParallel::trial(int training)
     some_I_neuron_fired_local = 0;
     some_I_neuron_fired_global = 0;
 	
-	some_input_changed_local = 0;
-	some_input_changed_global = 0;
-
 	// initialize update arrays
 	for (int i = 0; i < N_RA; i++)
 	{
 		update_Ge_AMPA_RA_local[i] = 0.0;
         update_Gi_RA_local[i] = 0.0;
-		new_strong_inputs_local[i] = 0;
         update_Ge_AMPA_RA_global[i] = 0.0;
         update_Gi_RA_global[i] = 0.0;
-		new_strong_inputs_global[i] = 0;
+		input_supersynaptic_weight_local[i] = 0.0;
+		input_supersynaptic_weight_global[i] = 0.0;
     }
 
 	for (int i = 0; i < N_I; i++)
@@ -2101,9 +2090,6 @@ void PoolParallel::trial(int training)
                             LTD(weights_local[fired_ID][target_ID], dt);
                             update_synapse(fired_ID, target_ID, weights_local[fired_ID][target_ID]);
                        		
-							// if strong number of strong inputs to a target neuron changes
-							if (new_strong_inputs_local[target_ID] != 0)
-								some_input_changed_local = 1;
 					   	}
                     }
                 }
@@ -2125,9 +2111,6 @@ void PoolParallel::trial(int training)
                            		LTD(weights_local[fired_ID][j], dt);
                            		update_synapse(fired_ID, j, weights_local[fired_ID][j]);
 								
-								// if number of strong inputs to a target neuron changes
-								if (new_strong_inputs_local[j] != 0)
-									some_input_changed_local = 1;
 							}
                         }
                     }
@@ -2322,10 +2305,6 @@ void PoolParallel::trial(int training)
          //                             printf("LTP from neuron %d onto %d; somatic spike at %f; dendritic spike at %f\n", Id_RA_local[i], fired_ID,
              //                                               last_soma_spikes_local[i][k], spike_times_dend_global[fired_ID]);
                                         update_synapse(i, fired_ID, weights_local[i][fired_ID]);
-                                   
-								   		// if number of strong inputs to a fired neuron changes
-										if (new_strong_inputs_local[fired_ID] != 0)
-											some_input_changed_local = 1;
 									}
                                 }
                             }
@@ -2353,9 +2332,6 @@ void PoolParallel::trial(int training)
                                         LTP(weights_local[i][fired_ID], dt);
                                         update_synapse(i, fired_ID, weights_local[i][fired_ID]);
                                   		
-										// if number of strong inputs to a fired neuron changes
-										if (new_strong_inputs_local[fired_ID] != 0)
-											some_input_changed_local = 1;
 									}
                                 }
                             }
@@ -2415,63 +2391,37 @@ void PoolParallel::trial(int training)
     }
     this->potentiation_decay();
     //printf("After potentiation decay")
-    this->update_all_synapses(some_input_changed_local);
+    this->update_all_synapses();
 	
-	MPI_Allreduce(&some_input_changed_local, &some_input_changed_global, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+	// calculate incoming supersynaptic weight
 
-	if (some_input_changed_global > 0)
+	for (int i = 0; i < N_RA_local; i++)
 	{
-		// sum number of new inputs
-        MPI_Allreduce(&new_strong_inputs_local[0], &new_strong_inputs_global[0], N_RA, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
-
-		// update number of inputs
-		for (int i = 0; i < N_RA; i++)
-		{	
-			num_strong_inputs[i] += new_strong_inputs_global[i];
-			
-			//if (MPI_rank == 0)
-			//	printf("%d\t", num_strong_inputs[i]);
-
-		}
 		
-		for (int i = 0; i < N_RA_local; i++)
+		for (int j = 0; j < static_cast<int>(active_supersynapses_local[i].size()); j++)
 		{
-			// if number of strong inputs is equal to max allowed number of supersynapses
-			// set it mature forever;
-			if ((num_strong_inputs[Id_RA_local[i]] >= Nss)&&(mature_local[i] < 1))
-			{
-				mature_local[i] = 1;
-				printf("\nnum_strong_inputs[%d] = %d\n", Id_RA_local[i], num_strong_inputs[Id_RA_local[i]]);
-			}
+			int super_target = active_supersynapses_local[i][j]; // supersynaptic target
+			input_supersynaptic_weight_local[super_target] += weights_local[i][super_target];
 		}
 
 	}
+	MPI_Allreduce(&input_supersynaptic_weight_local[0], &input_supersynaptic_weight_global[0], N_RA, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+
+	// check if incoming weight exceeds maturation threshold
+	for (int i = 0; i < N_RA_local; i++)
+	{
+		if ((input_supersynaptic_weight_global[Id_RA_local[i]] >= MATURATION_THRESHOLD) && (mature_local[i] == 0))
+		{
+			printf("Neuron %d became mature!\n", Id_RA_local[i]);
+			mature_local[i] = 1;		
+		}
+	}
+
+
 
 //printf("internal time = %f\n", internal_time);
 	//printf("t*timeStep = %f\n", t*timeStep);
 }
-
-
-
-
-void PoolParallel::STDP(int i, int j, double ti, double tj)
-{
-    // if i spiked before j, apply LTP i to j connection, LTD else
-
-
-    if (Id_RA_local[i]!=j)
-    {
-        double dt = fabs(ti - tj);
-        //printf("Rank %d; from %d onto %d; t1 = %f, t2 = %f\n", MPI_rank, Id_RA_local[i], j, ti, tj);
-        if (ti<=tj)
-            LTP(weights_local[i][j], dt);
-        else
-            LTD(weights_local[i][j], dt);
-
-        update_synapse(i, j, weights_local[i][j]);
-    }
-}
-
 
 void PoolParallel::potentiation_decay()
 {
@@ -2486,7 +2436,6 @@ void PoolParallel::potentiation_decay()
         }
     }
 }
-
 
 void PoolParallel::axon_remodeling(int i)
 {
@@ -2507,7 +2456,7 @@ void PoolParallel::axon_remodeling(int i)
     remodeled_local[i] = true;
 }
 
-void PoolParallel::update_all_synapses(int& some_input_changed)
+void PoolParallel::update_all_synapses()
 {
     //printf("Process %d; Updating all synapses after potentiation decay\n", MPI_rank);
     for (int i = 0; i < N_RA_local; i++)
@@ -2516,9 +2465,6 @@ void PoolParallel::update_all_synapses(int& some_input_changed)
         {
             this->update_synapse(i, j, weights_local[i][j]);
 			
-			// if number of new inputs to neuron j changed
-			if (new_strong_inputs_local[j] != 0)
-				some_input_changed = 1;
         }
     }
 
@@ -2538,7 +2484,6 @@ void PoolParallel::update_synapse(int i, int j, double w)
        // printf("Activated supersynapse from %d onto %d; weight = %f\n", Id_RA_local[i], j, w);
         supersynapses_local[i][j] = true;
         active_supersynapses_local[i].push_back(j);
-		new_strong_inputs_local[j] += 1;
     }
 
     if ((w < SUPERSYNAPSE_THRESHOLD)&&(supersynapses_local[i][j]))
@@ -2546,7 +2491,6 @@ void PoolParallel::update_synapse(int i, int j, double w)
        // printf("Deactivated supersynapse from %d onto %d; weight = %f\n", Id_RA_local[i], j, w);
         supersynapses_local[i][j] = false;
         remodeled_local[i] = false;
-		new_strong_inputs_local[j] -= 1;
         std::vector<unsigned>::iterator pos = std::find(active_supersynapses_local[i].begin(),
                                                     active_supersynapses_local[i].end(), j);
 
@@ -2716,12 +2660,6 @@ void PoolParallel::LTD(double &w, double t)
 //{
 //	return E_GABA_MATURE + (E_GABA_IMMATURE - E_GABA_MATURE) * exp(-t/T_GABA);
 //}
-
-double PoolParallel::E_GABA(int n)
-{
-    return E_GABA_MATURE + (E_GABA_IMMATURE - E_GABA_MATURE) * exp(-n/(N_MATURATION));
-}
-
 void PoolParallel::gather_data()
 {
     MPI_Status status;
