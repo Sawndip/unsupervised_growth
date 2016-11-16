@@ -58,6 +58,7 @@ public:
     void initialize_test_allI2RA_connections(double Gie); // initialize all equal I to RA connections except for training neurons
     void initialize_test_allRA2I_connections(double Gei); // initialize all equal RA to I connections except for training neurons
 
+	void mature_chain_test(const int num_trials, const char* file_soma_spikes, const char* file_dend_spikes, const char* file_chain_test); // test of mature network
 	void trial(int training); // make one trial
 	void ground_state(unsigned N_trials); // make simulation of a ground state;
 
@@ -268,6 +269,9 @@ protected:
 		const static double R; // learning rate
 		double F_0; // constant to prevent connections within the same chain group
 
+		void set_training_current(double t); // set current to training neurons. t - current injection time.
+		void write_chain_test(int num_trials, std::vector<double>& mean_burst_time, std::vector<double>& std_burst_time, const char* filename); // write results of chain test to file
+		void mature_trial(); // simulation trial without STDP rules
 		void LTD(double &w, double t); // long-term depression STDP rule
 		void LTP(double &w, double t); // long-term potentiation STDP rule
 		void potentiation_decay(); // apply potentiation decay to all RA-RA synapses
@@ -276,6 +280,7 @@ protected:
 		void axon_remodeling(int i); // remove all targets from neuron i except for supersynapses
 
         // MPI support
+		void gather_mature_data(std::vector<std::vector<double>>& average_dendritic_spike_time); // gather data from all processes in case of mature chain trial
 
         int MPI_size; // number of processes
         int MPI_rank; // rank of the process

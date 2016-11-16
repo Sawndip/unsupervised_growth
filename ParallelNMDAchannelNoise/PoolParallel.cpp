@@ -1863,6 +1863,20 @@ void PoolParallel::randomize_after_trial()
     }
 }
 
+
+void PoolParallel::set_training_current(double t)
+{
+    if (MPI_rank == 0)
+    {
+        std::function<double (double)> f = std::bind(&training_current, t, _1);
+
+        for (int i = 0; i < N_TR; i++)
+            HVCRA_local[i].set_dend_current(f);
+    }
+}
+
+
+
 void PoolParallel::set_training_current()
 {
     if (MPI_rank == 0)
@@ -1939,6 +1953,259 @@ void PoolParallel::set_testing_current()
 int PoolParallel::get_trial_number()
 {
     return trial_number;
+}
+
+
+void PoolParallel::mature_chain_test(const int num_trials, const char* file_soma_spikes, const char* file_dend_spikes, const char* file_chain_test)
+{
+
+	std::vector<std::vector<double>> average_dendritic_spike_time; // array with average dendritic spike time in every trial
+
+	average_dendritic_spike_time.resize(N_RA);
+
+	for (int i = 0; i < num_trials; i++)
+	{
+		this->mature_trial();
+		this->gather_mature_data(average_dendritic_spike_time);
+		this->write_soma_time_info(file_soma_spikes);
+		this->write_dend_time_info(file_dend_spikes);
+		this->randomize_after_trial();
+		
+	}
+	
+	// process dendritic spikes
+
+	std::vector<double> mean_burst_time; // average of dendritic spike time
+	std::vector<double> std_burst_time; // standard deviation of dendritic spike time
+
+	mean_burst_time.resize(N_RA);
+	std_burst_time.resize(N_RA);
+
+	if (MPI_rank == 0)
+	{
+		for (int i = 0; i < N_RA; i++)
+		{
+			if (static_cast<int>(average_dendritic_spike_time[i].size()) > 0)
+				mean_burst_time[i] = std::accumulate(average_dendritic_spike_time[i].begin(), average_dendritic_spike_time[i].end(), 0.0) / static_cast<double>(average_dendritic_spike_time[i].size());
+
+			else
+				mean_burst_time[i] = -1;
+			// calculate standard deviation of burst times
+
+			double accum = 0;
+			double mean = mean_burst_time[i];
+
+			std::for_each(average_dendritic_spike_time[i].begin(), average_dendritic_spike_time[i].end(), [&accum, mean](const double t)
+			{
+				accum += (t - mean) * (t - mean);
+			});
+
+			if (static_cast<int>(average_dendritic_spike_time[i].size() > 1))
+				std_burst_time[i] = sqrt(accum / (static_cast<double>(average_dendritic_spike_time[i].size()) - 1));
+			else
+				std_burst_time[i] = -1;
+
+
+		}
+	}
+
+	this->write_chain_test(num_trials, mean_burst_time, std_burst_time, file_chain_test);
+}
+
+void PoolParallel::mature_trial()
+{
+	int some_RA_neuron_fired_soma_local;
+
+	int some_I_neuron_fired_local;
+	int some_RA_neuron_fired_soma_global;
+
+	int some_I_neuron_fired_global;
+
+	int num_soma_spikes_local; // number of soma spikes in the process
+	int num_soma_spikes_global; // number of soma spikes in the network
+	
+	std::vector<unsigned> RA_neurons_fired_soma_local;
+	std::vector<unsigned> RA_neurons_fired_soma_global;
+	std::vector<unsigned> RA_neurons_fired_soma_realID;
+
+	std::vector<unsigned> I_neurons_fired;
+
+
+    trial_number++;
+    
+    internal_time = (trial_number - 1) * trial_duration;
+    network_time = internal_time + network_update_frequency;
+
+	// set training current
+	double current_injection_time = 10; //ms
+    this->set_training_current(current_injection_time);
+
+    some_RA_neuron_fired_soma_local = 0;
+	some_RA_neuron_fired_soma_global = 0;
+
+    some_I_neuron_fired_local = 0;
+    some_I_neuron_fired_global = 0;
+	
+	// initialize update arrays
+	for (int i = 0; i < N_RA; i++)
+	{
+		update_Ge_AMPA_RA_local[i] = 0.0;
+        update_Gi_RA_local[i] = 0.0;
+        update_Ge_AMPA_RA_global[i] = 0.0;
+        update_Gi_RA_global[i] = 0.0;
+    }
+
+	for (int i = 0; i < N_I; i++)
+	{
+        update_Ge_I_local[i] = 0.0;
+        update_Ge_I_global[i] = 0.0;
+	}
+
+    // evolve dynamics
+    for (unsigned t = 1; t < size; t++)
+	{
+		internal_time += timeStep;
+		
+		for (int i = 0; i < N_RA_local; i++)
+		{
+            int syn_num = active_synapses_local[i].size();
+
+            // set GABA potential
+            if (mature_local[i] > 0)
+                HVCRA_local[i].set_Ei(E_GABA_MATURE);
+            else
+		        HVCRA_local[i].set_Ei(E_GABA_IMMATURE);
+            
+            // RK4 step
+            HVCRA_local[i].R4_step_no_target_update();
+            
+            // if some neuron produced somatic spike, do LTD for all previous dendritic spikes
+            if (HVCRA_local[i].get_fired_soma())
+            {
+                some_RA_neuron_fired_soma_local = 1;
+                spikes_in_trial_soma_local[i].push_back(internal_time);
+                
+                int fired_ID = i; // local ID of fired neuron
+
+                // loop over all inhibitory targets of fired neurons
+                int num_I_targets = syn_ID_RA_I_local[fired_ID].size();
+                for (int j = 0; j < num_I_targets; j++)
+                {
+                    int syn_ID = syn_ID_RA_I_local[fired_ID][j];
+                    update_Ge_I_local[syn_ID] += weights_RA_I_local[fired_ID][j];
+
+                }
+				
+                // loop over all excitatory targets
+                int num_RA_targets = active_synapses_local[fired_ID].size();
+                for (int j = 0; j < num_RA_targets; j++)
+                {
+                    int syn_ID = active_synapses_local[fired_ID][j];
+                    update_Ge_AMPA_RA_local[syn_ID] += weights_local[fired_ID][syn_ID];
+                }
+            } 
+
+		}
+
+		for (int i = 0; i < N_I_local; i++)
+		{
+            HVCI_local[i].R4_step_no_target_update();
+            
+            //  if some I neuron spikes, change conductance update array
+            if (HVCI_local[i].get_fired())
+            {
+                //printf("My rank = %d; I neuron %d fired; spike_time = %f\n", MPI_rank, Id_I_local[i], internal_time);
+                some_I_neuron_fired_local = 1;
+                spikes_in_trial_interneuron_local[i].push_back(internal_time);
+
+                int fired_ID = i;
+
+                int num_RA_targets = syn_ID_I_RA_local[fired_ID].size();
+                // loop over all targets of fired neurons
+                for (int j = 0; j < num_RA_targets; j++)
+                {
+                    int syn_ID = syn_ID_I_RA_local[fired_ID][j];
+                    update_Gi_RA_local[syn_ID] += weights_I_RA_local[fired_ID][j];
+                    //printf("Rank = %d; i = %d; update_Gi_RA_local[%d] = %f; weights_I_RA_local[%d][%d] = %f\n", MPI_rank, i, syn_ID,
+                     //   update_Gi_RA_local[syn_ID], weights_I_RA_local[fired_ID][j], fired_ID, j);
+                }
+            }
+		}
+
+        // if we need to update network state
+        // get if any neurons fired in some process
+
+        if (internal_time > network_time)
+        {
+            MPI_Allreduce(&some_RA_neuron_fired_soma_local, &some_RA_neuron_fired_soma_global, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+            MPI_Allreduce(&some_I_neuron_fired_local, &some_I_neuron_fired_global, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+        
+            if (some_I_neuron_fired_global > 0)
+            {
+            // sum update array and send to all processes
+
+                MPI_Allreduce(&update_Gi_RA_local[0], &update_Gi_RA_global[0], N_RA, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+
+                for (int i = 0; i < N_RA_local; i++)
+                {
+                    HVCRA_local[i].raiseI(update_Gi_RA_global[Id_RA_local[i]]);
+                }
+            }
+
+            //if (some_RA_neuron_fired_global == 1)
+            //    printf("Rank %d; some_RA_neuron_fired_global: %d\n", MPI_rank, some_RA_neuron_fired_global);
+
+            // if somatic compartment of any neuron in the pool fired, update synaptic conductances
+             if (some_RA_neuron_fired_soma_global > 0)
+             {
+            // sum all update arrays and send to all processes
+
+                MPI_Allreduce(&update_Ge_AMPA_RA_local[0], &update_Ge_AMPA_RA_global[0], N_RA, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+                MPI_Allreduce(&update_Ge_I_local[0], &update_Ge_I_global[0], N_I, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+
+                // now update excitatory conductances of all neurons
+                for (int i = 0; i < N_RA_local; i++)
+                {
+                    HVCRA_local[i].raise_AMPA(update_Ge_AMPA_RA_global[Id_RA_local[i]]); // update conductance
+				}
+
+                for (int i = 0; i < N_I_local; i++)
+                {
+                    HVCI_local[i].raiseE(update_Ge_I_global[Id_I_local[i]]);
+                }
+
+            }
+
+            network_time += network_update_frequency;
+            
+            //printf("network_time = %f\n", network_time);
+
+            some_RA_neuron_fired_soma_local = 0;
+	        some_RA_neuron_fired_soma_global = 0;
+
+            some_I_neuron_fired_local = 0;
+            some_I_neuron_fired_global = 0;
+	
+	        // initialize update arrays
+	        for (int i = 0; i < N_RA; i++)
+	        {
+		        update_Ge_AMPA_RA_local[i] = 0.0;
+                update_Gi_RA_local[i] = 0.0;
+                update_Ge_AMPA_RA_global[i] = 0.0;
+                update_Gi_RA_global[i] = 0.0;
+            }
+
+	        for (int i = 0; i < N_I; i++)
+	        {
+                update_Ge_I_local[i] = 0.0;
+                update_Ge_I_global[i] = 0.0;
+	        }
+
+        }
+
+
+        //MPI_Barrier(MPI_COMM_WORLD);
+    }
 }
 
 void PoolParallel::trial(int training)
@@ -2660,6 +2927,221 @@ void PoolParallel::LTD(double &w, double t)
 //{
 //	return E_GABA_MATURE + (E_GABA_IMMATURE - E_GABA_MATURE) * exp(-t/T_GABA);
 //}
+void PoolParallel::gather_mature_data(std::vector<std::vector<double>>& average_dendritic_spike_time)
+{
+
+    MPI_Status status;
+    // Gather all data to master process
+    int *spike_num_soma_local = new int[N_RA_local];
+    int *spike_num_soma_global = new int[N_RA];
+    int *spike_num_dend_local = new int[N_RA_local];
+    int *spike_num_dend_global = new int[N_RA];
+    int *spike_num_interneuron_local = new int[N_I_local];
+    int *spike_num_interneuron_global = new int[N_I];
+
+    int *recvcounts_RA = new int[MPI_size];
+    int *displs_RA = new int[MPI_size];
+	int *recvcounts_I = new int[MPI_size];
+    int *displs_I = new int[MPI_size];
+
+
+    if (MPI_rank == 0)
+    {
+        recvcounts_RA[0] = N_RA_sizes[0];
+        displs_RA[0] = 0;
+
+        for (int i = 1; i < MPI_size; i++)
+        {
+            recvcounts_RA[i] = N_RA_sizes[i];
+            displs_RA[i] = displs_RA[i-1] + recvcounts_RA[i-1];
+        }
+		
+		recvcounts_I[0] = N_I_sizes[0];
+        displs_I[0] = 0;
+
+        for (int i = 1; i < MPI_size; i++)
+        {
+            recvcounts_I[i] = N_I_sizes[i];
+            displs_I[i] = displs_I[i-1] + recvcounts_I[i-1];
+        }
+
+    }
+
+    for (int i = 0; i < N_RA_local; i++)
+    {
+        spike_num_soma_local[i] = spikes_in_trial_soma_local[i].size();
+        spike_num_dend_local[i] = spikes_in_trial_dend_local[i].size();
+
+        //printf("Rank = %d, supersyn_sizes_local[%d] = %d\n", MPI_rank, Id_RA_local[i], supersyn_sizes_local[i]);
+        //printf("Rank = %d, syn_sizes_local[%d] = %d\n", MPI_rank, Id_RA_local[i], syn_sizes_local[i]);
+        //printf("Rank = %d, spike_num_local[%d] = %d\n", MPI_rank, Id_RA_local[i], spike_num_local[i]);
+    }
+
+	for (int i = 0; i < N_I_local; i++)
+		spike_num_interneuron_local[i] = (int) spikes_in_trial_interneuron_local[i].size();
+
+	MPI_Gatherv(&spike_num_interneuron_local[0], N_I_local, MPI_INT,
+        &spike_num_interneuron_global[0], recvcounts_I, displs_I, MPI_INT, 0, MPI_COMM_WORLD);
+
+    MPI_Gatherv(&spike_num_soma_local[0], N_RA_local, MPI_INT,
+        &spike_num_soma_global[0], recvcounts_RA, displs_RA, MPI_INT, 0, MPI_COMM_WORLD);
+
+    MPI_Gatherv(&spike_num_dend_local[0], N_RA_local, MPI_INT,
+        &spike_num_dend_global[0], recvcounts_RA, displs_RA, MPI_INT, 0, MPI_COMM_WORLD);
+
+    
+	if (MPI_rank == 0)
+    {
+        for (int i = 0; i < N_RA; i++)
+        {
+            spikes_in_trial_soma_global[i].resize(spike_num_soma_global[i]);
+            spikes_in_trial_dend_global[i].resize(spike_num_dend_global[i]);
+
+            //printf("Master, spike_num_global[%d] = %d\n", i, spike_num_global[i]);
+        }
+
+
+        // Copy from master's local arrays
+        for (int i = 0; i < N_RA_local; i++)
+        {
+            spikes_in_trial_soma_global[i] = spikes_in_trial_soma_local[i];
+            spikes_in_trial_dend_global[i] = spikes_in_trial_dend_local[i];
+        }
+
+			
+    // Gather from others
+		int N = N_RA_sizes[0]; // number of RA neurons in the processes with lower rank
+
+        for (int i = 1; i < MPI_size; i++)
+        {
+
+            for (int j = 0; j < N_RA_sizes[i]; j++)
+            {
+                int count;
+				int receive_index = N + j;
+
+                if (spike_num_soma_global[receive_index] != 0)
+                {
+                    MPI_Recv(&spikes_in_trial_soma_global[receive_index][0],
+                        spike_num_soma_global[receive_index], MPI_DOUBLE, i, 0, MPI_COMM_WORLD, &status);
+
+                    MPI_Get_count(&status, MPI_INT, &count);
+                    //printf("Recv spikes in trial; from i = %d  count = %d\n", i, count);
+                }
+
+                if (spike_num_dend_global[receive_index] != 0)
+                {
+                    MPI_Recv(&spikes_in_trial_dend_global[receive_index][0],
+                        spike_num_dend_global[receive_index], MPI_DOUBLE, i, 0, MPI_COMM_WORLD, &status);
+
+                    MPI_Get_count(&status, MPI_INT, &count);
+                    //printf("Recv spikes in trial; from i = %d  count = %d\n", i, count);
+                }
+
+               // for (int k = 0; k < spikes_in_trial_global[N_RA_local + (i-1)*offset + j].size(); k++)
+                   // printf("Master; spikes_in_trial_global[%d][%d] = %f\n", N_RA_local + (i-1)*offset + j, k,
+                      //  spikes_in_trial_global[N_RA_local + (i-1)*offset + j][k]);
+            }
+
+			N += N_RA_sizes[i];
+
+        }
+
+    }
+
+    else
+    {
+        for (int i = 0; i < N_RA_local; i++)
+        {
+
+            if (spike_num_soma_local[i] != 0)
+                MPI_Send(&spikes_in_trial_soma_local[i][0],
+                        spike_num_soma_local[i], MPI_DOUBLE, 0, 0, MPI_COMM_WORLD);
+
+            if (spike_num_dend_local[i] != 0)
+                MPI_Send(&spikes_in_trial_dend_local[i][0],
+                        spike_num_dend_local[i], MPI_DOUBLE, 0, 0, MPI_COMM_WORLD);
+        }
+    }
+
+	// gather spikes of interneurons
+	if (MPI_rank == 0)
+    {
+    
+        for (int i = 0; i < N_I; i++)
+			spikes_in_trial_interneuron_global[i].resize(spike_num_interneuron_global[i]);
+        
+	    for (int i = 0; i < N_I_local; i++)
+			spikes_in_trial_interneuron_global[i] = spikes_in_trial_interneuron_local[i];
+	
+        int N = N_I_sizes[0]; // number of I neurons in the processes with lower rank
+
+        for (int i = 1; i < MPI_size; i++)
+        {
+            for (int j = 0; j < N_I_sizes[i]; j++)
+            {
+                int count;
+				int receive_index = N + j;
+
+                if (spike_num_interneuron_global[receive_index] != 0)
+                {
+                    MPI_Recv(&spikes_in_trial_interneuron_global[receive_index][0],
+                        spike_num_interneuron_global[receive_index], MPI_DOUBLE, i, 0, MPI_COMM_WORLD, &status);
+
+                    MPI_Get_count(&status, MPI_INT, &count);
+                    //printf("Recv spikes in trial; from i = %d  count = %d\n", i, count);
+                }
+
+               // for (int k = 0; k < spikes_in_trial_global[N_RA_local + (i-1)*offset + j].size(); k++)
+                   // printf("Master; spikes_in_trial_global[%d][%d] = %f\n", N_RA_local + (i-1)*offset + j, k,
+                      //  spikes_in_trial_global[N_RA_local + (i-1)*offset + j][k]);
+            }
+
+			N += N_I_sizes[i];
+        }
+    }
+
+    
+    else
+    {
+        for (int i = 0; i < N_I_local; i++)
+        {
+            if (spike_num_interneuron_local[i] != 0)
+                MPI_Send(&spikes_in_trial_interneuron_local[i][0],
+                    spike_num_interneuron_local[i], MPI_DOUBLE, 0, 0, MPI_COMM_WORLD);
+
+
+        }
+    }
+    
+	// process dendritic spikes
+	if (MPI_rank == 0)
+	{
+		for (int i = 0; i < N_RA; i++)
+		{
+			if (spike_num_dend_global[i] > 0)
+				average_dendritic_spike_time[i].push_back(std::accumulate(spikes_in_trial_dend_global[i].begin(), spikes_in_trial_dend_global[i].end(), 0.0) / static_cast<double>(spike_num_dend_global[i]));
+
+		}
+
+
+	}
+
+
+    delete [] recvcounts_RA;
+    delete [] displs_RA;
+    delete [] recvcounts_I;
+    delete [] displs_I;
+    delete [] spike_num_soma_local;
+    delete [] spike_num_soma_global;
+    delete [] spike_num_dend_local;
+    delete [] spike_num_dend_global;
+	delete [] spike_num_interneuron_local;
+	delete [] spike_num_interneuron_global;
+
+
+}
+
 void PoolParallel::gather_data()
 {
     MPI_Status status;
@@ -3249,6 +3731,29 @@ void PoolParallel::statistics()
     
 }
 
+void PoolParallel::write_chain_test(int num_trials, std::vector<double>& mean_burst_time, std::vector<double>& std_burst_time, const char* filename)
+{
+    if (MPI_rank == 0)
+    {
+        std::ofstream out;
+
+        int size;
+
+        out.open(filename, std::ios::out | std::ios::binary);
+
+        // write number of neurons to each file
+
+        out.write(reinterpret_cast<char *>(&N_RA), sizeof(N_RA));
+        out.write(reinterpret_cast<char *>(&num_trials), sizeof(num_trials));
+
+        for (int i = 1; i <= N_RA; i++)
+        {
+            out.write(reinterpret_cast<char *>(&mean_burst_time[i]), sizeof(mean_burst_time[i]));
+            out.write(reinterpret_cast<char *>(&std_burst_time[i]), sizeof(std_burst_time[i]));
+        }
+        out.close();
+    }
+}
 
 void PoolParallel::write_active_synapses(const char* RA_RA)
 {
