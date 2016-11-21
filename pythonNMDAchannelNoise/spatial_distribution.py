@@ -176,31 +176,30 @@ if len(dist_RA2RA) > 1:
 numBins = 30
 
 f1 = plt.figure()
-ax = f1.add_subplot(111)
+plt.suptitle("Spatial distributions")
+ax = f1.add_subplot(311)
 ax.hist(dist_RA2I, numBins)
-ax.set_xlabel("Normalized distance")
+#ax.set_xlabel("Normalized distance")
 ax.set_ylabel("Number of connections")
-ax.set_title("Spatial distribution of connections from RA onto I neurons")
+ax.set_title("HVC(RA) to HVC(I)")
 ax.set_xlim([0,1])
 
 numBins = 25
 
-f2 = plt.figure()
-ax = f2.add_subplot(111)
+ax = f1.add_subplot(312)
 ax.hist(dist_I2RA, numBins)
-ax.set_xlabel("Normalized distance")
+#ax.set_xlabel("Normalized distance")
 ax.set_ylabel("Number of connections")
-ax.set_title("Spatial distribution of connections from I onto RA neurons")
+ax.set_title("HVC(I) to HVC(RA)")
 ax.set_xlim([0,1])
 
-numBins = 25
+numBins = 35
 
-f3 = plt.figure()
-ax = f3.add_subplot(111)
+ax = f1.add_subplot(313)
 ax.hist(dist_RA2RA, numBins)
 ax.set_xlabel("Normalized distance")
 ax.set_ylabel("Number of connections")
-ax.set_title("Spatial distribution of connections from RA onto RA neurons")
+ax.set_title("HVC(RA) to HVC(RA)")
 ax.set_xlim([0,1])
 
 f4 = plt.figure()

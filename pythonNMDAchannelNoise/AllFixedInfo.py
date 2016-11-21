@@ -23,7 +23,7 @@ Created on Wed May 11 12:41:50 2016
 Script plots spatial distributions of fixed synapses
 """
 
-filename = "/home/eugene/Output/super.net"
+filename = "/home/eugene/Output/super163.net"
 
 RA_xy = "/home/eugene/Output/RA_xy.bin"
 I_xy = "/home/eugene/Output/I_xy.bin"

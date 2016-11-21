@@ -17,7 +17,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import reading
 
-simFileAbs = "/home/eugene/Output/RAneurons/RA189.bin"	#	datafile name
+simFileAbs = "/home/eugene/Output/RA0.bin"	#	datafile name
 #simFileAbs = "/home/eugene/Output/RA.bin"	#	datafile name
 
 #testFileRel = "1.bin"
@@ -56,7 +56,7 @@ def print_steady_params():
 #print len(voltage)
 #print len(time)
 
-(t, Vs, Is, n, h, Vd, Id, r, c, Ca, Gexc_d, Ginh_d, Gexc_s, Ginh_s, G_NMDA, Ei, flag, Nsoma, Ndend) = reading.read_hh2(simFileAbs)
+(t, Vs, Is, n, h, Vd, Id, r, c, Ca, Gexc_d, Ginh_d, Gexc_s, Ginh_s, Ei, flag, Nsoma, Ndend) = reading.read_hh2(simFileAbs)
 
 print Nsoma
 #print "Vs", Vs
@@ -142,24 +142,21 @@ plt.grid(True)
 
 
 fig3 = plt.figure(3)
-ax1 = fig3.add_subplot(511)
+ax1 = fig3.add_subplot(411)
 ax1.plot(t, Gexc_d, 'r', linewidth = 2.0)
 ax1.set_ylabel("$G_{exc}^{d}$")
 plt.title('Synaptic conductances. s - refers to soma, d - to dendrite compartments.')
 
-ax2 = fig3.add_subplot(512)
-ax2.plot(t, G_NMDA, 'b', linewidth = 2.0)
-ax2.set_ylabel("$G_{NMDA}$")
 
-ax3 = fig3.add_subplot(513)
+ax3 = fig3.add_subplot(412)
 ax3.plot(t, Ginh_d, 'm', linewidth = 2.0)
 ax3.set_ylabel("$G_{inh}^{d}$")
 
-ax4 = fig3.add_subplot(514)
+ax4 = fig3.add_subplot(413)
 ax4.plot(t, Gexc_s, 'y', linewidth = 2.0)
 ax4.set_ylabel("$G_{exc}^{s}$")
 
-ax5 = fig3.add_subplot(515)
+ax5 = fig3.add_subplot(414)
 ax5.plot(t, Ginh_s, 'g', linewidth = 2.0)
 ax5.set_ylabel("$G_{inh}^{s}$")
 

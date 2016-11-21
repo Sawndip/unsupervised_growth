@@ -1,4 +1,4 @@
-#include "PoolParallel.h"
+#include "../PoolParallel.h"
 #include <mpi.h>
 
 using namespace std;
@@ -63,13 +63,15 @@ int main(int argc, char** argv)
 		sigma_soma = atof(argv[2]);
 		mu_dend = atof(argv[3]);
 		sigma_dend = atof(argv[4]);
-        N_RA = atoi(argv[22]);
-        num_inh_clusters_in_row = atoi(argv[23]);
-        num_inh_in_cluster = atoi(argv[24]);
-        N_ss = atoi(argv[25]);
-        N_TR = atoi(argv[26]);
-        outputDirectory = argv[27];
-		filenumber = argv[29];
+        N_RA = atoi(argv[5]);
+        num_inh_clusters_in_row = atoi(argv[6]);
+        num_inh_in_cluster = atoi(argv[7]);
+        N_ss = atoi(argv[8]);
+        N_TR = atoi(argv[9]);
+        num_trials = atoi(argv[10]);
+
+        outputDirectory = argv[11];
+		filenumber = argv[12];
 
         if (rank == 0)
             printf("Output directory is %s\n", outputDirectory.c_str());
@@ -99,8 +101,8 @@ int main(int argc, char** argv)
 
     string fileActive = outputDirectory + "RA_RA_connections.bin";
     string fileSuper = outputDirectory + "RA_RA_super_connections.bin";
-    string fileTimeSoma = outputDirectory + "time_info_soma.bin";
-    string fileTimeDend = outputDirectory + "time_info_dend.bin";
+    string fileTimeSoma = outputDirectory + "soma_spikes.bin";
+    string fileTimeDend = outputDirectory + "dend_spikes.bin";
     string fileTimeInterneuron = outputDirectory + "time_info_interneuron.bin";
 
     string fileChainTest = outputDirectory + "chain_test.bin";

@@ -990,18 +990,18 @@ void PoolParallel::read_from_file(const char* RA_xy, const char* I_xy, const cha
 		// read RA to RA supersynapses
 		this->read_connections_from_net(RA_RA_super, &active_supersynapses_global, &supersynapses_G);	
 		this->read_connections_from_net(RA_RA_active, &active_synapses_global, &active_G);
-	/*
-		for (int i = 0; i < N_RA; i++)
-		{
-			printf("Neuron %d has %d supersynapses\n", i, (int) active_supersynapses_global[i].size());
+	
+		//for (int i = 0; i < N_RA; i++)
+		//{
+		//	printf("Neuron %d has %d supersynapses\n", i, (int) active_supersynapses_global[i].size());
 
-			for (int j = 0; j < (int) active_supersynapses_global[i].size(); j++)
-			{
-				printf("target id: %d\tsynaptic weight: %f\n", active_supersynapses_global[i][j], supersynapses_G[i][j]);
-			}
+		//	for (int j = 0; j < (int) active_supersynapses_global[i].size(); j++)
+		//	{
+		//		printf("target id: %d\tsynaptic weight: %f\n", active_supersynapses_global[i][j], supersynapses_G[i][j]);
+		//	}
 
-		}
-	*/
+		//}
+	
 		//for (int i = 0; i < N_RA; i++)
 		//{
 		//	for (int j = 0; j < N_RA; j++)
@@ -1962,11 +1962,13 @@ void PoolParallel::mature_chain_test(const int num_trials, const char* file_soma
 	std::vector<std::vector<double>> average_dendritic_spike_time; // array with average dendritic spike time in every trial
 
 	average_dendritic_spike_time.resize(N_RA);
+    this-> enable_motivation_noise();
 
 	for (int i = 0; i < num_trials; i++)
 	{
 		this->mature_trial();
 		this->gather_mature_data(average_dendritic_spike_time);
+        //this->write_RA("/home/eugene/Output/RA0.bin", 0);
 		this->write_soma_time_info(file_soma_spikes);
 		this->write_dend_time_info(file_dend_spikes);
 		this->randomize_after_trial();
@@ -1977,16 +1979,26 @@ void PoolParallel::mature_chain_test(const int num_trials, const char* file_soma
 
 	std::vector<double> mean_burst_time; // average of dendritic spike time
 	std::vector<double> std_burst_time; // standard deviation of dendritic spike time
+    std::vector<int> num_dend_spikes; // number of dendritic spikes in all trials
+
 
 	mean_burst_time.resize(N_RA);
 	std_burst_time.resize(N_RA);
+    num_dend_spikes.resize(N_RA);
 
 	if (MPI_rank == 0)
 	{
 		for (int i = 0; i < N_RA; i++)
 		{
-			if (static_cast<int>(average_dendritic_spike_time[i].size()) > 0)
-				mean_burst_time[i] = std::accumulate(average_dendritic_spike_time[i].begin(), average_dendritic_spike_time[i].end(), 0.0) / static_cast<double>(average_dendritic_spike_time[i].size());
+            num_dend_spikes[i] = static_cast<int>(average_dendritic_spike_time[i].size());
+			if (num_dend_spikes[i] > 0)
+            {
+
+                //for (int j = 0; j < (int) average_dendritic_spike_time[i].size(); j++)
+                  //  printf("average_dendritic_spike_time[%d][%d] = %f\n", i, j, average_dendritic_spike_time[i][j]);
+				mean_burst_time[i] = std::accumulate(average_dendritic_spike_time[i].begin(), average_dendritic_spike_time[i].end(), 0.0) / static_cast<double>(num_dend_spikes[i]);
+
+            }
 
 			else
 				mean_burst_time[i] = -1;
@@ -2009,7 +2021,7 @@ void PoolParallel::mature_chain_test(const int num_trials, const char* file_soma
 		}
 	}
 
-	this->write_chain_test(num_trials, mean_burst_time, std_burst_time, file_chain_test);
+	this->write_chain_test(num_trials, num_dend_spikes, mean_burst_time, std_burst_time, file_chain_test);
 }
 
 void PoolParallel::mature_trial()
@@ -2033,7 +2045,7 @@ void PoolParallel::mature_trial()
 
     trial_number++;
     
-    internal_time = (trial_number - 1) * trial_duration;
+    internal_time = 0;
     network_time = internal_time + network_update_frequency;
 
 	// set training current
@@ -2105,6 +2117,10 @@ void PoolParallel::mature_trial()
                 }
             } 
 
+            if (HVCRA_local[i].get_fired_dend())
+            {
+                spikes_in_trial_dend_local[i].push_back(internal_time);
+            }
 		}
 
 		for (int i = 0; i < N_I_local; i++)
@@ -3120,8 +3136,12 @@ void PoolParallel::gather_mature_data(std::vector<std::vector<double>>& average_
 		for (int i = 0; i < N_RA; i++)
 		{
 			if (spike_num_dend_global[i] > 0)
-				average_dendritic_spike_time[i].push_back(std::accumulate(spikes_in_trial_dend_global[i].begin(), spikes_in_trial_dend_global[i].end(), 0.0) / static_cast<double>(spike_num_dend_global[i]));
+            {
+                double average_spike_time = std::accumulate(spikes_in_trial_dend_global[i].begin(), spikes_in_trial_dend_global[i].end(), 0.0) / static_cast<double>(spike_num_dend_global[i]);
 
+                //printf("Average dendritic spike time = %f\n", average_spike_time);
+				average_dendritic_spike_time[i].push_back(average_spike_time);
+            }
 		}
 
 
@@ -3731,7 +3751,7 @@ void PoolParallel::statistics()
     
 }
 
-void PoolParallel::write_chain_test(int num_trials, std::vector<double>& mean_burst_time, std::vector<double>& std_burst_time, const char* filename)
+void PoolParallel::write_chain_test(int num_trials, std::vector<int>& num_dend_spikes, std::vector<double>& mean_burst_time, std::vector<double>& std_burst_time, const char* filename)
 {
     if (MPI_rank == 0)
     {
@@ -3746,8 +3766,9 @@ void PoolParallel::write_chain_test(int num_trials, std::vector<double>& mean_bu
         out.write(reinterpret_cast<char *>(&N_RA), sizeof(N_RA));
         out.write(reinterpret_cast<char *>(&num_trials), sizeof(num_trials));
 
-        for (int i = 1; i <= N_RA; i++)
+        for (int i = 0; i < N_RA; i++)
         {
+            out.write(reinterpret_cast<char *>(&num_dend_spikes[i]), sizeof(num_dend_spikes[i]));
             out.write(reinterpret_cast<char *>(&mean_burst_time[i]), sizeof(mean_burst_time[i]));
             out.write(reinterpret_cast<char *>(&std_burst_time[i]), sizeof(std_burst_time[i]));
         }

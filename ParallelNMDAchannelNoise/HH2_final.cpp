@@ -266,7 +266,12 @@ double HH2_final::IdExt(double t)
 		if (white_noise)
 			return I_white_noise_dend(t);
 		else
-			return Id_default(t);
+        {
+            if (training_dend)
+                return Id_training(t);
+            else
+			    return Id_default(t);
+        }
 	}
 }
 
@@ -282,7 +287,12 @@ double HH2_final::IsExt(double t)
 		if (white_noise)
 			return I_white_noise_soma(t);
 		else
-			return Is_default(t);
+        {
+            if (training_soma)
+                return Is_training(t);
+            else
+			    return Is_default(t);
+        }
 	}
 }
 

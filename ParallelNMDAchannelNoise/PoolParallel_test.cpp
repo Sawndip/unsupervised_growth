@@ -183,7 +183,7 @@ int main(int argc, char** argv)
     
 	string weightsFilename, pajekSuperFilename, pajekActiveFilename, pajekAllFilename, fileAllRAneurons, fileAllIneurons, fileMature;
    
-   	int synapses_trials_update = 10;
+   	int synapses_trials_update = 20;
 	int weights_trials_update = 70;
 
 	pool.write_sim_info(fileSimInfo.c_str(), synapses_trials_update, weights_trials_update);

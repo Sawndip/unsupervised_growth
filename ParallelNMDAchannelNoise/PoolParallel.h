@@ -270,7 +270,7 @@ protected:
 		double F_0; // constant to prevent connections within the same chain group
 
 		void set_training_current(double t); // set current to training neurons. t - current injection time.
-		void write_chain_test(int num_trials, std::vector<double>& mean_burst_time, std::vector<double>& std_burst_time, const char* filename); // write results of chain test to file
+		void write_chain_test(int num_trials, std::vector<int>& num_dend_spikes, std::vector<double>& mean_burst_time, std::vector<double>& std_burst_time, const char* filename); // write results of chain test to file
 		void mature_trial(); // simulation trial without STDP rules
 		void LTD(double &w, double t); // long-term depression STDP rule
 		void LTP(double &w, double t); // long-term potentiation STDP rule
