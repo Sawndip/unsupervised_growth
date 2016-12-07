@@ -17,7 +17,7 @@ int main(int argc, char** argv)
     int N_RA, num_inh_clusters_in_row, num_inh_in_cluster, N_ss, N_TR;
 	double a, b, s_rai, s_ira;
 
-	double maturation_threshold; // maturation threshold for a neuron
+	double gaba_down; // GABA maturation rate
 
 	double sigma_soma; // white noise amplitude in soma compartment
 	double sigma_dend; // white noise amplitude in dendritic compartment
@@ -60,8 +60,8 @@ int main(int argc, char** argv)
 		f0 = atof(argv[17]);
         activation = atof(argv[18]);
         super_threshold = atof(argv[19]);
-        maturation_threshold = atof(argv[20]);
-        Gmax = atof(argv[21]);
+        Gmax = atof(argv[20]);
+        gaba_down = atof(argv[21]);
         N_RA = atoi(argv[22]);
         num_inh_clusters_in_row = atoi(argv[23]);
         num_inh_in_cluster = atoi(argv[24]);
@@ -89,12 +89,9 @@ int main(int argc, char** argv)
 
     string fileRA = outputDirectory + "RA.bin";
     string fileI = outputDirectory + "I.bin";
-    string filePajekSuper = outputDirectory + "super.net";
-    string filePajekSuperPerm = outputDirectory;
-    string filePajekActive = outputDirectory + "active.net";
-    string filePajekActivePerm = outputDirectory;
+    string filePajekSuperGraph = outputDirectory + "super.net";
+    string filePajekActiveGraph = outputDirectory + "active.net";
     string filePajekAll = outputDirectory + "all.net";
-    string filePajekAllPerm = outputDirectory;
     string filePajekFixed = outputDirectory + "fixed.net";
     string fileIxy = outputDirectory + "I_xy.bin";
     string fileRAxy = outputDirectory + "RA_xy.bin";
@@ -104,28 +101,29 @@ int main(int argc, char** argv)
     
 	string fileSimInfo = outputDirectory + "sim_info.bin";
 	string fileSynapticInfo = outputDirectory + "synaptic_info.bin";
-	string fileMaturePerm = outputDirectory;
+	string fileMatureGraph = outputDirectory + "mature.bin";
+	string fileGabaPotentialGraph = outputDirectory + "gaba_potential.bin";
 	
 	string fileMatureInfo = outputDirectory + "mature" + filenumber + ".bin"; // file from which to read mature information
 	string fileAllInfo = outputDirectory + "weights" + filenumber + ".bin"; // file from which to read all RA-RA connections
 	string fileActiveInfo = outputDirectory + "active" + filenumber + ".net"; // file from which to read all active RA-RA connections
 	string fileSuperInfo = outputDirectory + "super" + filenumber + ".net"; // file from which to read all super RA-RA connections
+	string fileGabaPotentialInfo = outputDirectory + "gaba" + filenumber + ".bin"; // file from which to read gaba potential info
 
-    string fileActive = outputDirectory + "RA_RA_connections.bin";
-    string fileSuper = outputDirectory + "RA_RA_super_connections.bin";
+    string fileActiveGraph = outputDirectory + "RA_RA_connections.bin";
+    string fileSuperGraph = outputDirectory + "RA_RA_super_connections.bin";
     string fileTimeSoma = outputDirectory + "time_info_soma.bin";
     string fileTimeDend = outputDirectory + "time_info_dend.bin";
     string fileTimeInterneuron = outputDirectory + "time_info_interneuron.bin";
 
-    string fileWeights = outputDirectory + "weights.bin";
-    string fileWeightsPerm = outputDirectory;
+    string fileWeightsGraph = outputDirectory + "weights.bin";
     string RAdir = outputDirectory + "RAneurons/";
     string Idir = outputDirectory + "Ineurons/";
 
     int N_I = num_inh_clusters_in_row * num_inh_clusters_in_row * num_inh_in_cluster;
 	
 	PoolParallel pool(a, s_rai, b, s_ira, network_update, Ei, beta, beta_s, Tp, Td, tauP, tauD, Ap, Ad, Ap_super, Ad_super, 
-					  f0, activation, super_threshold, maturation_threshold, Gmax, N_RA, num_inh_clusters_in_row, num_inh_in_cluster, N_ss, N_TR);
+					  f0, activation, super_threshold, Gmax, gaba_down, N_RA, num_inh_clusters_in_row, num_inh_in_cluster, N_ss, N_TR);
 
 	pool.initialize_generator();
 
@@ -134,7 +132,7 @@ int main(int argc, char** argv)
 	{
 		count = atoi(filenumber.c_str()) + 1;
 
-		pool.read_from_file(fileRAxy.c_str(), fileIxy.c_str(), fileAllInfo.c_str(), fileActiveInfo.c_str(), fileSuperInfo.c_str(), fileRA2I.c_str(), fileI2RA.c_str(), fileMatureInfo.c_str(), fileTimeInfo.c_str());
+		pool.read_from_file(fileRAxy.c_str(), fileIxy.c_str(), fileAllInfo.c_str(), fileActiveInfo.c_str(), fileSuperInfo.c_str(), fileRA2I.c_str(), fileI2RA.c_str(), fileMatureInfo.c_str(), fileGabaPotentialInfo.c_str(), fileTimeInfo.c_str());
 
 		pool.send_connections();
 		pool.send_simulation_parameters();
@@ -181,7 +179,7 @@ int main(int argc, char** argv)
 
 	pool.print_simulation_parameters();
     
-	string weightsFilename, pajekSuperFilename, pajekActiveFilename, pajekAllFilename, fileAllRAneurons, fileAllIneurons, fileMature;
+	string weightsFilename, pajekSuperFilename, pajekActiveFilename, pajekAllFilename, fileAllRAneurons, fileAllIneurons, fileMature, fileGabaPotential;
    
    	int synapses_trials_update = 20;
 	int weights_trials_update = 70;
@@ -218,13 +216,15 @@ int main(int argc, char** argv)
 		    pool.write_soma_time_info(fileTimeSoma.c_str());
             pool.write_dend_time_info(fileTimeDend.c_str());
             pool.write_interneuron_time_info(fileTimeInterneuron.c_str());
-            pool.write_weights(fileWeights.c_str());
-            pool.write_active_synapses(fileActive.c_str());
-	    	pool.write_supersynapses(fileSuper.c_str());
+            pool.write_weights(fileWeightsGraph.c_str());
+            pool.write_active_synapses(fileActiveGraph.c_str());
+	    	pool.write_supersynapses(fileSuperGraph.c_str());
             pool.write_RA(fileRA.c_str(), 3);
             pool.write_I(fileI.c_str(), 1);
-            pool.write_pajek_super(filePajekSuper.c_str());
-            pool.write_pajek_active(filePajekActive.c_str());
+            pool.write_pajek_super(filePajekSuperGraph.c_str());
+            pool.write_pajek_active(filePajekActiveGraph.c_str());
+			pool.write_mature(fileMatureGraph.c_str());
+			pool.write_gaba_potential(fileGabaPotentialGraph.c_str());
            
 			//for (int i = 0; i < (int) RAtoWrite.size(); i++)
 	    	//{
@@ -244,23 +244,26 @@ int main(int argc, char** argv)
 			if (!data_gathered)
 				pool.gather_data();
 
-	 		weightsFilename = fileWeightsPerm + "weights" + std::to_string(count) + ".bin";
+	 		weightsFilename = outputDirectory + "weights" + std::to_string(count) + ".bin";
 			pool.write_weights(weightsFilename.c_str());
 			//pool.write_weights(fileWeights.c_str());
 
-			pajekSuperFilename = filePajekSuperPerm + "super" + std::to_string(count) + ".net";
+			pajekSuperFilename = outputDirectory + "super" + std::to_string(count) + ".net";
 	    	pool.write_pajek_super(pajekSuperFilename.c_str());
 	    
-	   		pajekActiveFilename = filePajekActivePerm + "active" + std::to_string(count) + ".net";
+	   		pajekActiveFilename = outputDirectory + "active" + std::to_string(count) + ".net";
 	    	pool.write_pajek_active(pajekActiveFilename.c_str());
 
 	    	//pajekAllFilename = filePajekAllPerm + "all" + std::to_string(count) + ".net";
 	    	//pool.write_pajek_all(pajekAllFilename.c_str());
 
-			fileMature = fileMaturePerm + "mature" + std::to_string(count) + ".bin";
+			fileMature = outputDirectory + "mature" + std::to_string(count) + ".bin";
 			pool.write_mature(fileMature.c_str());
-
-            pool.write_time_info(fileTimeInfo.c_str());
+			
+			fileGabaPotential = outputDirectory + "gaba_potential" + std::to_string(count) + ".bin";
+			pool.write_gaba_potential(fileGabaPotential.c_str());
+            
+			pool.write_time_info(fileTimeInfo.c_str());
 
 		
 			

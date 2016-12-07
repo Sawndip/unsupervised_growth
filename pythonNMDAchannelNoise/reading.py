@@ -346,7 +346,20 @@ def read_mature(filename):
         mature.append(struct.unpack("<i", data[(SIZE_OF_INT + i*SIZE_OF_INT):(2*SIZE_OF_INT + i*SIZE_OF_INT)])[0])
         
     return mature
+
+def read_gaba_potential(filename):
+    with open(filename, "rb") as file:
+        data = file.read()
+        file.close()
     
+    N_RA = struct.unpack("<i", data[:SIZE_OF_INT])[0]
+    gaba_potential = []
+    
+    for i in xrange(N_RA):
+        gaba_potential.append(struct.unpack("<d", data[(SIZE_OF_INT + i*SIZE_OF_DOUBLE):(SIZE_OF_INT + (i+1)*SIZE_OF_DOUBLE)])[0])
+        
+    return gaba_potential
+
 def read_simTime_info(filename):
     with open(filename, "rb") as file:
         data = file.read()

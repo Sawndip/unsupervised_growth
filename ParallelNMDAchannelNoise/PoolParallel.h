@@ -6,14 +6,14 @@
 #include <cmath>
 #include <mpi.h>
 #include "poisson_noise.h"
-
+#include <boost/circular_buffer.hpp>
 
 class HH2_final_pool;
 class HHI_final_pool;
 
 using std::vector;
 
-//typedef std::function<double (double)> DDfunction;
+typedef boost::circular_buffer<int> intBuffer;
 
 class PoolParallel
 {
@@ -21,12 +21,13 @@ public:
 	PoolParallel(double a, double s_rai, double b, double sigma_ira, double network_update, double Ei,
 				 double beta, double beta_s, double Tp, double Td, double tauP, double tauD, double Ap,
 				 double Ad, double Ap_super, double Ad_super, double f0, double activation, double super_threshold, 
-				 double maturation_threshold,  double Gmax, int N_ra, int Nic, int NiInC, int N_ss, int N_tr);
+				 double gaba_down,  double Gmax, int N_ra, int Nic, int NiInC, int N_ss, int N_tr);
 	
 	~PoolParallel();
 
 	void read_from_file(const char* RA_xy, const char* I_xy, const char* RA_RA_all, const char* RA_RA_active,
-						const char* RA_RA_super, const char* RA_I, const char* I_RA, const char* mature, const char* timeInfo); // read network structure from files
+						const char* RA_RA_super, const char* RA_I, const char* I_RA, const char* mature,
+						const char* gaba_potential, const char* timeInfo); // read network structure from files
 	
 	void read_connections_from_net(const char *filename, std::vector<unsigned int>** target_id, std::vector<double>** target_G); // read connection from .net file
 	void read_all_connections_from_net(const char *filename, double*** weights); // read connection from .net file
@@ -84,6 +85,7 @@ public:
     void write_dend_time_info(const char* filename); // write dendritic spike information to a file
     void write_interneuron_time_info(const char* filename); // write interneuron spike information to a file
 	void write_mature(const char* filename); // write mature neurons
+	void write_gaba_potential(const char* filename); // write gaba potential of all neurons in the network
     void write_time_info(const char* filename); // write simulation time information
 
     void write_pajek_super(const char* filename); // write supersynapses to a file for pajek
@@ -202,15 +204,17 @@ protected:
 		int* mature_local; // indicator if neuron is mature due to supersynaptic acquisition (neuron matures forever after it acquires all supersynapses)
 		int* mature_global; // global array of indicators if neuron is mature due to supersynaptic acquisition 
 		
+		double* gaba_potential_local; // array with local values of GABA reverse potential
+		double* gaba_potential_global; // array with global values of GABA reverse potential
+
+		vector<intBuffer> num_soma_spikes_in_recent_trials; // array of circular buffer containing recent neuron rates
+
 		vector<double>* spikes_in_trial_local; // local rray with spike times of single trial
 		vector<double>* weights_RA_I_local; // array with synapses from RA to I neurons
 		vector<double>* weights_I_RA_local; // array with senapses from I to RA neurons
 		vector<unsigned>* syn_ID_RA_I_local; // array with synaptic ID numbers from RA to I neurons
 		vector<unsigned>* syn_ID_I_RA_local; // array with synaptic ID numbers from I to RA neurons
 		
-		double* input_supersynaptic_weight_local; // supersynaptic input weight to neuron in each process
-		double* input_supersynaptic_weight_global; // total supersynaptic input weight to neuron
-
 		vector<unsigned>* active_synapses_local; // array of vectors with IDs of active synapses
 		vector<unsigned>* active_supersynapses_local; // array of vectors with IDs of supersynapses
 		unsigned* Id_RA_local; // Id of RA neurons in each process
@@ -225,8 +229,6 @@ protected:
 		double* update_Gi_RA_global;
 		double* update_Ge_I_global;
 
-
-
 		//const static double ACTIVATION; // activation threshold for synapses
 		double p_RA2I(int i, int j); // probability of connection from RA to I neuron
 		double p_I2RA(int i, int j); // probability of connection from I to RA neuron
@@ -236,10 +238,16 @@ protected:
 		// developmental GABA switch
 		const static double T_GABA; // time scale of maturation
 		//double E_GABA(double t); // time-dependent switch
+		void update_Ei(); // update GABA reverse potential after trial
 		double E_GABA(int n); // activity-dependent switch
 		double E_GABA_IMMATURE; // immature reverse GABA potential
-        const static double E_GABA_MATURE; // mature reverse GABA potential
-        const static int N_MATURATION; // maturation scale for number of active synapses
+        double SWITCH_RATE; // rate of gaba potential change due to excessive firing rate
+		const static double E_GABA_MATURE; // mature reverse GABA potential
+        
+		const static int N_MATURATION; // maturation scale for number of active synapses
+		const static double BURST_RATE_THRESHOLD; // firing rate threshold for D-H shift
+		double GABA_UP; // restoration value for gaba potential
+		double GABA_DOWN; // decrease value for gaba potential
 
 		// constants for STDP-rules
 		const static double LTP_WINDOW; // window for LTP beyond which we ignore all somatic spikes
@@ -247,7 +255,6 @@ protected:
 
         double ACTIVATION; // threshold for synapse activation
         double SUPERSYNAPSE_THRESHOLD; // threshold for supersynapse activation
-		double MATURATION_THRESHOLD; // threshold for neuron maturation
         double BETA; // potentiation decay parameter
         double BETA_SUPERSYNAPSE; // potentiation decay parameter for supersynapse
         double G_MAX; // maximum synaptic weight
@@ -270,7 +277,9 @@ protected:
 		double F_0; // constant to prevent connections within the same chain group
 
 		void set_training_current(double t); // set current to training neurons. t - current injection time.
+		
 		void write_chain_test(int num_trials, std::vector<int>& num_dend_spikes, std::vector<double>& mean_burst_time, std::vector<double>& std_burst_time, const char* filename); // write results of chain test to file
+		
 		void mature_trial(); // simulation trial without STDP rules
 		void LTD(double &w, double t); // long-term depression STDP rule
 		void LTP(double &w, double t); // long-term potentiation STDP rule
