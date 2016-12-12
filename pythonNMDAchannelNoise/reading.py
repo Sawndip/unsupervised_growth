@@ -334,31 +334,27 @@ def read_synaptic_info(filename):
     
     return (trial_num, num_active, num_super)
     
-def read_mature(filename):
+def read_maturation_info(filename):
     with open(filename, "rb") as file:
         data = file.read()
         file.close()
     
     N_RA = struct.unpack("<i", data[:SIZE_OF_INT])[0]
+    
+    gaba_potential = []    
+    maturation_triggered = []
     mature = []
+        
+    ind = SIZE_OF_INT
     
     for i in xrange(N_RA):
-        mature.append(struct.unpack("<i", data[(SIZE_OF_INT + i*SIZE_OF_INT):(2*SIZE_OF_INT + i*SIZE_OF_INT)])[0])
+        gaba_potential.append(struct.unpack("<d", data[ind:(ind + SIZE_OF_DOUBLE)])[0])
+        maturation_triggered.append(struct.unpack("<i", data[(ind + SIZE_OF_DOUBLE):(ind + SIZE_OF_DOUBLE + SIZE_OF_INT)])[0])
+        mature.append(struct.unpack("<i", data[(ind + SIZE_OF_DOUBLE + SIZE_OF_INT):(ind + SIZE_OF_DOUBLE + 2*SIZE_OF_INT)])[0])
         
-    return mature
-
-def read_gaba_potential(filename):
-    with open(filename, "rb") as file:
-        data = file.read()
-        file.close()
+        ind += SIZE_OF_DOUBLE + 2*SIZE_OF_INT
     
-    N_RA = struct.unpack("<i", data[:SIZE_OF_INT])[0]
-    gaba_potential = []
-    
-    for i in xrange(N_RA):
-        gaba_potential.append(struct.unpack("<d", data[(SIZE_OF_INT + i*SIZE_OF_DOUBLE):(SIZE_OF_INT + (i+1)*SIZE_OF_DOUBLE)])[0])
-        
-    return gaba_potential
+    return gaba_potential, maturation_triggered, mature
 
 def read_simTime_info(filename):
     with open(filename, "rb") as file:

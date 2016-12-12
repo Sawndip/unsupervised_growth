@@ -14,7 +14,7 @@ int main(int argc, char** argv)
     int trials = 100000;
 
     double network_update, Ei, beta, beta_s, Ap, Ad, Ap_super, Ad_super, f0, activation, super_threshold, Gmax, Gie_mean, Tp, Td, tauP, tauD;
-    int N_RA, num_inh_clusters_in_row, num_inh_in_cluster, N_ss, N_TR;
+    int N_RA, N_I, N_ss, N_TR;
 	double a, b, s_rai, s_ira;
 
 	double gaba_down; // GABA maturation rate
@@ -30,7 +30,6 @@ int main(int argc, char** argv)
 
     int rank; // MPI process rank
 	int reading; // indicator whether we read connections from the files or not
-	int testing; // indicator if it is a test run
 	int training; // indcator if we innervate training neurons
 	int count; // file number from which to start writing output data
 
@@ -63,20 +62,18 @@ int main(int argc, char** argv)
         Gmax = atof(argv[20]);
         gaba_down = atof(argv[21]);
         N_RA = atoi(argv[22]);
-        num_inh_clusters_in_row = atoi(argv[23]);
-        num_inh_in_cluster = atoi(argv[24]);
-        N_ss = atoi(argv[25]);
-        N_TR = atoi(argv[26]);
-        outputDirectory = argv[27];
-		reading = atoi(argv[28]);
-		filenumber = argv[29];
-		testing = atoi(argv[30]);
-		training = atoi(argv[31]);
-        network_update = atof(argv[32]);
-		a = atof(argv[33]);
-		s_rai = atof(argv[34]);
-		b = atof(argv[35]);
-		s_ira = atof(argv[36]);
+        N_I = atoi(argv[23]);
+        N_ss = atoi(argv[24]);
+        N_TR = atoi(argv[25]);
+        outputDirectory = argv[26];
+		reading = atoi(argv[27]);
+		filenumber = argv[28];
+		training = atoi(argv[29]);
+        network_update = atof(argv[30]);
+		a = atof(argv[31]);
+		s_rai = atof(argv[32]);
+		b = atof(argv[33]);
+		s_ira = atof(argv[34]);
 
         if (rank == 0)
             printf("Output directory is %s\n", outputDirectory.c_str());
@@ -102,13 +99,11 @@ int main(int argc, char** argv)
 	string fileSimInfo = outputDirectory + "sim_info.bin";
 	string fileSynapticInfo = outputDirectory + "synaptic_info.bin";
 	string fileMatureGraph = outputDirectory + "mature.bin";
-	string fileGabaPotentialGraph = outputDirectory + "gaba_potential.bin";
 	
 	string fileMatureInfo = outputDirectory + "mature" + filenumber + ".bin"; // file from which to read mature information
 	string fileAllInfo = outputDirectory + "weights" + filenumber + ".bin"; // file from which to read all RA-RA connections
 	string fileActiveInfo = outputDirectory + "active" + filenumber + ".net"; // file from which to read all active RA-RA connections
 	string fileSuperInfo = outputDirectory + "super" + filenumber + ".net"; // file from which to read all super RA-RA connections
-	string fileGabaPotentialInfo = outputDirectory + "gaba" + filenumber + ".bin"; // file from which to read gaba potential info
 
     string fileActiveGraph = outputDirectory + "RA_RA_connections.bin";
     string fileSuperGraph = outputDirectory + "RA_RA_super_connections.bin";
@@ -120,10 +115,8 @@ int main(int argc, char** argv)
     string RAdir = outputDirectory + "RAneurons/";
     string Idir = outputDirectory + "Ineurons/";
 
-    int N_I = num_inh_clusters_in_row * num_inh_clusters_in_row * num_inh_in_cluster;
-	
 	PoolParallel pool(a, s_rai, b, s_ira, network_update, Ei, beta, beta_s, Tp, Td, tauP, tauD, Ap, Ad, Ap_super, Ad_super, 
-					  f0, activation, super_threshold, Gmax, gaba_down, N_RA, num_inh_clusters_in_row, num_inh_in_cluster, N_ss, N_TR);
+					  f0, activation, super_threshold, Gmax, gaba_down, N_RA, N_I, N_ss, N_TR);
 
 	pool.initialize_generator();
 
@@ -132,7 +125,7 @@ int main(int argc, char** argv)
 	{
 		count = atoi(filenumber.c_str()) + 1;
 
-		pool.read_from_file(fileRAxy.c_str(), fileIxy.c_str(), fileAllInfo.c_str(), fileActiveInfo.c_str(), fileSuperInfo.c_str(), fileRA2I.c_str(), fileI2RA.c_str(), fileMatureInfo.c_str(), fileGabaPotentialInfo.c_str(), fileTimeInfo.c_str());
+		pool.read_from_file(fileRAxy.c_str(), fileIxy.c_str(), fileAllInfo.c_str(), fileActiveInfo.c_str(), fileSuperInfo.c_str(), fileRA2I.c_str(), fileI2RA.c_str(), fileMatureInfo.c_str(), fileTimeInfo.c_str());
 
 		pool.send_connections();
 		pool.send_simulation_parameters();
@@ -143,21 +136,8 @@ int main(int argc, char** argv)
 	{
 		count = 1;
 
-		// if testing run assemble neurons into clusters
-		if (testing > 0)
-		{
-
-			pool.initialize_inhibitory_clusters();
-			pool.initialize_RA_for_inh_clusters();
-			pool.initialize_connections_for_inhibitory_clusters(Gei_mean, Gei_var, Gie_mean, Gie_var);
-
-		}
-		else
-		// if real run set distribution for connections between neurons
-		{
-			pool.initialize_coordinates();
-			pool.initialize_connections(Gei_mean, Gei_var, Gie_mean, Gie_var);
-		}
+		pool.initialize_coordinates();
+		pool.initialize_connections(Gei_mean, Gei_var, Gie_mean, Gie_var);
 
 		pool.send_connections();
     	pool.write_coordinates(fileRAxy.c_str(), fileIxy.c_str());
@@ -173,13 +153,11 @@ int main(int argc, char** argv)
 
     //pool.print_invariable_connections();
 
-    pool.set_generator4neurons();
-    pool.set_dynamics(interval, timeStep);
-    pool.set_white_noise_RA(mu_soma, sigma_soma, mu_dend, sigma_dend);
+    pool.set_simulation_parameters(interval, timeStep, mu_soma, sigma_soma, mu_dend, sigma_dend);
 
 	pool.print_simulation_parameters();
     
-	string weightsFilename, pajekSuperFilename, pajekActiveFilename, pajekAllFilename, fileAllRAneurons, fileAllIneurons, fileMature, fileGabaPotential;
+	string weightsFilename, pajekSuperFilename, pajekActiveFilename, pajekAllFilename, fileAllRAneurons, fileAllIneurons, fileMature;
    
    	int synapses_trials_update = 20;
 	int weights_trials_update = 70;
@@ -223,8 +201,7 @@ int main(int argc, char** argv)
             pool.write_I(fileI.c_str(), 1);
             pool.write_pajek_super(filePajekSuperGraph.c_str());
             pool.write_pajek_active(filePajekActiveGraph.c_str());
-			pool.write_mature(fileMatureGraph.c_str());
-			pool.write_gaba_potential(fileGabaPotentialGraph.c_str());
+			pool.write_maturation_info(fileMatureGraph.c_str());
            
 			//for (int i = 0; i < (int) RAtoWrite.size(); i++)
 	    	//{
@@ -258,10 +235,8 @@ int main(int argc, char** argv)
 	    	//pool.write_pajek_all(pajekAllFilename.c_str());
 
 			fileMature = outputDirectory + "mature" + std::to_string(count) + ".bin";
-			pool.write_mature(fileMature.c_str());
+			pool.write_maturation_info(fileMature.c_str());
 			
-			fileGabaPotential = outputDirectory + "gaba_potential" + std::to_string(count) + ".bin";
-			pool.write_gaba_potential(fileGabaPotential.c_str());
             
 			pool.write_time_info(fileTimeInfo.c_str());
 

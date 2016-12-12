@@ -21,31 +21,23 @@ public:
 	PoolParallel(double a, double s_rai, double b, double sigma_ira, double network_update, double Ei,
 				 double beta, double beta_s, double Tp, double Td, double tauP, double tauD, double Ap,
 				 double Ad, double Ap_super, double Ad_super, double f0, double activation, double super_threshold, 
-				 double gaba_down,  double Gmax, int N_ra, int Nic, int NiInC, int N_ss, int N_tr);
+				 double gaba_down,  double Gmax, int N_ra, int Ni, int N_ss, int N_tr);
 	
 	~PoolParallel();
 
 	void read_from_file(const char* RA_xy, const char* I_xy, const char* RA_RA_all, const char* RA_RA_active,
-						const char* RA_RA_super, const char* RA_I, const char* I_RA, const char* mature,
-						const char* gaba_potential, const char* timeInfo); // read network structure from files
+						const char* RA_RA_super, const char* RA_I, const char* I_RA, const char* maturation,
+						const char* timeInfo); // read network structure from files
 	
-	void read_connections_from_net(const char *filename, std::vector<unsigned int>** target_id, std::vector<double>** target_G); // read connection from .net file
+	void read_connections_from_net(const char *filename, std::vector<int>** target_id, std::vector<double>** target_G); // read connection from .net file
 	void read_all_connections_from_net(const char *filename, double*** weights); // read connection from .net file
     void read_all_connections(const char *filename, double** weights); // read all connections between RA neurons from binary file
 
-	void initialize_inhibitory_clusters(); // initialize coordinates of inhibitory clusters on square lattice
-	void initialize_RA_for_inh_clusters(); // initialize coordinates of pool neurons for inhibitory clusters
 	void initialize_coordinates(); // initialize coordinates of neurons
-	void initialize_clusters(); // initialize clusters of neurons
 	void initialize_generator(); // initialize generator for processes
-	void initialize_equal_clusters(); // initialize equal clusters of neurons
 
     void initialize_connections(double Gei_mean, double Gei_var, double Gie_mean, double Gie_var); // initialize connections for neurons
 
-	void initialize_connections_for_clusters(double Gei_mean, double Gei_var, double Gie_mean, double Gie_var); // initialize connections for neurons in equal clusters
-
-    void initialize_connections_for_inhibitory_clusters(double Gei_mean, double Gei_var, double Gie_mean, double Gie_var); // initialize connections for inhibitory clusters
-	
     int get_trial_number(); // get current number of trials performed
 
 	void send_connections(); // send fixed connections connections to all processes
@@ -53,15 +45,8 @@ public:
 	
 	void update_synaptic_info(); // update synaptic information after reading network structure from files
 
-	void test_connections(); // function to test how connections are written to file
-    void test_initialization(double Gie_max, double Gei_max); // test initialization of the pool
-
-    void initialize_test_allI2RA_connections(double Gie); // initialize all equal I to RA connections except for training neurons
-    void initialize_test_allRA2I_connections(double Gei); // initialize all equal RA to I connections except for training neurons
-
 	void mature_chain_test(const int num_trials, const char* file_soma_spikes, const char* file_dend_spikes, const char* file_chain_test); // test of mature network
 	void trial(int training); // make one trial
-	void ground_state(unsigned N_trials); // make simulation of a ground state;
 
 	void randomize_after_trial(); // set all neurons to the resting state
 	void reset_after_trial(); // reset neurons after trial is over
@@ -84,8 +69,7 @@ public:
     void write_soma_time_info(const char* filename); // write somatic spike information to a file
     void write_dend_time_info(const char* filename); // write dendritic spike information to a file
     void write_interneuron_time_info(const char* filename); // write interneuron spike information to a file
-	void write_mature(const char* filename); // write mature neurons
-	void write_gaba_potential(const char* filename); // write gaba potential of all neurons in the network
+	void write_maturation_info(const char* filename); // write mature neurons
     void write_time_info(const char* filename); // write simulation time information
 
     void write_pajek_super(const char* filename); // write supersynapses to a file for pajek
@@ -94,20 +78,10 @@ public:
     void write_pajek_fixed(const char* filename); // write fixed synapses to a file for pajek
 
 	// set functions
-	void set_generator(Poisson_noise* g); // set poisson noise generator
-	void set_generator4neurons(); // set noise generator for all neurons
-	void set_dynamics(double interval, double tS); // set dynamics range for all neurons
-    void set_white_noise_RA(double mu_s, double sigma_s, double mu_d, double sigma_d); // set white noise for RA neurons
+	void set_simulation_parameters(double interval, double tS, double mu_s, double sigma_s, double mu_d, double sigma_d); // set simulation parameters: trial duration; timestep of dynamics; white noise input to neuron
    
-   // motivation
-    void enable_motivation_noise(); // switch on dc component of the input noise
-    void disable_motivation_noise(); // turn off dc component of the input noise
-    
-    // statistics
-    void statistics();
    // current
     void set_training_current(); // set current to training neurons
-    void set_testing_current(); // set testing current for neurons
 
 	void print_simulation_parameters(); // print simulation parameters
 protected:
@@ -118,8 +92,6 @@ protected:
 		int N_RA_local; // number of RA neurons in each process
 		int N_I_local; // number of I neurons in each process
 		int Nss; // number of super synapses
-		int num_inh_clusters; // number of inhibitory clusters in a raw or column
-		int num_inh_in_cluster; // number of inhibitory neurons in single cluster
 
 		HH2_final_pool* HVCRA_local; // array of HVC(RA) neurons
 		HHI_final_pool* HVCI_local; // array of HVC(I) neurons
@@ -168,17 +140,12 @@ protected:
 		double** weights_global; // array of synaptic strength of all connections between RA neurons
 		vector<double>* weights_RA_I_global; // array with synapses from RA to I neurons
 		vector<double>* weights_I_RA_global; // array with senapses from I to RA neurons
-		vector<unsigned>* syn_ID_RA_I_global; // array with synaptic ID numbers from RA to I neurons
-		vector<unsigned>* syn_ID_I_RA_global; // array with synaptic ID numbers from I to RA neurons
+		vector<int>* syn_ID_RA_I_global; // array with synaptic ID numbers from RA to I neurons
+		vector<int>* syn_ID_I_RA_global; // array with synaptic ID numbers from I to RA neurons
 
-		vector<unsigned>* active_synapses_global; // array of vectors with IDs of active synapses
-		vector<unsigned>* active_supersynapses_global; // array of vectors with IDs of supersynapses
+		vector<int>* active_synapses_global; // array of vectors with IDs of active synapses
+		vector<int>* active_supersynapses_global; // array of vectors with IDs of supersynapses
 
-		// spatial info
-		int* N_cluster; // number of RA neurons per inhibitory center
-
-        // spike time info
-        const static int NUM_SOMA_SPIKES; // number of last somatic spikes to store
 
         std::deque<double>* last_soma_spikes_local; // last NUM_SOMA_SPIKES spikes in somatic compartment
         std::deque<double>* last_soma_spikes_global; // last NUM_SOMA_SPIKES spikes in somatic compartment
@@ -200,34 +167,39 @@ protected:
 		bool** active_local; // array of HVC(RA) neurons with active synapses
 		bool** supersynapses_local; // indicator array for active supersynapses;
 		double** weights_local; // array of synaptic strength of all connections between RA neurons
-		bool* remodeled_local; // indicators if neuron underwent axon remodelling
-		int* mature_local; // indicator if neuron is mature due to supersynaptic acquisition (neuron matures forever after it acquires all supersynapses)
-		int* mature_global; // global array of indicators if neuron is mature due to supersynaptic acquisition 
 		
-		double* gaba_potential_local; // array with local values of GABA reverse potential
-		double* gaba_potential_global; // array with global values of GABA reverse potential
+		vector<bool> remodeled_local; // indicators if neuron underwent axon remodelling
+		
+		vector<int> maturation_triggered_local; // local indicators if neuron maturation process is triggered
+		vector<int> maturation_triggered_global; // global indicators if neuron maturation process is triggered
+		
+		vector<int> mature_local; // indicator if neuron is mature due to supersynaptic acquisition (neuron matures forever after it acquires all supersynapses)
+		vector<int> mature_global; // global array of indicators if neuron is mature due to supersynaptic acquisition 
+		
+		vector<double> gaba_potential_local; // array with local values of GABA reverse potential
+		vector<double> gaba_potential_global; // array with global values of GABA reverse potential
 
-		vector<intBuffer> num_soma_spikes_in_recent_trials; // array of circular buffer containing recent neuron rates
+		vector<intBuffer> num_bursts_in_recent_trials; // array of circular buffer containing recent neuron rates
 
 		vector<double>* spikes_in_trial_local; // local rray with spike times of single trial
 		vector<double>* weights_RA_I_local; // array with synapses from RA to I neurons
 		vector<double>* weights_I_RA_local; // array with senapses from I to RA neurons
-		vector<unsigned>* syn_ID_RA_I_local; // array with synaptic ID numbers from RA to I neurons
-		vector<unsigned>* syn_ID_I_RA_local; // array with synaptic ID numbers from I to RA neurons
+		vector<int>* syn_ID_RA_I_local; // array with synaptic ID numbers from RA to I neurons
+		vector<int>* syn_ID_I_RA_local; // array with synaptic ID numbers from I to RA neurons
 		
-		vector<unsigned>* active_synapses_local; // array of vectors with IDs of active synapses
-		vector<unsigned>* active_supersynapses_local; // array of vectors with IDs of supersynapses
-		unsigned* Id_RA_local; // Id of RA neurons in each process
-		unsigned* Id_I_local; // Id of I neurons in each process
+		vector<int>* active_synapses_local; // array of vectors with IDs of active synapses
+		vector<int>* active_supersynapses_local; // array of vectors with IDs of supersynapses
+		vector<int> Id_RA_local; // Id of RA neurons in each process
+		vector<int> Id_I_local; // Id of I neurons in each process
 
 		// update conductances and glutamate
-		double* update_Ge_AMPA_RA_local;
-		double* update_Gi_RA_local;
-		double* update_Ge_I_local;
+		vector<double> update_Ge_RA_local;
+		vector<double> update_Gi_RA_local;
+		vector<double> update_Ge_I_local;
 	
-		double* update_Ge_AMPA_RA_global;
-		double* update_Gi_RA_global;
-		double* update_Ge_I_global;
+		vector<double> update_Ge_RA_global;
+		vector<double> update_Gi_RA_global;
+		vector<double> update_Ge_I_global;
 
 		//const static double ACTIVATION; // activation threshold for synapses
 		double p_RA2I(int i, int j); // probability of connection from RA to I neuron
@@ -236,22 +208,16 @@ protected:
 		//const static double SUPERSYNAPSE_THRESHOLD; // threshold for supersynaptic connection
 
 		// developmental GABA switch
-		const static double T_GABA; // time scale of maturation
-		//double E_GABA(double t); // time-dependent switch
 		void update_Ei(); // update GABA reverse potential after trial
-		double E_GABA(int n); // activity-dependent switch
 		double E_GABA_IMMATURE; // immature reverse GABA potential
-        double SWITCH_RATE; // rate of gaba potential change due to excessive firing rate
 		const static double E_GABA_MATURE; // mature reverse GABA potential
         
-		const static int N_MATURATION; // maturation scale for number of active synapses
+		const static int RATE_WINDOW; // window in which neuron firing rate is estimated
 		const static double BURST_RATE_THRESHOLD; // firing rate threshold for D-H shift
-		double GABA_UP; // restoration value for gaba potential
 		double GABA_DOWN; // decrease value for gaba potential
 
 		// constants for STDP-rules
-		const static double LTP_WINDOW; // window for LTP beyond which we ignore all somatic spikes
-		const static double LTD_WINDOW; // window for LTD beyond which we ignore all somatic spikes
+		const static double STDP_WINDOW; // window for STDP beyond which we ignore all spikes
 
         double ACTIVATION; // threshold for synapse activation
         double SUPERSYNAPSE_THRESHOLD; // threshold for supersynapse activation
@@ -284,7 +250,7 @@ protected:
 		void LTD(double &w, double t); // long-term depression STDP rule
 		void LTP(double &w, double t); // long-term potentiation STDP rule
 		void potentiation_decay(); // apply potentiation decay to all RA-RA synapses
-		void update_synapse(int i, int j, double w); // update synapse from neuron i to neuron j
+		void update_synapse(int i, int j); // update synapse from neuron i to neuron j
 		void update_all_synapses(); // update synapses between RA neurons and apply potentiation decay
 		void axon_remodeling(int i); // remove all targets from neuron i except for supersynapses
 
@@ -294,11 +260,11 @@ protected:
         int MPI_size; // number of processes
         int MPI_rank; // rank of the process
 
-		int* N_RA_sizes; // array with number of RA neurons in each process
-		int* N_I_sizes; // array with nubmer of I neurons in each process
+		vector<int> N_RA_sizes; // array with number of RA neurons in each process
+		vector<int> N_I_sizes; // array with nubmer of I neurons in each process
 
-	void get_neuronRA_location(unsigned n, int* rank, int* shift); // get location of RA neuron with ID n in terms of process and position in array
-	void get_neuronI_location(unsigned n, int* rank, int *shift); // get location of I neuron with ID n in terms of process and position in array
+	void get_neuronRA_location(int n, int* rank, int* shift); // get location of RA neuron with ID n in terms of process and position in array
+	void get_neuronI_location(int n, int* rank, int *shift); // get location of I neuron with ID n in terms of process and position in array
 
 
 

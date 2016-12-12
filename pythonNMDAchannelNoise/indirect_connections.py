@@ -8,10 +8,10 @@ Script analyzes how many indirect connections
 neurons in one group make onto neurons in the next group
 """
 
-RA2I = "/home/eugene/Output/networks/noNMDA112816/RA_I_connections.bin"
-I2RA = "/home/eugene/Output/networks/noNMDA112816/I_RA_connections.bin"
-RA2RA = "/home/eugene/Output/networks/noNMDA112816/RA_RA_super_connections.bin"
-fileMature = "/home/eugene/Output/networks/noNMDA112816/mature14.bin"
+RA2I = "/home/eugene/Output/networks/noNMDA121216/RA_I_connections.bin"
+I2RA = "/home/eugene/Output/networks/noNMDA121216/I_RA_connections.bin"
+RA2RA = "/home/eugene/Output/networks/noNMDA121216/RA_RA_super_connections.bin"
+fileMature = "/home/eugene/Output/networks/noNMDA121216/mature343.bin"
 
 import reading
 import math
@@ -77,12 +77,12 @@ indirect_connections_in_groups(training, RA2I_targets, RA2RA_targets, I2RA_targe
 
 
 
-mature = reading.read_mature(fileMature)
+#mature = reading.read_mature(fileMature)
 
 #print "mature = ", mature
 
-mature_id = [i for i,e in enumerate(mature) if e == 1]
+#mature_id = [i for i,e in enumerate(mature) if e == 1]
 
-print "Mature neurons: ", mature_id
+#print "Mature neurons: ", mature_id
 
 #print get_indirect_connections(training, mature_id, RA2I_targets, I2RA_targets)
