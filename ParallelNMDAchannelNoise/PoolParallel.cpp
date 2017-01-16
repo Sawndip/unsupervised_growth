@@ -2185,7 +2185,7 @@ void PoolParallel::LTP(double &w, double t)
 
 void PoolParallel::LTD(double &w, double t)
 {
-	if (t <= T_P)
+	if (t <= T_D)
 	{
 
         //if ((w - R * A_D * w * ((1 - F_0) * t / T_D + F_0))<0)
@@ -2195,11 +2195,11 @@ void PoolParallel::LTD(double &w, double t)
 		if (w >= SUPERSYNAPSE_THRESHOLD)
 		{
 
-			w = w - R * (A_P_SUPER * G_P * F_0 + (A_D_SUPER - A_P_SUPER * G_P * F_0) * t / T_D);
+			w = w - w * R * A_D_SUPER * ( F_0 + (1 -  F_0) * t / T_D);
 		}
 		else
 		{
-			w = w - R * (A_P * G_P * F_0 + (A_D - A_P * G_P * F_0) * t / T_D);
+			w = w - w * R * A_D * ( F_0 + (1 -  F_0) * t / T_D);
         }
 		
 		if (w < 0)
@@ -2215,11 +2215,11 @@ void PoolParallel::LTD(double &w, double t)
 		//w = w - R * A_D * w * exp(-(t - T_D) / TAU_D);
 		if (w >= SUPERSYNAPSE_THRESHOLD)
 		{
-			w = w - R * A_D_SUPER * exp(-(t - T_D) / TAU_D);
+			w = w - w * R * A_D_SUPER * exp(-(t - T_D) / TAU_D);
 		}
 		else
 		{
-			w = w - R * A_D * exp(-(t - T_D) / TAU_D);
+			w = w - w * R * A_D * exp(-(t - T_D) / TAU_D);
 		}
 
         if (w < 0)

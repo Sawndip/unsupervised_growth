@@ -71,11 +71,12 @@ def indirect_connections_in_groups(training, RA2I_targets, RA2RA_targets, I2RA_t
 #print RA2RA_targets
         
 training = [0, 1, 2, 3]
+targets = [13, 16, 18, 25, 28, 46, 47, 52, 56, 62, 67, 71, 75, 84, 102, 103, 105, 113, 119, 121, 141, 147, 151, 156, 157, 171, 175, 176, 186, 187, 189, 218, 219, 220, 238, 242, 245, 246, 247, 262, 264, 265, 269, 278, 281, 289, 291, 298]
 num_layers = 2
 
-indirect_connections_in_groups(training, RA2I_targets, RA2RA_targets, I2RA_targets, num_layers)
+#indirect_connections_in_groups(training, RA2I_targets, RA2RA_targets, I2RA_targets, num_layers)
 
-
+print get_indirect_connections(training, targets, RA2I_targets, I2RA_targets)
 
 #mature = reading.read_mature(fileMature)
 
