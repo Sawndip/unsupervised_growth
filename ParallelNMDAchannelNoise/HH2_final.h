@@ -5,6 +5,8 @@
 #include <functional>
 #include <cmath>
 
+#define point_distribution_size 30
+
 using std::vector;
 
 typedef std::function<double (double)> DDfunction;
@@ -39,7 +41,6 @@ public:
     void set_soma_current(DDfunction fs); // set current to somatic compartment
 	void set_dend_current(DDfunction fd); // set current to dendritic compartment
 
-
     // noise
     void set_no_poisson_noise(); // disable Poisson point noisy spikes
 	void set_poisson_noise(); // enable Poisson point noisy spikes
@@ -53,12 +54,27 @@ public:
 	void set_to_rest(); // set all variables to the rest state
 	
 	// calculate dynamics
-	void Runge4_step(); // one step of Runge Kutta order 4
-	void R4_step_no_target_update(); // Runge Kutta step with no update of targets
-	void R4_step_with_target_update(); // Runge Kutta step with update of targets
+	void Euler_step(); // one Euler step
+	void Euler_step_no_target_update(); // Euler step with no update of targets
+	
+	void EulerMaryama_step(); // one Euler-Maryama step
+	void EulerMaryama_step_no_target_update(); // Euler-Maryama step with no update of targets
+	
+	void Debraband_step(); // one Debraband step; determenistic order 4, weak convergence order 3
+	void Debraband_step_no_target_update(); // Debraband step with no update of targets
 
+	void DRI1_step(); // one DRI1 step; determenistic order 3, weak convergence order 3
+	void DRI1_step_no_target_update(); // DRI1 step with no update of targets
+	
+	void Runge4_step(); // one step of Runge Kutta order 4
+	void R4_step_no_target_update(); // Runge Kutta 4 step with no update of targets
+	void R4_step_with_target_update(); // Runge Kutta 4 step with update of targets
+
+	void Runge6_step(); // one step of Runge Kutta order 6
+	void R6_step_no_target_update(); // Runge Kutta 6 step with no update of targets
+	
 	// change conductance
-	void raise_AMPA(double G); // raise excitatory AMPA conductance
+	void raiseE(double G); // raise excitatory conductance
 	void raiseI(double G); // raise inhibitory conductance
 
     // targets
@@ -103,11 +119,9 @@ protected:
 	vector<double> Ginh_s;	//	inhibitory soma conductance
 	vector<double> Gexc_d; //	excitatory dendrite conductance
 	vector<double> Ginh_d;	//	inhibitory dendrite conductance
-	vector<double> G_AMPA; // AMPA conductance of dendritic compartment
 	vector<double> E_gaba; // reverse GABA potential
 	// constants
 	
-	const static double bin_size; // bin size for current white noise stimulus
 	//	thresholds
 	const static double threshold; // threshold for somatic spike
 	const static double threshold_dend; // threshold for dendritic spike
@@ -158,14 +172,12 @@ protected:
 	void initialize_poisson_noise(int& noise_time, double lambda); // initialize noise
 
 	// white noise
-	double stored_dend;
-	double stored_soma;
 	double mu_soma;
 	double mu_dend;
 	double sigma_soma;
 	double sigma_dend;
-	int count;
-	bool white_noise; // indicator for white noise
+
+	double point_distribution[point_distribution_size]; // array with point distribution for Debraband method
 
 	// targets
 
@@ -195,14 +207,11 @@ protected:
 	double Ge_d(double t);	//	excitatory dendrite conductance
 	double Gi_s(double t);	//	inhibitory soma conductance
 	double Gi_d(double t);	//	inhibitory dendrite conductance
-	double G_ampa(double t); // excitatory AMPA conductance of dendritic compartment
 
 	double IsExt(double t); // injected current to somatic compartment
 	double IdExt(double t); // injected current to dendritic compartment
 	double Is_default(double t){return 0;};	//	default external current for soma
 	double Id_default(double t){return 0;};	//	default external current for dendrite
-	double I_white_noise_soma(double t); // external white noise current to somatic compartment
-    double I_white_noise_dend(double t); // external white noise current to dendritic compartment
 
 	static double nInf(double v){return 1 / (1 + exp(-(v + 35) / 10));}
 	static double tauN(double v){return 0.1 + 0.5 / (1 + exp((v + 27) / 15));}

@@ -9,7 +9,6 @@
 class HH2_final;
 class Poisson_noise;
 
-
 using std::vector;
 typedef std::function<double (double)> DDfunction;
 
@@ -17,7 +16,6 @@ class HHI_final
 {
 public:
 	HHI_final();
-	HHI_final(DDfunction f);
 	
 	// print
 	void print_param(); // print parameters of the model
@@ -37,6 +35,35 @@ public:
 	void R4_step_no_target_update(); // do one step of RK4 without update of target conductances
 	void Runge4_step();	//	do one step of Runge-Kutta order 4
 	
+	void DP5_step_no_target_update(); // do one step of Dormand Prince order 5 without update of target conductances
+	void DP5_step(); // do one step of Dormand Prince order 5 method 
+	
+	void PC4_step_no_target_update(); // do one predictor-corrector step of order 4 without update of target conductances
+	void AB4_step_no_target_update();	//	do one step of Adams-Bashforth order 4 method without target update
+	void AB4_step();	//	do one step of Adams-Bashforth order 4 method
+	void AM4_step();	//	do one step of Adams-Moulton order 4 method preceded by Adams-Bashforth order 4 method
+	
+	void R6_step_no_target_update(); // do one step of RK6 without update of target conductances
+	void Runge6_step();	//	do one step of Runge-Kutta order 6
+	
+	void DP8_step_no_target_update(); // do one step of Dormand Prince order 8 without update of target conductances
+	void DP8_step(); // do one step of Dormand Prince order 8 method 
+	
+	void Euler_step_no_target_update(); // do one Euler step without update of target conductances
+	void Euler_step(); // do one Euler step
+
+	void iEuler_step_no_target_update(); // do one implicit Euler step without update of target conductances
+	void iEuler_step(); // do one step of implicit Euler
+
+	void iTrapezoid_step_no_target_update(); // do one implicit Trapezoid step without update of target conductances
+	void iTrapezoid_step(); // do one step of implicit Trapezoid
+	
+	void BDF4_step_no_target_update(); // do one BDF4 step without update of target conductances
+	void BDF4_step(); // do one BDF4 step
+	
+	void BDF6_step_no_target_update(); // do one BDF6 step without update of target conductances
+	void BDF6_step(); // do one BDF6 step
+
 	// noise
 	void set_no_poisson_noise(); //	turn off Poisson noise
 	void set_no_white_noise(); // turn off white noise
@@ -135,40 +162,70 @@ protected:
 	void initialize_noise(int& noise_time); // initialize noise spike times
 
     // white noise
-    bool white_noise; // indicator for white noise
     double mu; // white noise mean
     double sigma; // white noise standard deviation
 
-    //	External current
+	//	current
+	bool injected_current; // indicator that external current is injected 
+	double I_total(double t); // total current 
+	DDfunction I_injected; // injected current
 
-	DDfunction Iext; // function that defines external injected current
+	double I_default(double t){return 0;}; // default function for injected current (returns zero)	
 	
-	double I_default(double t){return 0;}; // default function for injected current (returns zero)
 	
-	double I_white_noise(double t); // function for white noise in injected current
+	double bisection(DDfunction f, double x, double xmax, double eps, int Nmax); // bisection method for finding solution of nonlinear equation
 	
-	// parameters for white-noise current
+	// support for predictor-corrector model
+	vector<double> fv; // right handside of ode for voltage
+	vector<double> fn; // right handside of ode for n
+	vector<double> fm; // right handside of ode for m
+	vector<double> fh; // right handside of ode for h
+	vector<double> fw; // right handside of ode for w
+
+
+	// support for BDF6
+	double m_bdf6(double v);
+	double n_bdf6(double v);
+	double h_bdf6(double v);
+	double w_bdf6(double v);
+	double f_bdf6(double v);
 	
-	double bin_size; // bin size for white noise generator
-	double stored; // stored number for white noise generator
+	// support for BDF4
+	double m_bdf4(double v);
+	double n_bdf4(double v);
+	double h_bdf4(double v);
+	double w_bdf4(double v);
+	double f_bdf4(double v);
+	
+	// support for implicit Trapezoid
+	double m_iTrapezoid(double fm, double v);
+	double n_iTrapezoid(double fn, double v);
+	double h_iTrapezoid(double fh, double v);
+	double w_iTrapezoid(double fw, double v);
+	double f_iTrapezoid(double fv, double fn, double fm, double fh, double fw, double v);
+
+	// support for implicit Euler
+	double m_iEuler(double v);
+	double n_iEuler(double v);
+	double h_iEuler(double v);
+	double w_iEuler(double v);
+	double f_iEuler(double v);
+
 	// support functions for Runge-Kutta method
-	
 	double kV(double v, double t, double h, double w, double m3, double n4);
 	double kn(double v, double n);
 	double km(double v, double m);
 	double kh(double v, double h);
 	double kw(double v, double w);
-	double kexc(double gexc);
-	double kinh(double ginh);	
 
-	static double an(double v){return 0.05*(v + 15) / (1 - exp(-(v + 15) / 10));}
-	static double bn(double v){return 0.1 * exp(-(v + 25) / 80);}
+	static double an(double v){return 0.15*(v + 15) / (1 - exp(-(v + 15) / 10));} // was 0.05; original value = 0.15
+	static double bn(double v){return 0.2 * exp(-(v + 25) / 80);} // was 0.1; original value = 0.2
 	static double am(double v){return (v + 22) / (1 - exp(-(v + 22) / 10));}
 	static double bm(double v){return 40 * exp(-(v + 47) / 18);}
 	static double ah(double v){return 0.7 * exp(-(v + 34) / 20);}
 	static double bh(double v){return 10 / (1 + exp(-(v + 4) / 10));}
 	static double wInf(double v){return 1 / (1 + exp(-v / 5));}
-	static double tauW(double v){return 2;}
+	static double tauW(double v){return 1;} // was 2; original value = 1
 };
 
 

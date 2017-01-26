@@ -1,6 +1,6 @@
 #include "PoolParallel.h"
-#include "HHI_final_pool.h"
-#include "HH2_final_pool.h"
+#include "HHI_final.h"
+#include "HH2_final.h"
 #include <algorithm>
 #include <fstream>
 #include <iostream>
@@ -11,34 +11,22 @@
 
 using namespace std::placeholders;
 
-PoolParallel::PoolParallel(double a, double s_rai, double b, double s_ira, double network_update,
-						double Ei, double beta, double beta_s, double Tp, double Td, double tauP, double tauD, double Ap, double Ad, double Ap_super, 
-						double Ad_super, double f0, double activation, double super_threshold, 
-                        double Gmax, double gaba_down, int N_ra, int Ni, int N_ss, int N_tr) : A_RA2I(a), 
-						SIGMA_RA2I(s_rai), B_I2RA(b), SIGMA_I2RA(s_ira), network_update_frequency(network_update),
-						E_GABA_IMMATURE(Ei), BETA(beta), BETA_SUPERSYNAPSE(beta_s), A_P(Ap), A_D(Ad), T_P(Tp), T_D(Td), TAU_P(tauP), 
-						TAU_D(tauD), A_P_SUPER(Ap_super),
-						A_D_SUPER(Ad_super), F_0(f0), ACTIVATION(activation), SUPERSYNAPSE_THRESHOLD(super_threshold), 
-						GABA_DOWN(gaba_down), G_MAX(Gmax),
-				        N_RA(N_ra), N_I(Ni),  Nss(N_ss), N_TR(N_tr)
+PoolParallel::PoolParallel(int N_tr, int N_ra, int Ni, int N_ss, std::string outDir) : N_RA(N_ra), N_I(Ni),  Nss(N_ss), N_TR(N_tr), outputDirectory(outDir)
 {
 
     MPI_Comm_size(MPI_COMM_WORLD, &MPI_size);
     MPI_Comm_rank(MPI_COMM_WORLD, &MPI_rank);
+    
+    // initialize internal time
+    internal_time = 0.0;
+    network_time = 0.0;
+    trial_number = 0;
 
-    // white noise
-    double mu_soma = 30; // dc component of white noise to somatic compartment
-    double sigma_soma = 100; // variance of white noise to somatic compartment
-    double mu_dend = 50; // dc component of white noise to dendritic compartment
-    double sigma_dend = 150; // variance of white noise to dendritic compartment
-
-	double delay = 0;
-	int num_related_spikes = 0;
+    this->initialize_generator();
 
 	N_RA_sizes.resize(MPI_size); // array with number of RA neurons per process
 	N_I_sizes.resize(MPI_size); // array with number of I neurons per process
 
-	
 	for (int i = 0; i < MPI_size; i++)
 	{
 		N_RA_sizes[i] = N_RA / MPI_size;
@@ -77,8 +65,8 @@ PoolParallel::PoolParallel(double a, double s_rai, double b, double s_ira, doubl
 
 	printf("My rank is %d; N_RA_local = %d; N_I_local = %d\n", MPI_rank, N_RA_local, N_I_local);
 
-	HVCRA_local = new HH2_final_pool[N_RA_local];
-	HVCI_local = new HHI_final_pool[N_I_local];
+	HVCRA_local = new HH2_final[N_RA_local];
+	HVCI_local = new HHI_final[N_I_local];
 
     Id_RA_local.resize(N_RA_local);
     Id_I_local.resize(N_I_local);
@@ -97,6 +85,8 @@ PoolParallel::PoolParallel(double a, double s_rai, double b, double s_ira, doubl
     syn_ID_RA_I_global = new std::vector<int>[N_RA];
     syn_ID_I_RA_global = new std::vector<int>[N_I];
 
+    gaba_reached_mature_local = new bool[N_RA_local];
+    
     active_global = new bool*[N_RA];
     supersynapses_global = new bool*[N_RA];
 	active_supersynapses_global = new std::vector<int>[N_RA];
@@ -129,31 +119,27 @@ PoolParallel::PoolParallel(double a, double s_rai, double b, double s_ira, doubl
     spikes_in_trial_interneuron_local = new std::vector<double>[N_I_local];
 
 	remodeled_local.resize(N_RA_local);
+	remodeled_global.resize(N_RA);
 
 	mature_local.resize(N_RA_local);
 	mature_global.resize(N_RA);
 
-	maturation_triggered_local.resize(N_RA_local);
-	maturation_triggered_global.resize(N_RA);
-
 	gaba_potential_local.resize(N_RA_local);
 	gaba_potential_global.resize(N_RA);
 
+	firing_rate_local.resize(N_RA_local);
+	firing_rate_global.resize(N_RA);
 
-	// initialize circular buffers for somatic spikes
+	
+    // initialize circular buffers for somatic spikes
 	num_bursts_in_recent_trials.resize(N_RA_local);
-	std::fill(num_bursts_in_recent_trials.begin(), num_bursts_in_recent_trials.end(), intBuffer(RATE_WINDOW));
-
-	for (size_t i = 0; i < num_bursts_in_recent_trials.size(); i++)
-		for (int j = 0; j < RATE_WINDOW; j++)
-			num_bursts_in_recent_trials[i].push_back(0);
 
 	for (int i = 0; i < N_RA_local; i++)
 	{
         weights_local[i] = new double[N_RA];
         active_local[i] = new bool[N_RA];
         supersynapses_local[i] = new bool[N_RA];
-        remodeled_local[i] = false;
+        gaba_reached_mature_local[i] = false;
 	
 	    for (int j = 0; j < N_RA; j++)
         {
@@ -189,23 +175,9 @@ PoolParallel::PoolParallel(double a, double s_rai, double b, double s_ira, doubl
 		supersynapses_global[i] = new bool[N_RA];
 		weights_global[i] = new double[N_RA];
 
+
 	}
 	
-	// set training neurons to be mature, all other neurons are immature
-	for (int i = 0; i < N_RA_local; i++)
-	{
-		if (Id_RA_local[i] < N_TR)
-		{
-			mature_local[i] = 1;
-			gaba_potential_local[i] = E_GABA_MATURE;
-		}
-		else
-		{
-			mature_local[i] = 0;
-			gaba_potential_local[i] = E_GABA_IMMATURE;
-		}
-		maturation_triggered_local[i] = 0;
-	}
 
 	for (int i = 0; i < N_RA; i++)
 	{
@@ -253,26 +225,114 @@ PoolParallel::~PoolParallel()
 //	MPI_Finalize();
 }
 
+void PoolParallel::set_spatial_parameters(struct SpatialConnectivityParameters& spatial_params)
+{
+    SIDE = spatial_params.SIDE;
+    MIN_INTERNEURON_DISTANCE = spatial_params.MIN_INTERNEURON_DISTANCE;
 
-const double PoolParallel::DEMOTIVATION_WINDOW = 200; // demotivation window in ms
-// coordinates
-const double PoolParallel::MIN_INTERNEURON_DISTANCE = 0.01; // minimum distance between neurons
+    A_RA2I = spatial_params.A_RA2I;
+    SIGMA_RA2I = spatial_params.SIGMA_RA2I;
+    B_I2RA = spatial_params.B_I2RA;
+    SIGMA_I2RA = spatial_params.SIGMA_I2RA;
 
-const double PoolParallel::SIDE = 100; // length of HVC side
+    Gei_mean = spatial_params.Gei_mean;
+    Gei_std = spatial_params.Gei_std;
+    Gie_mean = spatial_params.Gie_mean;
+    Gie_std = spatial_params.Gie_std;
 
+}
 
-// developmental GABA switch
-const double PoolParallel::E_GABA_MATURE = -80;
+void PoolParallel::set_synaptic_parameters(struct SynapticParameters& syn_params)
+{
+    R = syn_params.R;
 
-const double PoolParallel::BURST_RATE_THRESHOLD = 0.75; // threshold fraction of trials. if neuron exceeds the threshold, its maturation program is triggered
-const int PoolParallel::RATE_WINDOW = 10; // window in which firing rate is averaged (num of trials)
+    A_P = syn_params.A_P;
+    A_D = syn_params.A_D;
+    F_0 = syn_params.F_0;
+    T_P = syn_params.T_P;
+    T_D = syn_params.T_D;
+    TAU_P = syn_params.TAU_P;
+    TAU_D = syn_params.TAU_D;
+    
+    BETA = syn_params.BETA;
+    BETA_SUPERSYNAPSE = syn_params.BETA_SUPERSYNAPSE;
+    
+    ACTIVATION = syn_params.ACTIVATION;
+    SUPERSYNAPSE_THRESHOLD = syn_params.SUPERSYNAPSE_THRESHOLD;
+    G_MAX = syn_params.G_MAX;
+    
+    STDP_WINDOW = syn_params.STDP_WINDOW;
+}
 
-// constants for STDP-rules
-const double PoolParallel::G_P = 0.1;
+void PoolParallel::set_noise_parameters(struct NoiseParameters& noise_params)
+{
+    mu_soma = noise_params.mean_soma;
+    sigma_soma = noise_params.std_soma;
+    mu_dend = noise_params.mean_dend;
+    sigma_dend = noise_params.std_dend;
 
-const double PoolParallel::R = 1;
+	for (int i = 0; i < N_RA_local; i++)
+	{	
+		HVCRA_local[i].set_noise_generator(&generator);
+		HVCRA_local[i].set_white_noise(mu_soma, sigma_soma, mu_dend, sigma_dend);
+	}
 
-const double PoolParallel::STDP_WINDOW = 100;
+    for (int i = 0; i < N_I_local; i++)
+	    HVCI_local[i].set_noise_generator(&generator);
+}
+
+void PoolParallel::set_time_parameters(struct TimeParameters& time_params)
+{
+    timeStep = time_params.timestep;
+    network_update_frequency = time_params.network_update_frequency;
+    trial_duration = time_params.trial_duration;
+
+    WAITING_TIME = time_params.WAITING_TIME;
+
+    size = (int) round(trial_duration/timeStep) + 1;
+
+    for (int i = 0; i < N_RA_local; i++)
+		HVCRA_local[i].set_dynamics(trial_duration, timeStep);
+	
+    for (int i = 0; i < N_I_local; i++)
+		HVCI_local[i].set_dynamics(trial_duration, timeStep);
+}
+
+void PoolParallel::set_gaba_parameters(struct GabaParameters& gaba_params)
+{
+    E_GABA_MATURE = gaba_params.E_GABA_MATURE;
+    E_GABA_IMMATURE = gaba_params.E_GABA_IMMATURE;
+
+    GABA_RATE_THRESHOLD = gaba_params.GABA_RATE_THRESHOLD;
+    MATURATION_RATE_THRESHOLD = gaba_params.MATURATION_RATE_THRESHOLD;
+    DEATH_RATE_THRESHOLD = gaba_params.DEATH_RATE_THRESHOLD;
+    
+    RATE_WINDOW_SHORT = gaba_params.RATE_WINDOW_SHORT;
+    RATE_WINDOW_LONG = gaba_params.RATE_WINDOW_LONG;
+    
+    GABA_DOWN = gaba_params.GABA_DOWN;
+
+	std::fill(num_bursts_in_recent_trials.begin(), num_bursts_in_recent_trials.end(), intBuffer(RATE_WINDOW_LONG));
+
+	for (size_t i = 0; i < num_bursts_in_recent_trials.size(); i++)
+		for (int j = 0; j < RATE_WINDOW_LONG; j++)
+			num_bursts_in_recent_trials[i].push_back(0);
+	
+    // set training neurons to be mature, all other neurons are immature
+	for (int i = 0; i < N_RA_local; i++)
+	{
+		if (Id_RA_local[i] < N_TR)
+		{
+			mature_local[i] = 1;
+			gaba_potential_local[i] = E_GABA_MATURE;
+		}
+		else
+		{
+			mature_local[i] = 0;
+			gaba_potential_local[i] = E_GABA_IMMATURE;
+		}
+	}
+}
 
 void PoolParallel::initialize_generator()
 {
@@ -362,6 +422,11 @@ void PoolParallel::initialize_coordinates()
             xx_RA.push_back(xx);
             yy_RA.push_back(yy);
 		}
+        
+        std::string fileRAxy = outputDirectory + "RA_xy.bin";
+        std::string fileIxy = outputDirectory + "I_xy.bin";
+
+        this->write_coordinates(fileRAxy.c_str(), fileIxy.c_str());
     }
 }
 
@@ -533,7 +598,6 @@ void PoolParallel::read_from_file(const char* RA_xy, const char* I_xy, const cha
 		for (int i = 0; i < N_RA; i++)
 		{	
 			inp_maturation.read(reinterpret_cast<char *>(&gaba_potential_global[i]), sizeof(gaba_potential_global[i]));
-			inp_maturation.read(reinterpret_cast<char *>(&maturation_triggered_global[i]), sizeof(maturation_triggered_global[i]));
 			inp_maturation.read(reinterpret_cast<char *>(&mature_global[i]), sizeof(mature_global[i]));
 			
 			//if (mature_global[i] > 0)
@@ -594,16 +658,14 @@ void PoolParallel::print_simulation_parameters()
 		printf("TAU_D = %f\n", TAU_D);
 		printf("A_P = %f\n", A_P);
 		printf("A_D = %f\n", A_D);
-		printf("A_P_SUPER = %f\n", A_P_SUPER);
-		printf("A_D_SUPER = %f\n", A_D_SUPER);
 		printf("ACTIVATION = %f\n", ACTIVATION);
 		printf("SUPERSYNAPSE_THRESHOLD = %f\n", SUPERSYNAPSE_THRESHOLD);
 		printf("Gmax = %f\n", G_MAX);
 
 		printf("\nGABA developmental switch\n");
 		printf("GABA_DOWN = %f\n", GABA_DOWN);
-		printf("BURST_RATE_THRESHOLD = %f\n", BURST_RATE_THRESHOLD);
-		printf("RATE_WINDOW = %d\n", RATE_WINDOW);
+		printf("GABA_RATE_THRESHOLD = %f\n", GABA_RATE_THRESHOLD);
+		printf("RATE_WINDOW_SHORT = %d\n", RATE_WINDOW_SHORT);
 
 	}
 
@@ -836,8 +898,8 @@ void PoolParallel::send_simulation_parameters()
 		&mature_local[0], N_RA_local, MPI_INT, 0, MPI_COMM_WORLD);
 	
 	// send maturation trigger indicators
-	MPI_Scatterv(&maturation_triggered_global[0], sendcounts_syn_num_RA, displs_syn_num_RA, MPI_INT,
-		&maturation_triggered_local[0], N_RA_local, MPI_INT, 0, MPI_COMM_WORLD);
+	//MPI_Scatterv(&maturation_triggered_global[0], sendcounts_syn_num_RA, displs_syn_num_RA, MPI_INT,
+	//	&maturation_triggered_local[0], N_RA_local, MPI_INT, 0, MPI_COMM_WORLD);
 	
 	// send internal times
     MPI_Bcast(&internal_time, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
@@ -1103,8 +1165,8 @@ void PoolParallel::update_synaptic_info()
 {
 	for (int i = 0; i < N_RA_local; i++)
 	{
-		if (((int) active_supersynapses_local[i].size() == Nss)&&((int) active_synapses_local[i].size() == Nss))
-			remodeled_local[i] = true;
+		if (((int) active_supersynapses_local[i].size() == Nss) && ((int) active_synapses_local[i].size() == Nss))
+			remodeled_local[i] = 1;
 
 		for (int j = 0; j < (int) active_synapses_local[i].size(); j++)
 		{
@@ -1122,7 +1184,7 @@ void PoolParallel::update_synaptic_info()
 
 }
 
-void PoolParallel::initialize_connections(double Gei_mean, double Gei_var, double Gie_mean, double Gie_var)
+void PoolParallel::initialize_connections()
 {
 
     if (MPI_rank == 0)
@@ -1135,7 +1197,7 @@ void PoolParallel::initialize_connections(double Gei_mean, double Gei_var, doubl
 	        {
 	         	 if (generator.random(1) < p_RA2I(i,j))
 	             {
-		        	 double G = Gei_mean + generator.normal_distribution() * Gei_var;
+		        	 double G = this->sample_Ge2i();
 
 		             weights_RA_I_global[i].push_back(G);
 		             syn_ID_RA_I_global[i].push_back(j);
@@ -1151,7 +1213,7 @@ void PoolParallel::initialize_connections(double Gei_mean, double Gei_var, doubl
 	        {
 	         	 if (generator.random(1) < p_I2RA(i,j))
 	             {
-		        	 double G = Gie_mean + generator.normal_distribution() * Gie_var;
+		        	 double G = this->sample_Gi2e();
 
 		             weights_I_RA_global[i].push_back(G);
 		             syn_ID_I_RA_global[i].push_back(j);
@@ -1159,6 +1221,15 @@ void PoolParallel::initialize_connections(double Gei_mean, double Gei_var, doubl
 			 }
 		 }
 	}
+
+    this->send_connections();
+
+    std::string fileRA2I = outputDirectory + "RA_I_connections.bin";
+    std::string fileI2RA = outputDirectory + "I_RA_connections.bin";
+    std::string filePajekFixed = outputDirectory + "fixed.net";
+
+    this->write_invariable_synapses(fileRA2I.c_str(), fileI2RA.c_str());
+    this->write_pajek_fixed(filePajekFixed.c_str());
 
 }
 
@@ -1172,32 +1243,6 @@ void PoolParallel::print_invariable_connections()
         for (int i = 0; i < N_I; i++)
             printf("I neuron %d has %d connections to RA neurons\n", i, weights_I_RA_global[i].size());
     }
-}
-
-void PoolParallel::reset_after_trial()
-{
-
-    for (int i = 0; i < N_RA; i++)
-    {
-        spikes_in_trial_soma_global[i].clear();
-        spikes_in_trial_dend_global[i].clear();
-    }
-
-	for (int i = 0; i < N_I; i++)	
-		spikes_in_trial_interneuron_global[i].clear();
-
-    for (int i = 0; i < N_RA_local; i++)
-    {
-        HVCRA_local[i].reset();
-        spikes_in_trial_soma_local[i].clear();
-        spikes_in_trial_dend_local[i].clear();
-
-    }
-    for (int i = 0; i < N_I_local; i++)
-	{
-        HVCI_local[i].reset();
-		spikes_in_trial_interneuron_local[i].clear();
-	}
 }
 
 void PoolParallel::randomize_after_trial()
@@ -1247,7 +1292,7 @@ void PoolParallel::set_training_current()
 {
     if (MPI_rank == 0)
     {
-        current_injection_time = DEMOTIVATION_WINDOW + generator.random(trial_duration-2*DEMOTIVATION_WINDOW);
+        current_injection_time = WAITING_TIME + generator.random(trial_duration-2*WAITING_TIME);
 
         std::function<double (double)> f = std::bind(&training_current, current_injection_time, _1);
 
@@ -1256,32 +1301,6 @@ void PoolParallel::set_training_current()
     }
 }
 
-void PoolParallel::set_simulation_parameters(double interval, double tS, double mu_s, double sigma_s, double mu_d, double sigma_d)
-{
-	
-	mu_soma = mu_s;
-	sigma_soma = sigma_s;
-	mu_dend = mu_d;
-	sigma_dend = sigma_d;
-
-	size = (int) round(interval/tS) + 1;
-	timeStep = tS;
-	trial_duration = interval;
-
-    //printf("size = %d\n", size);
-
-	for (int i = 0; i < N_RA_local; i++)
-	{	
-		HVCRA_local[i].set_noise_generator(&generator);
-		HVCRA_local[i].set_white_noise(mu_soma, sigma_soma, mu_dend, sigma_dend);
-		HVCRA_local[i].set_dynamics(interval, tS);
-	}
-	for (int i = 0; i < N_I_local; i++)
-	{
-		HVCRA_local[i].set_noise_generator(&generator);
-		HVCI_local[i].set_dynamics(interval, tS);
-	}
-}
 
 int PoolParallel::get_trial_number()
 {
@@ -1301,8 +1320,8 @@ void PoolParallel::mature_chain_test(const int num_trials, const char* file_soma
 		this->mature_trial();
 		this->gather_mature_data(average_dendritic_spike_time);
         //this->write_RA("/home/eugene/Output/RA0.bin", 0);
-		this->write_soma_time_info(file_soma_spikes);
-		this->write_dend_time_info(file_dend_spikes);
+		this->write_soma_spike_times(file_soma_spikes);
+		this->write_dend_spike_times(file_dend_spikes);
 		this->randomize_after_trial();
 		
 	}
@@ -1496,7 +1515,7 @@ void PoolParallel::mature_trial()
                 // now update excitatory conductances of all neurons
                 for (int i = 0; i < N_RA_local; i++)
                 {
-                    HVCRA_local[i].raise_AMPA(update_Ge_RA_global[Id_RA_local[i]]); // update conductance
+                    HVCRA_local[i].raiseE(update_Ge_RA_global[Id_RA_local[i]]); // update conductance
 				}
 
                 for (int i = 0; i < N_I_local; i++)
@@ -1522,6 +1541,112 @@ void PoolParallel::mature_trial()
     } // end evolve dynamics
 }
 
+void PoolParallel::chain_growth(int save_freq_short, int save_freq_long)
+{
+    std::string fileRA = outputDirectory + "RA.bin";
+    std::string fileI = outputDirectory + "I.bin";
+    
+	std::string fileNumSynapses = outputDirectory + "num_synapses.bin";
+	
+    std::string fileActiveGraph = outputDirectory + "RA_RA_connections.bin";
+    std::string fileSuperGraph = outputDirectory + "RA_RA_super_connections.bin";
+    std::string fileTimeSoma = outputDirectory + "spike_times_soma.bin";
+    std::string fileTimeDend = outputDirectory + "spike_times_dend.bin";
+    std::string fileTimeInterneuron = outputDirectory + "spike_times_interneuron.bin";
+    std::string fileMaturationGraph = outputDirectory + "mature.bin";
+    
+    std::string fileMaturationTimeSequence = outputDirectory + "maturation_time_sequence.bin";
+
+    std::string fileWeightsGraph = outputDirectory + "weights.bin";
+    std::string fileWeightsSourceToTarget = outputDirectory + "weightsTimeSequence.bin";
+    std::string RAdir = outputDirectory + "RAneurons/";
+    std::string Idir = outputDirectory + "Ineurons/";
+
+    this->write_spatial_parameters((outputDirectory + "spatial_params.txt").c_str());
+    this->write_synaptic_parameters((outputDirectory + "synaptic_params.txt").c_str());
+    this->write_gaba_parameters((outputDirectory + "gaba_params.txt").c_str());
+    this->write_noise_parameters((outputDirectory + "noise_params.txt").c_str());
+    this->write_time_parameters((outputDirectory + "time_params.txt").c_str());
+
+    bool data_gathered; // indicator if data was already gathered
+    bool training = true; // indicator to inject training current
+
+	while (true)
+    {
+		//break;
+		data_gathered = false;
+        this->trial(training);
+        //pool.gather_data();
+
+        if (MPI_rank == 0)
+            printf("Trial %d\n", trial_number + 1);
+        
+        //pool.statistics();
+
+		std::vector<int> RAtoWrite{0, 1, 2, 3, 4, 9, 13, 22, 47, 83};
+
+        std::vector<int> source{0, 1, 2, 3};
+        std::vector<int> target{4, 9, 13, 16, 22, 47, 83};
+
+        if (trial_number % save_freq_short == 0)
+        {
+			this->gather_data();
+			data_gathered = true;
+
+           	this->write_num_synapses(fileNumSynapses.c_str());
+		    this->write_soma_spike_times(fileTimeSoma.c_str());
+            this->write_dend_spike_times(fileTimeDend.c_str());
+            this->write_interneuron_spike_times(fileTimeInterneuron.c_str());
+           
+			this->write_maturation_info(fileMaturationGraph.c_str());
+		
+            this->write_weights_time_sequence_from_source_to_target(source, target, fileWeightsSourceToTarget.c_str());
+            this->write_maturation_time_sequence(target, fileMaturationTimeSequence.c_str());
+
+            for (int i = 0; i < (int) RAtoWrite.size(); i++)
+	    	{
+				this->write_RA((RAdir + "RA" + std::to_string(RAtoWrite[i]) + ".bin").c_str(), RAtoWrite[i]);
+	    	}
+
+			//fileMature = fileMaturePerm + "mature" + std::to_string(count) + ".bin";
+			//pool.write_mature(fileMature.c_str());
+			//pool.write_pajek_all(filePajekAll.c_str());
+        }
+	
+			
+
+		if (trial_number % save_freq_long == 0)
+		{
+			if (!data_gathered)
+				this->gather_data();
+
+            this->write_weights(fileWeightsGraph.c_str());
+            this->write_active_synapses(fileActiveGraph.c_str());
+	    	this->write_supersynapses(fileSuperGraph.c_str());
+			this->write_weights((outputDirectory + "weights" + std::to_string(trial_number) + ".bin").c_str());
+	    	this->write_pajek_super((outputDirectory + "super" + std::to_string(trial_number) + ".net").c_str());
+	    	this->write_pajek_active((outputDirectory + "active" + std::to_string(trial_number) + ".net").c_str());
+			this->write_maturation_info((outputDirectory + "mature" + std::to_string(trial_number) + ".bin").c_str());
+		}
+		
+		//break;    
+		//for (int i = 0; i < N_I; i++)
+	    //{
+	      //  fileAllIneurons = Idir + "I" + std::to_string(i) + ".bin";
+		//	pool.write_I(fileAllIneurons.c_str(), i);
+	    //}
+
+        trial_number++;
+        this->randomize_after_trial();
+		
+		//break;
+    }
+	
+	
+}
+
+
+
 void PoolParallel::trial(int training)
 {
 	int some_RA_neuron_fired_soma_local;
@@ -1533,13 +1658,14 @@ void PoolParallel::trial(int training)
 
 	int some_I_neuron_fired_global;
 
+    std::vector<int> spike_times_fired_dend_global;
+    std::vector<int> spike_times_fired_dend_local;
+    
     std::vector<int> RA_neurons_fired_dend_global;
     std::vector<int> RA_neurons_fired_dend_realID;
 
-    trial_number++;
-    
-    internal_time = (trial_number - 1) * trial_duration;
-    network_time = internal_time + network_update_frequency;
+    internal_time = 0;
+    network_time = network_update_frequency;
 
     //printf("network time = %f\n", network_time);
 
@@ -1574,8 +1700,8 @@ void PoolParallel::trial(int training)
             // set GABA potential
             HVCRA_local[i].set_Ei(gaba_potential_local[i]);
             
-            // RK4 step
-            HVCRA_local[i].R4_step_no_target_update();
+            // Debraband step
+            HVCRA_local[i].Debraband_step_no_target_update();
             
             // if some neuron produced somatic spike, do LTD for all previous dendritic spikes
             if (HVCRA_local[i].get_fired_soma())
@@ -1670,7 +1796,7 @@ void PoolParallel::trial(int training)
                 spikes_in_trial_dend_local[i].push_back(internal_time);
                 //printf("My rank = %d; RA neuron %d fired; spike_time = %f\n", MPI_rank, Id_RA_local[i], internal_time);
                 RA_neurons_fired_dend_realID.push_back(Id_RA_local[i]);
-
+                spike_times_fired_dend_local.push_back(internal_time);
                 //printf("My rank = %d; Dend neuron %d fired; spike_time = %f\n", MPI_rank, Id_RA_local[i], spike_times_dend_local[i]);
 
             }
@@ -1679,7 +1805,7 @@ void PoolParallel::trial(int training)
 
 		for (int i = 0; i < N_I_local; i++)
 		{
-            HVCI_local[i].R4_step_no_target_update();
+            HVCI_local[i].DP8_step_no_target_update();
             
             //  if some I neuron spikes, change conductance update array
             if (HVCI_local[i].get_fired())
@@ -1743,7 +1869,7 @@ void PoolParallel::trial(int training)
                 // now update excitatory conductances of all neurons
                 for (int i = 0; i < N_RA_local; i++)
                 {
-                    HVCRA_local[i].raise_AMPA(update_Ge_RA_global[Id_RA_local[i]]); // update conductance
+                    HVCRA_local[i].raiseE(update_Ge_RA_global[Id_RA_local[i]]); // update conductance
 				}
 
                 for (int i = 0; i < N_I_local; i++)
@@ -1777,7 +1903,7 @@ void PoolParallel::trial(int training)
                 // get total number of fired neurons
                 MPI_Allreduce(&num_RA_fired_dend_local, &num_RA_fired_dend_global, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
                 RA_neurons_fired_dend_global.resize(num_RA_fired_dend_global);
-
+                //spike_times_fired_dend_global.resize(num_RA_fired_dend_global);
 
                 //printf("Rank %d; fired RA num: %d\n", MPI_rank, num_RA_fired_local);
 
@@ -1803,6 +1929,9 @@ void PoolParallel::trial(int training)
                 // get fired neurons
                 MPI_Allgatherv(&RA_neurons_fired_dend_realID[0], num_RA_fired_dend_local, MPI_INT,
                     &RA_neurons_fired_dend_global[0], recvcounts, displs, MPI_INT, MPI_COMM_WORLD);
+                
+                //MPI_Allgatherv(&spike_times_fired_dend_local[0], num_RA_fired_dend_local, MPI_INT,
+                  //  &spike_times_fired_dend_global[0], recvcounts, displs, MPI_INT, MPI_COMM_WORLD);
                 /*
                 if (MPI_rank == 0)
                  {
@@ -1816,7 +1945,8 @@ void PoolParallel::trial(int training)
                 for (int i = 0; i < RA_neurons_fired_dend_global.size(); i++)
                 {
                     spike_times_dend_global[RA_neurons_fired_dend_global[i]] = internal_time;
-
+                    //spike_times_dend_global[RA_neurons_fired_dend_global[i]] = spike_times_fired_dend_global[i];
+                    
                 }
 
                 delete [] recvcounts;
@@ -1893,7 +2023,7 @@ void PoolParallel::trial(int training)
 
                 for (int i = 0; i < N_RA_local; i++)
                 {
-                    if ( (active_supersynapses_local[i].size() == Nss) && (!remodeled_local[i]) )
+                    if ( (active_supersynapses_local[i].size() == Nss) && (remodeled_local[i] == 0) )
                     {
 					    this->axon_remodeling(i);
 
@@ -1906,6 +2036,9 @@ void PoolParallel::trial(int training)
             	
 				RA_neurons_fired_dend_global.clear();
             	RA_neurons_fired_dend_realID.clear();
+
+                //spike_times_fired_dend_local.clear();
+                //spike_times_fired_dend_global.clear();
             } // end if some_neuron_dend_fired
             
             network_time += network_update_frequency;
@@ -1926,6 +2059,10 @@ void PoolParallel::trial(int training)
 	for (int i = 0; i < N_RA_local; i++)
 	{
 		num_bursts_in_recent_trials[i].push_front(static_cast<int>(spikes_in_trial_dend_local[i].size()));
+        
+        firing_rate_local[i] = std::accumulate(num_bursts_in_recent_trials[i].begin(), num_bursts_in_recent_trials[i].begin() + RATE_WINDOW_SHORT, 0.0)
+                                    / static_cast<double>(RATE_WINDOW_SHORT);
+
 
 		//if (std::accumulate(num_bursts_in_recent_trials[i].begin(), num_bursts_in_recent_trials[i].end(), 0.0) >= 1)
 		//{
@@ -1950,27 +2087,29 @@ void PoolParallel::update_Ei()
 {
 	for (int i = 0; i < N_RA_local; i++)
 	{
-	// if not a training neuron and not mature but maturation process was triggered
-		if ( (Id_RA_local[i] >= N_TR) && (maturation_triggered_local[i] == 1) && (mature_local[i] == 0) )
+        // calculate firing rate in large window:
+        double firing_rate_long = std::accumulate(num_bursts_in_recent_trials[i].begin(), num_bursts_in_recent_trials[i].end(), 0.0)
+                                                                                            / static_cast<double>(RATE_WINDOW_LONG);
+
+	// if not a training neuron, GABA didnt hit the bottom and firing rate exceeds gaba rate threshold, decrease gaba
+		if ( (Id_RA_local[i] >= N_TR) && (!gaba_reached_mature_local[i]) && (firing_rate_local[i] >= GABA_RATE_THRESHOLD))
 		{
-			gaba_potential_local[i] = gaba_potential_local[i] - GABA_DOWN; // decrease gaba potential
+			gaba_potential_local[i] = gaba_potential_local[i] - GABA_DOWN * static_cast<int>(spikes_in_trial_dend_local[i].size()); // decrease gaba potential
 					
 			if (gaba_potential_local[i] <= E_GABA_MATURE) // if gaba potential hit the bottom, make neuron mature
 			{
 				gaba_potential_local[i] = E_GABA_MATURE;
-				mature_local[i] = 1;
+				gaba_reached_mature_local[i] = true;
 			}
 
 		}
-		// if not a training neuron and if maturation is not triggered
-		else if ( (Id_RA_local[i] >= N_TR) && (maturation_triggered_local[i] == 0) )
+		// if not a training neuron and if firing rate in wide window exceeds maturation threshold, make mature
+		if ( (Id_RA_local[i] >= N_TR) && (firing_rate_long >= MATURATION_RATE_THRESHOLD) && (mature_local[i] == 0) )
+            mature_local[i] = 1;
+
+		// if not a training neuron and if firing rate in wide window is smaller than death threshold, replace neuron with a new one
+		else if ( (Id_RA_local[i] >= N_TR) && (firing_rate_long <= DEATH_RATE_THRESHOLD) )
 		{
-			double average_rate = std::accumulate(num_bursts_in_recent_trials[i].begin(), 
-												 num_bursts_in_recent_trials[i].end(), 0.0) / static_cast<double>(RATE_WINDOW);
-			
-			// check trigger maturation if rate exceeds threshold
-			if (average_rate >= BURST_RATE_THRESHOLD)
-				maturation_triggered_local[i] = 1;
 
 		}
 	}
@@ -2024,7 +2163,7 @@ void PoolParallel::axon_remodeling(int i)
 					  << " which should be removed in axon remodeling is not found!" << std::endl;
 	}
 
-    remodeled_local[i] = true;
+    remodeled_local[i] = 1;
 }
 
 void PoolParallel::update_all_synapses()
@@ -2045,7 +2184,7 @@ void PoolParallel::update_synapse(int i, int j)
 {
 	double w = weights_local[i][j];
 
-    if ( (w >= ACTIVATION) && (!active_local[i][j]) && (!remodeled_local[i]) )
+    if ( (w >= ACTIVATION) && (!active_local[i][j]) && (remodeled_local[i] == 0) )
     {
        // printf("Activated synapse from %d onto %d; weight = %f\n", Id_RA_local[i], j, w);
         active_local[i][j] = true;
@@ -2063,7 +2202,7 @@ void PoolParallel::update_synapse(int i, int j)
     {
        // printf("Deactivated supersynapse from %d onto %d; weight = %f\n", Id_RA_local[i], j, w);
         supersynapses_local[i][j] = false;
-        remodeled_local[i] = false;
+        remodeled_local[i] = 0;
         std::vector<int>::iterator pos = std::find(active_supersynapses_local[i].begin(),
                                                     active_supersynapses_local[i].end(), j);
 
@@ -2089,6 +2228,16 @@ void PoolParallel::update_synapse(int i, int j)
 
     }
 
+}
+
+double PoolParallel::sample_Ge2i()
+{
+    return Gei_mean + generator.normal_distribution() * Gei_std;
+}
+
+double PoolParallel::sample_Gi2e()
+{
+    return Gie_mean + generator.normal_distribution() * Gie_std;
 }
 
 double PoolParallel::p_RA2I(int i_RA, int j_I)
@@ -2139,14 +2288,7 @@ void PoolParallel::LTP(double &w, double t)
         //else
          //   printf("Positive LTP!!! t = %f; temp = %f\n", t, temp);
 		//w = w + temp;
-		if (w >= SUPERSYNAPSE_THRESHOLD)
-		{
-			w = w + R * A_P_SUPER * G_P * ((1 + F_0) * t / T_P - F_0);
-		}
-		else
-		{
-			w = w + R * A_P * G_P * ((1 + F_0) * t / T_P - F_0);
-		}
+			w = w + R * A_P * ((1 + F_0) * t / T_P - F_0);
 	
 
         //std::cout << "w = " << w << std::endl;
@@ -2163,15 +2305,7 @@ void PoolParallel::LTP(double &w, double t)
          //   printf("Positive LTP!!! t = %f; temp = %f\n", t, temp);
 
         //w = w + temp;
-   		if (w >= SUPERSYNAPSE_THRESHOLD)
-		{
-
-   			w = w + R * A_P_SUPER * G_P * exp(-(t - T_P) / TAU_P);
-		}
-		else
-		{
-   			w = w + R * A_P * G_P * exp(-(t - T_P) / TAU_P);
-		}
+   			w = w + R * A_P * exp(-(t - T_P) / TAU_P);
 
         //std::cout << "w = " << w << std::endl;
     }
@@ -2192,15 +2326,7 @@ void PoolParallel::LTD(double &w, double t)
             //printf("LTD. Linear interval. Weight became negative. w = %f\n", w);
 		//w = w - R * A_D * w * ((1 - F_0) * t / T_D + F_0);
 		//w = w - R * A_D * ((1 - F_0) * t / T_D + F_0);
-		if (w >= SUPERSYNAPSE_THRESHOLD)
-		{
-
-			w = w - w * R * A_D_SUPER * ( F_0 + (1 -  F_0) * t / T_D);
-		}
-		else
-		{
 			w = w - w * R * A_D * ( F_0 + (1 -  F_0) * t / T_D);
-        }
 		
 		if (w < 0)
             w = 0;
@@ -2213,14 +2339,7 @@ void PoolParallel::LTD(double &w, double t)
           //  printf("LTD. Exponential interval. Weight became negative. w = %f\n", w);
 
 		//w = w - R * A_D * w * exp(-(t - T_D) / TAU_D);
-		if (w >= SUPERSYNAPSE_THRESHOLD)
-		{
-			w = w - w * R * A_D_SUPER * exp(-(t - T_D) / TAU_D);
-		}
-		else
-		{
 			w = w - w * R * A_D * exp(-(t - T_D) / TAU_D);
-		}
 
         if (w < 0)
             w = 0;
@@ -2529,13 +2648,16 @@ void PoolParallel::gather_data()
     MPI_Gatherv(&mature_local[0], N_RA_local, MPI_INT,
         &mature_global[0], recvcounts_RA, displs_RA, MPI_INT, 0, MPI_COMM_WORLD);
     
-    MPI_Gatherv(&maturation_triggered_local[0], N_RA_local, MPI_INT,
-        &maturation_triggered_global[0], recvcounts_RA, displs_RA, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Gatherv(&remodeled_local[0], N_RA_local, MPI_INT,
+        &remodeled_global[0], recvcounts_RA, displs_RA, MPI_INT, 0, MPI_COMM_WORLD);
     
 	MPI_Gatherv(&gaba_potential_local[0], N_RA_local, MPI_DOUBLE,
         &gaba_potential_global[0], recvcounts_RA, displs_RA, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 	
-	if (MPI_rank == 0)
+	MPI_Gatherv(&firing_rate_local[0], N_RA_local, MPI_DOUBLE,
+        &firing_rate_global[0], recvcounts_RA, displs_RA, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+	
+    if (MPI_rank == 0)
     {
         for (int i = 0; i < N_RA; i++)
         {
@@ -2923,49 +3045,124 @@ void PoolParallel::write_weights(const char * filename)
 	}
 }
 
-
-void PoolParallel::write_time_info(const char* timeInfoFile)
+void PoolParallel::write_spatial_parameters(const char* filename)
 {
-
 	if (MPI_rank == 0)
 	{
-		std::ofstream out_timeInfo;
+		std::ofstream out;
 
-		out_timeInfo.open(timeInfoFile, std::ios::binary | std::ios::out);
+		out.open(filename, std::ios::binary | std::ios::out);
 
-		// write simulation information
-		out_timeInfo.write(reinterpret_cast<char*>(&trial_number), sizeof(trial_number)); // trial number
-		out_timeInfo.write(reinterpret_cast<char*>(&internal_time), sizeof(internal_time)); // internal time of each neuron
-
-		out_timeInfo.write(reinterpret_cast<char*>(&network_time), sizeof(network_time)); // time of the network
-
-		out_timeInfo.close();
+        out << "SIDE = " << SIDE << std::endl;
+        out << "MIN_INTERNEURON_DISTANCE = " << MIN_INTERNEURON_DISTANCE << std::endl;
+        
+        out << "A_RA2I = " << A_RA2I << std::endl;
+        out << "SIGMA_RA2I = " << SIGMA_RA2I << std::endl;
+        out << "B_I2RA = " << B_I2RA << std::endl;
+        out << "SIGMA_I2RA = " << SIGMA_I2RA << std::endl;
+        
+        out << "Gei_mean = " << Gei_mean << std::endl;
+        out << "Gei_std = " << Gei_std << std::endl;
+        out << "Gie_mean = " << Gie_mean << std::endl;
+        out << "Gie_std = " << Gie_std << std::endl;
+		
+		out.close();
 	}
-
-
-
 }
 
-void PoolParallel::write_sim_info(const char* simInfoFile, int synapses_trials_update, int weights_trials_update)
+void PoolParallel::write_time_parameters(const char* filename)
 {
-
 	if (MPI_rank == 0)
 	{
-		std::ofstream out_simInfo;
+		std::ofstream out;
 
-		out_simInfo.open(simInfoFile, std::ios::binary | std::ios::out);
+		out.open(filename, std::ios::out);
 
 		// write simulation information
-		out_simInfo.write(reinterpret_cast<char*>(&trial_duration), sizeof(trial_duration)); // trial duration in ms
-		out_simInfo.write(reinterpret_cast<char*>(&synapses_trials_update), sizeof(synapses_trials_update)); // how often synaptic information is updated
+        out << "timestep = " << timeStep << std::endl;
+        
+        out << "trial_duration = " << trial_duration << std::endl;
+        out << "network_update_frequency = " << network_update_frequency << std::endl;
+        
+        out << "WAITING_TIME = " << WAITING_TIME << std::endl;
 
-		out_simInfo.write(reinterpret_cast<char*>(&weights_trials_update), sizeof(weights_trials_update)); // how often weights are updated
-
-		out_simInfo.close();
+		out.close();
 	}
+}
 
 
+void PoolParallel::write_noise_parameters(const char* filename)
+{
+	if (MPI_rank == 0)
+	{
+		std::ofstream out;
 
+		out.open(filename, std::ios::out);
+
+		// write simulation information
+        out << "mu_soma = " << mu_soma << std::endl;
+        out << "sigma_soma = " << sigma_soma << std::endl;
+        out << "mu_dend = " << mu_dend << std::endl;
+        out << "sigma_dend = " << sigma_dend << std::endl;
+	
+       out.close();
+	}
+}
+
+void PoolParallel::write_gaba_parameters(const char* filename)
+{
+	if (MPI_rank == 0)
+	{
+		std::ofstream out;
+
+		out.open(filename, std::ios::out);
+
+		// write simulation information
+        out << "E_GABA_MATURE = " << E_GABA_MATURE << std::endl;
+        out << "E_GABA_IMMATURE = " << E_GABA_IMMATURE << std::endl;
+        
+        out << "GABA_RATE_THRESHOLD = " << GABA_RATE_THRESHOLD << std::endl;
+        out << "MATURATION_RATE_THRESHOLD = " << MATURATION_RATE_THRESHOLD << std::endl;
+        out << "DEATH_RATE_THRESHOLD = " << DEATH_RATE_THRESHOLD << std::endl;
+        
+        out << "RATE_WINDOW_SHORT = " << RATE_WINDOW_SHORT << std::endl;
+        out << "RATE_WINDOW_LONG = " << RATE_WINDOW_LONG << std::endl;
+
+        out << "GABA_DOWN = " << GABA_DOWN << std::endl;
+        
+        out.close();
+	}
+}
+
+void PoolParallel::write_synaptic_parameters(const char* filename)
+{
+	if (MPI_rank == 0)
+	{
+		std::ofstream out;
+
+		out.open(filename, std::ios::out);
+
+		// write simulation information
+        out << "R = " << R << std::endl;
+        
+        out << "A_P = " << A_P << std::endl;
+        out << "A_D = " << A_D << std::endl;
+        out << "T_P = " << T_P << std::endl;
+        out << "T_D = " << T_D << std::endl;
+        out << "TAU_P = " << TAU_P << std::endl;
+        out << "TAU_D = " << TAU_D << std::endl;
+        
+        out << "BETA = " << BETA << std::endl;
+        out << "BETA_SUPERSYNAPSE = " << BETA_SUPERSYNAPSE << std::endl;
+        
+        out << "ACTIVATION = " << ACTIVATION << std::endl;
+        out << "SUPERSYNAPSE_THRESHOLD = " << SUPERSYNAPSE_THRESHOLD << std::endl;
+        out << "G_MAX = " << G_MAX << std::endl;
+        
+        out << "STDP_WINDOW = " << STDP_WINDOW << std::endl;
+
+		out.close();
+	}
 }
 
 void PoolParallel::write_num_synapses(const char* fileSynapses)
@@ -2973,9 +3170,11 @@ void PoolParallel::write_num_synapses(const char* fileSynapses)
 	if (MPI_rank == 0)
 	{
 		std::ofstream out_synapses;
-
-		out_synapses.open(fileSynapses, std::ios::binary | std::ios::out | std::ios::app);
-
+   
+        if (trial_number == 0)
+	    	out_synapses.open(fileSynapses, std::ios::binary | std::ios::out);
+        else
+	    	out_synapses.open(fileSynapses, std::ios::binary | std::ios::out | std::ios::app);
 
 		// count active synapses and supersynapses
 		int active = 0;
@@ -3031,7 +3230,7 @@ void PoolParallel::write_coordinates(const char* xy_RA, const char* xy_I)
 	}
 }
 
-void PoolParallel::write_soma_time_info(const char* filename)
+void PoolParallel::write_soma_spike_times(const char* filename)
 {
     if (MPI_rank == 0)
     {
@@ -3053,10 +3252,8 @@ void PoolParallel::write_soma_time_info(const char* filename)
 
             for (int j = 0; j < spike_array_size; j++)
 	        {
-                //out.write(reinterpret_cast<char *>(&spikes_in_trial_soma_global[i][j]), sizeof(double));
-	        double relative_spike_time = spikes_in_trial_soma_global[i][j] - (trial_number - 1) * trial_duration;
        		//printf("relative_spike_time_soma = %f\n", relative_spike_time);
-            out.write(reinterpret_cast<char *>(&relative_spike_time), sizeof(double));
+                out.write(reinterpret_cast<char *>(&spikes_in_trial_soma_global[i][j]), sizeof(spikes_in_trial_soma_global[i][j]));
 	        }
         }
         //out.write(reinterpret_cast<char *>(spike_times), N_RA*sizeof(double));
@@ -3065,7 +3262,7 @@ void PoolParallel::write_soma_time_info(const char* filename)
     }
 }
 
-void PoolParallel::write_dend_time_info(const char* filename)
+void PoolParallel::write_dend_spike_times(const char* filename)
 {
     if (MPI_rank == 0)
     {
@@ -3088,8 +3285,7 @@ void PoolParallel::write_dend_time_info(const char* filename)
             for (int j = 0; j < spike_array_size; j++)
 	    {
                 //out.write(reinterpret_cast<char *>(&spikes_in_trial_dend_global[i][j]), sizeof(double));
-	        double relative_spike_time = spikes_in_trial_dend_global[i][j] - (trial_number - 1) * trial_duration;
-        	out.write(reinterpret_cast<char *>(&relative_spike_time), sizeof(double));
+        	out.write(reinterpret_cast<char *>(&spikes_in_trial_dend_global[i][j]), sizeof(spikes_in_trial_dend_global[i][j]));
 			//printf("Neuron %d; relative spike time = %f\n", i, relative_spike_time);
 	    }
 	}
@@ -3099,7 +3295,7 @@ void PoolParallel::write_dend_time_info(const char* filename)
     }
 }
 
-void PoolParallel::write_interneuron_time_info(const char* filename)
+void PoolParallel::write_interneuron_spike_times(const char* filename)
 {
     if (MPI_rank == 0)
     {
@@ -3122,8 +3318,7 @@ void PoolParallel::write_interneuron_time_info(const char* filename)
             for (int j = 0; j < spike_array_size; j++)
 	    {
                 //out.write(reinterpret_cast<char *>(&spikes_in_trial_dend_global[i][j]), sizeof(double));
-	        double relative_spike_time = spikes_in_trial_interneuron_global[i][j] - (trial_number - 1) * trial_duration;
-        	out.write(reinterpret_cast<char *>(&relative_spike_time), sizeof(double));
+        	out.write(reinterpret_cast<char *>(&spikes_in_trial_interneuron_global[i][j]), sizeof(spikes_in_trial_interneuron_global[i][j]));
 			//printf("Neuron %d; relative spike time = %f\n", i, relative_spike_time);
 	    }
 	}
@@ -3407,16 +3602,94 @@ void PoolParallel::write_maturation_info(const char* filename)
     if (MPI_rank == 0)
     {
         std::ofstream out;
-
+      
         out.open(filename, std::ios::out | std::ios::binary );
         out.write(reinterpret_cast<char *>(&N_RA), sizeof(N_RA));
+
+      
+        out.write(reinterpret_cast<char *>(&trial_number), sizeof(trial_number));
 
         for (int i = 0; i < N_RA; i++)
         {
             out.write(reinterpret_cast<char *>(&gaba_potential_global[i]), sizeof(gaba_potential_global[i]));
-            out.write(reinterpret_cast<char *>(&maturation_triggered_global[i]), sizeof(maturation_triggered_global[i]));
+            out.write(reinterpret_cast<char *>(&firing_rate_global[i]), sizeof(firing_rate_global[i]));
+            out.write(reinterpret_cast<char *>(&remodeled_global[i]), sizeof(remodeled_global[i]));
             out.write(reinterpret_cast<char *>(&mature_global[i]), sizeof(mature_global[i]));
 	    
+	    }
+		out.close();
+	}
+
+}
+
+void PoolParallel::write_maturation_time_sequence(const std::vector<int>& neurons, const char* filename)
+{
+    if (MPI_rank == 0)
+    {
+        std::ofstream out;
+      
+        if (trial_number == 0)
+        {
+            out.open(filename, std::ios::out | std::ios::binary );
+            
+            int size = static_cast<int>(neurons.size());
+            
+            out.write(reinterpret_cast<char *>(&size), sizeof(size));
+
+            for (size_t i = 0; i < neurons.size(); i++)
+                out.write(reinterpret_cast<const char *>(&neurons[i]), sizeof(neurons[i]));
+
+        }
+        else
+            out.open(filename, std::ios::out | std::ios::binary | std::ios::app);
+
+        out.write(reinterpret_cast<char *>(&trial_number), sizeof(trial_number));
+
+        for (size_t i = 0; i < neurons.size(); i++)
+        {
+            out.write(reinterpret_cast<char *>(&gaba_potential_global[neurons[i]]), sizeof(gaba_potential_global[neurons[i]]));
+            out.write(reinterpret_cast<char *>(&firing_rate_global[neurons[i]]), sizeof(firing_rate_global[neurons[i]]));
+            out.write(reinterpret_cast<char *>(&remodeled_global[neurons[i]]), sizeof(remodeled_global[neurons[i]]));
+            out.write(reinterpret_cast<char *>(&mature_global[neurons[i]]), sizeof(mature_global[neurons[i]]));
+	    
+	    }
+		out.close();
+	}
+}
+
+void PoolParallel::write_weights_time_sequence_from_source_to_target(const std::vector<int>& source, const std::vector<int>& target, const char* filename)
+{
+    if (MPI_rank == 0)
+    {
+        std::ofstream out;
+      
+        if (trial_number == 0)
+        {
+            out.open(filename, std::ios::out | std::ios::binary );
+            
+            int size_source = static_cast<int>(source.size());
+            int size_target = static_cast<int>(target.size());
+            
+            out.write(reinterpret_cast<char *>(&size_source), sizeof(size_source));
+            out.write(reinterpret_cast<char *>(&size_target), sizeof(size_target));
+
+            for (size_t i = 0; i < source.size(); i++)
+                out.write(reinterpret_cast<const char *>(&source[i]), sizeof(source[i]));
+
+            for (size_t i = 0; i < target.size(); i++)
+                out.write(reinterpret_cast<const char *>(&target[i]), sizeof(target[i]));
+        }
+        else
+            out.open(filename, std::ios::out | std::ios::binary | std::ios::app);
+
+        out.write(reinterpret_cast<char *>(&trial_number), sizeof(trial_number));
+
+        for (size_t i = 0; i < source.size(); i++)
+        {
+            for (size_t j = 0; j < target.size(); j++)
+            {
+                out.write(reinterpret_cast<char *>(&weights_global[source[i]][target[j]]), sizeof(double));
+	        }
 	    }
 		out.close();
 	}

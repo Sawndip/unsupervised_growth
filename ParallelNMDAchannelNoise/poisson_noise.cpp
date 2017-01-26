@@ -20,6 +20,11 @@ double Poisson_noise::random(double G)
 	return (double) G * generator() / generator.max();
 }
 
+int Poisson_noise::sample_index_for_point_distribution()
+{
+	return dis_int(generator);
+}
+
 void Poisson_noise::set_normal_distribution(double mu, double sigma)
 {
 	mean = mu;

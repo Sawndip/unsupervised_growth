@@ -8,10 +8,10 @@ Script analyzes how many indirect connections
 neurons in one group make onto neurons in the next group
 """
 
-RA2I = "/home/eugene/Output/networks/noNMDA121216/RA_I_connections.bin"
-I2RA = "/home/eugene/Output/networks/noNMDA121216/I_RA_connections.bin"
-RA2RA = "/home/eugene/Output/networks/noNMDA121216/RA_RA_super_connections.bin"
-fileMature = "/home/eugene/Output/networks/noNMDA121216/mature343.bin"
+RA2I = "/home/eugene/Output/RA_I_connections.bin"
+I2RA = "/home/eugene/Output/I_RA_connections.bin"
+RA2RA = "/home/eugene/Output/RA_RA_super_connections.bin"
+fileMature = "/home/eugene/Output/mature.bin"
 
 import reading
 import math
@@ -19,7 +19,24 @@ import matplotlib.pyplot as plt
 import numpy as np
 from collections import defaultdict
 
-def get_indirect_connections(source, target, RA2I_targets, I2RA_targets):
+def get_indirect_inhibition(source, RA2I_targets, I2RA_targets, G):
+    """
+    Function finds all indirect connections from source neurons
+    """
+    d = defaultdict(list)    
+    
+    for s in source:
+        for interneuron in RA2I_targets[s]:
+            for target in I2RA_targets[interneuron]:
+                if target in d:
+                    d[target] += G
+                else:
+                    d[target] = G
+                
+    return d
+
+
+def get_indirect_connections_to_target(source, target, RA2I_targets, I2RA_targets):
     """
     Function finds all indirect connections from source group to target group
     """
@@ -69,14 +86,17 @@ def indirect_connections_in_groups(training, RA2I_targets, RA2RA_targets, I2RA_t
 #print RA2I_targets
 #print I2RA_targets
 #print RA2RA_targets
+
+
         
 training = [0, 1, 2, 3]
 targets = [13, 16, 18, 25, 28, 46, 47, 52, 56, 62, 67, 71, 75, 84, 102, 103, 105, 113, 119, 121, 141, 147, 151, 156, 157, 171, 175, 176, 186, 187, 189, 218, 219, 220, 238, 242, 245, 246, 247, 262, 264, 265, 269, 278, 281, 289, 291, 298]
 num_layers = 2
 
 #indirect_connections_in_groups(training, RA2I_targets, RA2RA_targets, I2RA_targets, num_layers)
+G = 0.2
 
-print get_indirect_connections(training, targets, RA2I_targets, I2RA_targets)
+print get_indirect_inhibition([0, 1, 2, 3], RA2I_targets, I2RA_targets, G)
 
 #mature = reading.read_mature(fileMature)
 

@@ -280,12 +280,13 @@ def read_time_info(filename):
     
     trial_number = struct.unpack("<i", data[:SIZE_OF_INT])[0]
     simulation_time = struct.unpack("<d", data[SIZE_OF_INT:(SIZE_OF_INT+SIZE_OF_DOUBLE)])[0]
-    N_RA = struct.unpack("<i", data[(SIZE_OF_INT+SIZE_OF_DOUBLE):(2*SIZE_OF_INT+SIZE_OF_DOUBLE)])[0] 
+    N = struct.unpack("<i", data[(SIZE_OF_INT+SIZE_OF_DOUBLE):(2*SIZE_OF_INT+SIZE_OF_DOUBLE)])[0] 
     #print len(data[(2*SIZE_OF_INT+SIZE_OF_DOUBLE):])
     ind = 2*SIZE_OF_INT+SIZE_OF_DOUBLE    
     spike_times = []
     neuron_fired = []
-    for i in range(N_RA):
+    
+    for i in range(N):
         spike_array_size = struct.unpack("<i", data[ind:(ind+SIZE_OF_INT)])[0]
         single_neuron_spikes = []        
         single_neuron_fired = []        
@@ -301,7 +302,127 @@ def read_time_info(filename):
             neuron_fired.append(single_neuron_fired)
     #spike_times = struct.unpack("<{0}d".format(N_RA), data[(2*SIZE_OF_INT+SIZE_OF_DOUBLE):])
     return (trial_number, simulation_time, spike_times, neuron_fired)
+
+def read_maturation_time_sequence(filename):
+    """
+    Reads neuron states of target neurons such as remodeled and mature indicators; gaba reverse potential
+     and firing rate as functions of time measured in trial_numbers
+    """
+    with open(filename, "rb") as file:
+        data = file.read()
+        file.close()
+
+    num_target = struct.unpack("<i", data[:SIZE_OF_INT])[0] # number of targets     
     
+    target = [] # target neurons
+    
+    ind = SIZE_OF_INT    
+    
+    for i in xrange(num_target):
+        target.append(struct.unpack("<i", data[ind:(ind + SIZE_OF_INT)])[0])
+        ind += SIZE_OF_INT
+    
+    t = [] # time in trial numbers    
+    remodeled = [[] for i in xrange(num_target)] # indicator for neuron to be remodeled
+    mature = [[] for i in xrange(num_target)] # idicator for neuron to be mature
+    gaba_potential = [[] for i in xrange(num_target)] # reverse GABA potential    
+    firing_rate = [[] for i in xrange(num_target)] # neuron firing rate
+    
+    num_datapoints = (len(data) - SIZE_OF_INT) / (SIZE_OF_INT + num_target * (2*SIZE_OF_INT + 2*SIZE_OF_DOUBLE)) # number of datapoints in file
+    
+    for i in xrange(num_datapoints):
+        t.append(struct.unpack("<i", data[ind:(ind + SIZE_OF_INT)])[0])
+
+        for j in xrange(num_target):        
+            gaba_potential[j].append(struct.unpack("<d", data[(ind + SIZE_OF_INT):(ind + SIZE_OF_INT + SIZE_OF_DOUBLE)])[0])
+            firing_rate[j].append(struct.unpack("<d", data[(ind + SIZE_OF_INT + SIZE_OF_DOUBLE):(ind + SIZE_OF_INT + 2*SIZE_OF_DOUBLE)])[0])
+            
+            remodeled[j].append(struct.unpack("<i", data[(ind + SIZE_OF_INT + 2*SIZE_OF_DOUBLE):(ind + 2*SIZE_OF_DOUBLE + 2*SIZE_OF_INT)])[0])
+            mature[j].append(struct.unpack("<i", data[(ind + 2*SIZE_OF_DOUBLE + 2*SIZE_OF_INT):(ind + 2*SIZE_OF_DOUBLE + 3*SIZE_OF_INT)])[0])
+           
+            ind += 2*SIZE_OF_INT + 2*SIZE_OF_DOUBLE
+        
+        ind += SIZE_OF_INT
+    
+    return (target, t, remodeled, mature, gaba_potential, firing_rate)
+        
+
+def read_synaptic_weights_time_sequence(filename):
+    """
+    Reads time dynamics of synaptic weights from source to target neurons
+    """
+    with open(filename, "rb") as file:
+        data = file.read()
+        file.close()
+    
+    num_source = struct.unpack("<i", data[:SIZE_OF_INT])[0] # number of source neurons
+    num_target = struct.unpack("<i", data[SIZE_OF_INT:2*SIZE_OF_INT])[0] # number of target neurons
+    
+    source = [] # source neuron id
+    target = [] # target neuron id
+
+    ind = 2*SIZE_OF_INT    
+    
+    # read id of source neurons
+    for i in xrange(num_source):
+        source.append(struct.unpack("<i", data[ind:(ind + SIZE_OF_INT)])[0])
+        
+        ind += SIZE_OF_INT
+        
+    # read id of target neurons
+    for i in xrange(num_target):
+        target.append(struct.unpack("<i", data[ind:(ind + SIZE_OF_INT)])[0])
+        
+        ind += SIZE_OF_INT
+        
+    num_datapoints = (len(data) - 2*SIZE_OF_INT - SIZE_OF_INT * (num_source + num_target)) \
+                                / (num_source * num_target * SIZE_OF_DOUBLE + SIZE_OF_INT)
+
+    t = []    
+    weights = [[] for i in xrange(num_source)]
+    
+    for i in xrange(num_source):
+        for j in xrange(num_target):
+            weights[i].append([])
+        
+    for k in xrange(num_datapoints):    
+        t.append(struct.unpack("<i", data[ind:(ind + SIZE_OF_INT)])[0])
+        
+        for i in xrange(num_source):
+            for j in xrange(num_target):        
+                weights[i][j].append(struct.unpack("<d", data[(ind + SIZE_OF_INT):(ind + SIZE_OF_INT + SIZE_OF_DOUBLE)])[0])
+                
+                ind += SIZE_OF_DOUBLE
+        ind += SIZE_OF_INT
+        
+    return source, target, t, weights
+
+def read_num_synapses(filename):
+    """
+    Read number of active and supersynapses from file
+    """
+    with open(filename, "rb") as file:
+        data = file.read()
+        file.close()
+    
+    trial_number = []
+    num_active = []
+    num_super = []
+    
+    num_datapoints = len(data) / (3 * SIZE_OF_INT)
+    
+    ind = 0
+    
+    for i in xrange(num_datapoints):
+        
+        trial_number.append(struct.unpack("<i", data[ind:(ind+SIZE_OF_INT)])[0])
+        num_active.append(struct.unpack("<i", data[(ind+SIZE_OF_INT):(ind + 2*SIZE_OF_INT)])[0])
+        num_super.append(struct.unpack("<i", data[(ind + 2*SIZE_OF_INT):(ind + 3*SIZE_OF_INT)])[0])
+        
+        ind += 3*SIZE_OF_INT
+   
+    return (trial_number, num_active, num_super)
+
 def read_sim_info(filename):
     with open(filename, "rb") as file:
         data = file.read()
@@ -340,21 +461,25 @@ def read_maturation_info(filename):
         file.close()
     
     N_RA = struct.unpack("<i", data[:SIZE_OF_INT])[0]
+    trial_number = struct.unpack("<i", data[SIZE_OF_INT:2*SIZE_OF_INT])[0]
     
     gaba_potential = []    
-    maturation_triggered = []
+    firing_rate = []
     mature = []
-        
-    ind = SIZE_OF_INT
+    remodeled = []    
+    
+    ind = 2*SIZE_OF_INT
     
     for i in xrange(N_RA):
         gaba_potential.append(struct.unpack("<d", data[ind:(ind + SIZE_OF_DOUBLE)])[0])
-        maturation_triggered.append(struct.unpack("<i", data[(ind + SIZE_OF_DOUBLE):(ind + SIZE_OF_DOUBLE + SIZE_OF_INT)])[0])
-        mature.append(struct.unpack("<i", data[(ind + SIZE_OF_DOUBLE + SIZE_OF_INT):(ind + SIZE_OF_DOUBLE + 2*SIZE_OF_INT)])[0])
+        firing_rate.append(struct.unpack("<d", data[(ind + SIZE_OF_DOUBLE):(ind + 2*SIZE_OF_DOUBLE)])[0])
+
+        remodeled.append(struct.unpack("<i", data[(ind + 2*SIZE_OF_DOUBLE):(ind + 2*SIZE_OF_DOUBLE + SIZE_OF_INT)])[0])
+        mature.append(struct.unpack("<i", data[(ind + 2*SIZE_OF_DOUBLE + SIZE_OF_INT):(ind + 2*SIZE_OF_DOUBLE + 2*SIZE_OF_INT)])[0])
         
-        ind += SIZE_OF_DOUBLE + 2*SIZE_OF_INT
+        ind += 2*SIZE_OF_DOUBLE + 2*SIZE_OF_INT
     
-    return gaba_potential, maturation_triggered, mature
+    return trial_number, gaba_potential, firing_rate, remodeled, mature
 
 def read_simTime_info(filename):
     with open(filename, "rb") as file:
