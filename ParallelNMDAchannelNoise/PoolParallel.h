@@ -155,9 +155,6 @@ protected:
         std::deque<double>* last_soma_spikes_local; // last NUM_SOMA_SPIKES spikes in somatic compartment
         std::deque<double>* last_soma_spikes_global; // last NUM_SOMA_SPIKES spikes in somatic compartment
 
-        double* spike_times_soma_local; // local array with neurons somatic spike times
-		double* spike_times_dend_local; // local array with neurons dendritic spike times
-
 		double* spike_times_soma_global; // array with the most recent somatic spike times of neurons
 		double* spike_times_dend_global; // array with the most recent dendritic spike times of neurons
 

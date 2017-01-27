@@ -1264,7 +1264,7 @@ void PoolParallel::randomize_after_trial()
 
         spikes_in_trial_soma_local[i].clear();
         spikes_in_trial_dend_local[i].clear();
-
+		last_soma_spikes_local[i].clear();
     }
 
     for (int i = 0; i < N_I_local; i++)
@@ -1743,11 +1743,13 @@ void PoolParallel::trial(int training)
 
                         double dt = internal_time - spike_times_dend_global[supersynapse_id];
 
+						//std::cout << "dt in saturated LTD = " << dt << std::endl;
+
                         if ( (Id_RA_local[i] != supersynapse_id) && (dt < STDP_WINDOW) )
                         {
                         
-         //                   printf("LTD from neuron %d onto %d; somatic spike: %f; dendritic spike: %f\n", Id_RA_local[fired_ID], target_ID,
-			    	//spike_times_soma_local[fired_ID], spike_times_dend_global[target_ID]);
+                            //printf("LTD from saturated neuron %d onto %d; somatic spike: %f; dendritic spike: %f; dt = %f\n", Id_RA_local[i], supersynapse_id,
+			    	//last_soma_spikes_local[i].back(), spike_times_dend_global[supersynapse_id], dt);
                             LTD(weights_local[i][supersynapse_id], dt);
                             update_synapse(i, supersynapse_id);
                        		
@@ -1765,11 +1767,13 @@ void PoolParallel::trial(int training)
                     for (int j = 0; j < N_RA; j++)
                     {
                         double dt = internal_time - spike_times_dend_global[j];
+						
+						//std::cout << "dt in LTD = " << dt << std::endl;
 
                         if ( (Id_RA_local[i] != j) && (dt < STDP_WINDOW) )
                         {
-                           // printf("LTD from neuron %d onto %d; somatic spike: %f; dendritic spike: %f\n", Id_RA_local[fired_ID], j,
-		//	    	spike_times_soma_local[fired_ID], spike_times_dend_global[j]);
+            //               printf("LTD from neuron %d onto %d; somatic spike: %f; dendritic spike: %f; dt = %f\n", Id_RA_local[i], j,
+			//		    	last_soma_spikes_local[i].back(), spike_times_dend_global[j], dt);
                            	LTD(weights_local[i][j], dt);
                            	update_synapse(i, j);
 								
@@ -1980,9 +1984,9 @@ void PoolParallel::trial(int training)
 
                                     if (dt < STDP_WINDOW)
                                     {
+                                        //printf("LTP from saturated neuron %d onto %d; somatic spike at %f; dendritic spike at %f; dt = %f\n", Id_RA_local[i], fired_ID,
+                      //                                      last_soma_spikes_local[i][k], spike_times_dend_global[fired_ID], dt);
                                         LTP(weights_local[i][fired_ID], dt);
-         //                             printf("LTP from neuron %d onto %d; somatic spike at %f; dendritic spike at %f\n", Id_RA_local[i], fired_ID,
-             //                                               last_soma_spikes_local[i][k], spike_times_dend_global[fired_ID]);
                                         update_synapse(i, fired_ID);
 									}
                                 }
@@ -2006,8 +2010,8 @@ void PoolParallel::trial(int training)
 
                                     if (dt < STDP_WINDOW)
                                     {
-           //                             printf("LTP from neuron %d onto %d; somatic spike at %f; dendritic spike: %f\n", Id_RA_local[i], fired_ID,
-                            //                                last_soma_spikes_local[i][k], spike_times_dend_global[fired_ID]);
+                                        //printf("LTP from neuron %d onto %d; somatic spike at %f; dendritic spike: %f; dt = %f\n", Id_RA_local[i], fired_ID,
+                                          //                  last_soma_spikes_local[i][k], spike_times_dend_global[fired_ID], dt);
                                         LTP(weights_local[i][fired_ID], dt);
                                         update_synapse(i, fired_ID);
                                   		
@@ -2280,6 +2284,7 @@ void PoolParallel::LTP(double &w, double t)
     //printf("LTP\n");
 	if (t <= T_P)
     {
+		//std::cout << "Weight before LTP = " << w << std::endl;
         //if ((w + R * A_P * G_P * ((1 + F_0) * t / T_P - F_0))<0)
           //  printf("LTP. Linear interval. Weight became negative. w = %f\n", w);
         //double temp = R * A_P * G_P * ((1 + F_0) * t / T_P - F_0);
@@ -2290,6 +2295,7 @@ void PoolParallel::LTP(double &w, double t)
 		//w = w + temp;
 			w = w + R * A_P * ((1 + F_0) * t / T_P - F_0);
 	
+		//std::cout << "Weight after LTP = " << w << std::endl;
 
         //std::cout << "w = " << w << std::endl;
     }
@@ -2305,8 +2311,11 @@ void PoolParallel::LTP(double &w, double t)
          //   printf("Positive LTP!!! t = %f; temp = %f\n", t, temp);
 
         //w = w + temp;
-   			w = w + R * A_P * exp(-(t - T_P) / TAU_P);
+		//std::cout << "Weight before exp LTP = " << w << std::endl;
+   		
+		w = w + R * A_P * exp(-(t - T_P) / TAU_P);
 
+		//std::cout << "Weight after exp LTP = " << w << std::endl;
         //std::cout << "w = " << w << std::endl;
     }
 
@@ -2326,8 +2335,10 @@ void PoolParallel::LTD(double &w, double t)
             //printf("LTD. Linear interval. Weight became negative. w = %f\n", w);
 		//w = w - R * A_D * w * ((1 - F_0) * t / T_D + F_0);
 		//w = w - R * A_D * ((1 - F_0) * t / T_D + F_0);
+		//std::cout << "Weight before LTD = " << w << std::endl;
 			w = w - w * R * A_D * ( F_0 + (1 -  F_0) * t / T_D);
 		
+		//std::cout << "Weight after LTD = " << w << std::endl;
 		if (w < 0)
             w = 0;
 
@@ -2339,8 +2350,10 @@ void PoolParallel::LTD(double &w, double t)
           //  printf("LTD. Exponential interval. Weight became negative. w = %f\n", w);
 
 		//w = w - R * A_D * w * exp(-(t - T_D) / TAU_D);
+		//std::cout << "Weight before exp LTD = " << w << std::endl;
 			w = w - w * R * A_D * exp(-(t - T_D) / TAU_D);
 
+		//std::cout << "Weight after exp LTD = " << w << std::endl;
         if (w < 0)
             w = 0;
 
