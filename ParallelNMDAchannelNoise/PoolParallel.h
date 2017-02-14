@@ -2,65 +2,59 @@
 #define POOLPARALLEL_H_INCLUDED
 
 #include <vector>
-#include <deque>
 #include <cmath>
 #include <mpi.h>
 #include "poisson_noise.h"
 #include <boost/circular_buffer.hpp>
-#include "structures.h"
+#include <boost/dynamic_bitset.hpp>
+#include "Configuration.h"
+#include "HHI_final.h"
+#include "HH2_final.h"
 
-
-class HH2_final;
-class HHI_final;
 
 using std::vector;
 
 typedef boost::circular_buffer<int> intBuffer;
+typedef boost::dynamic_bitset<> bitArray;
 
 class PoolParallel
 {
 public:
-	PoolParallel(int N_tr, int N_ra, int Ni, int N_ss, std::string outputDir);
+	PoolParallel(const Configuration& cfg);
 	
-	~PoolParallel();
-
-    void set_synaptic_parameters(struct SynapticParameters& syn_params); // set synaptic parameters
-    void set_gaba_parameters(struct GabaParameters& gaba_params); // set GABA parameters of maturation
-    void set_spatial_parameters(struct SpatialConnectivityParameters& spatial_params); // set spatial parameters
-    void set_time_parameters(struct TimeParameters& time_params); // set time parameters
-    void set_noise_parameters(struct NoiseParameters& noise_params); // set noise parameters
-
-
-	void read_from_file(const char* RA_xy, const char* I_xy, const char* RA_RA_all, const char* RA_RA_active,
-						const char* RA_RA_super, const char* RA_I, const char* I_RA, const char* maturation,
-						const char* timeInfo); // read network structure from files
-	
-	void read_connections_from_net(const char *filename, std::vector<int>** target_id, std::vector<double>** target_G); // read connection from .net file
-	void read_all_connections_from_net(const char *filename, double*** weights); // read connection from .net file
-    void read_all_connections(const char *filename, double** weights); // read all connections between RA neurons from binary file
+    void run_trials_no_save(int num_trials); // run num_trials trials without saving data to files
+    void run_trials_with_save(int num_trials); // run num_trials trials with saving sata to files
+    
+    void read_network_state(std::string dirname); // read network state from files in the directory dirname
 
 	void initialize_coordinates(); // initialize coordinates of neurons
+    void initialize_coordinates_for_added_neurons(int n_total_old); // initialize coordinates for added neurons; 
+                                                                    // n_total_old - total number of HVC(RA) neurons before new neurons are added;
 	void initialize_generator(); // initialize generator for processes
 
     void initialize_connections(); // initialize connections for neurons
+    void initialize_connections_for_added_neurons(int n_total_old); // initialize connections for added neurons; 
+                                                                    // n_total_old - total number of HVC(RA) neurons before new neurons are added;
+
+    void initialize_test_connections(int num_RA_targets, int num_RA_target_groups); // initialize test connections: first training neuron is connected to the first
+                                                                                    // interneuron; First interneuron in turn is connected to num_RA_targets RA
+                                                                                    // neurons. Strength if inhibitory connection increases by Gie_mean in each
+                                                                                    // next group of RA neurons
+
+
+    void initialize_chain_connections(int num_layers); // initialize connections like in a real synfire chain
 
     int get_trial_number(); // get current number of trials performed
 
 	void send_connections(); // send fixed connections connections to all processes
-	void send_simulation_parameters(); // send parameters of simulation and RA to RA connections to all processes
 	
-	void update_synaptic_info(); // update synaptic information after reading network structure from files
-
     void chain_growth(int save_freq_short, int save_freq_long); // run chain growth algorithm; save data for graph update every 
                                                                 // save_freq_short trials; data for analysis every save_freq_long trials
-	void mature_chain_test(const int num_trials, const char* file_soma_spikes, const char* file_dend_spikes, const char* file_chain_test); // test of mature network
+    void add_new_neurons(int N); // add N immature neurons to network
+    void mature_chain_test(int num_trials, std::string dataDir); // test of mature network
 	void trial(int training); // make one trial
 
 	void randomize_after_trial(); // set all neurons to the resting state
-	void reset_after_trial(); // reset neurons after trial is over
-	void initialize_pool(double Gie_max, double Gei_max); // initialize pools with synapses stored outside neurons
-	void visualize_RA_connections(); // visualize RA connections of the network
-	void visualize_I_connections(); // visualize I connections of the network
     void print_invariable_connections(); // get number of connections for invariable synapses
 	// write to file functions
 	void gather_data(); // gather data from all processes
@@ -73,21 +67,14 @@ public:
 	void write_RA(const char * filename, int n); // write dynamics of RA neuron to a file
 	void write_I(const char * filename, int n); // write dynamics of I neuron to a file
 	void write_weights(const char * filename); // write weights of all synapses in network
+	void write_weight_statistics(const char * filename); // write mean synaptic weight and synaptic weight standard deviation
     void write_soma_spike_times(const char* filename); // write somatic spike information to a file
     void write_dend_spike_times(const char* filename); // write dendritic spike information to a file
     void write_interneuron_spike_times(const char* filename); // write interneuron spike information to a file
 	void write_maturation_info(const char* filename); // write mature neurons
     void write_time_info(const char* filename); // write simulation time information
 
-    void write_pajek_super(const char* filename); // write supersynapses to a file for pajek
-	void write_pajek_active(const char* filename); // write active synapses to a file for pajek
-	void write_pajek_all(const char* filename); // write all synapses to a file for pajek
     void write_pajek_fixed(const char* filename); // write fixed synapses to a file for pajek
-
-	// set functions
-	void set_simulation_parameters(double interval, double tS, double mu_s, double sigma_s, double mu_d, double sigma_d); // set simulation parameters: trial duration; timestep of dynamics; white noise input to neuron
-   
-   // current
 
 	void print_simulation_parameters(); // print simulation parameters
 protected:
@@ -99,8 +86,8 @@ protected:
 		int N_I_local; // number of I neurons in each process
 		int Nss; // number of super synapses
 
-		HH2_final* HVCRA_local; // array of HVC(RA) neurons
-		HHI_final* HVCI_local; // array of HVC(I) neurons
+		vector<HH2_final> HVCRA_local; // array of HVC(RA) neurons
+		vector<HHI_final> HVCI_local; // array of HVC(I) neurons
 
 		// coordinates info
 		vector <double> xx_RA; // x-coordinates of RA neurons
@@ -124,10 +111,10 @@ protected:
 		double B_I2RA; // constant for I to RA connections
 		double SIDE; // length of HVC side
 		
-		double mu_soma; // dc component of white noise to soma
-		double sigma_soma; // variance of white noise to soma
-		double mu_dend; // dc component of white noise to dendrite
-		double sigma_dend; // variance of white noise to dendrite
+		double white_noise_mean_soma; // dc component of white noise to soma
+		double white_noise_std_soma; // variance of white noise to soma
+		double white_noise_mean_dend; // dc component of white noise to dendrite
+		double white_noise_std_dend; // variance of white noise to dendrite
 
 		int size; // time array size for dynamics
 		double timeStep; // time step for dynamics
@@ -141,34 +128,37 @@ protected:
 
 		Poisson_noise generator; // poisson noise generator
 
-		bool** active_global; // array of HVC(RA) neurons with active synapses
-		bool** supersynapses_global; // indicator array for active supersynapses;
-		double** weights_global; // array of synaptic strength of all connections between RA neurons
-		vector<double>* weights_RA_I_global; // array with synapses from RA to I neurons
-		vector<double>* weights_I_RA_global; // array with senapses from I to RA neurons
-		vector<int>* syn_ID_RA_I_global; // array with synaptic ID numbers from RA to I neurons
-		vector<int>* syn_ID_I_RA_global; // array with synaptic ID numbers from I to RA neurons
+		vector<vector<double>> weights_global; // array of synaptic strength of all connections between RA neurons
+        vector<vector<double>> weights_local; // array of synaptic strength of all connections between RA neurons
+		
+        vector<vector<double>> weights_RA_I_global; // array with synapses from RA to I neurons
+		vector<vector<double>> weights_I_RA_global; // array with senapses from I to RA neurons
+		vector<vector<double>> weights_RA_I_local; // array with synapses from RA to I neurons
+		vector<vector<double>> weights_I_RA_local; // array with senapses from I to RA neurons
+        
+        vector<vector<int>> syn_ID_RA_I_global; // array with synaptic ID numbers from RA to I neurons
+		vector<vector<int>> syn_ID_I_RA_global; // array with synaptic ID numbers from I to RA neurons
+		vector<vector<int>> syn_ID_RA_I_local; // array with synaptic ID numbers from RA to I neurons
+		vector<vector<int>> syn_ID_I_RA_local; // array with synaptic ID numbers from I to RA neurons
 
-		vector<int>* active_synapses_global; // array of vectors with IDs of active synapses
-		vector<int>* active_supersynapses_global; // array of vectors with IDs of supersynapses
+		vector<bitArray> active_indicators_local; // array of HVC(RA) neurons with active synapses
+		vector<bitArray> supersynapses_indicators_local; // indicator array for active supersynapses;
+		
+		vector<vector<int>> active_synapses_local; // array of vectors with IDs of active synapses
+		vector<vector<int>> supersynapses_local; // array of vectors with IDs of supersynapses
+		
+        vector<vector<int>> active_synapses_global; // array of vectors with IDs of active synapses
+		vector<vector<int>> supersynapses_global; // array of vectors with IDs of supersynapses
+		
+		vector<double> spike_times_dend_global; // array with the most recent dendritic spike times of neurons
 
-        std::deque<double>* last_soma_spikes_local; // last NUM_SOMA_SPIKES spikes in somatic compartment
-        std::deque<double>* last_soma_spikes_global; // last NUM_SOMA_SPIKES spikes in somatic compartment
+        vector<vector<double>> spikes_in_trial_soma_global; // array with somatic spike times in the last trial
+		vector<vector<double>> spikes_in_trial_dend_global; // array with dendritic spike times in the last trial
+		vector<vector<double>> spikes_in_trial_interneuron_global; // array with interneuron spike times in the last trial
 
-		double* spike_times_soma_global; // array with the most recent somatic spike times of neurons
-		double* spike_times_dend_global; // array with the most recent dendritic spike times of neurons
-
-        vector<double>* spikes_in_trial_soma_global; // array with somatic spike times in the last trial
-		vector<double>* spikes_in_trial_dend_global; // array with dendritic spike times in the last trial
-		vector<double>* spikes_in_trial_interneuron_global; // array with interneuron spike times in the last trial
-
-        vector<double>* spikes_in_trial_soma_local; // array with somatic spike times in the last trial
-		vector<double>* spikes_in_trial_dend_local; // array with dendritic spike times in the last trial
-		vector<double>* spikes_in_trial_interneuron_local; // array with interneuron spike times in the last trial
-
-		bool** active_local; // array of HVC(RA) neurons with active synapses
-		bool** supersynapses_local; // indicator array for active supersynapses;
-		double** weights_local; // array of synaptic strength of all connections between RA neurons
+        vector<vector<double>> spikes_in_trial_soma_local; // array with somatic spike times in the last trial
+		vector<vector<double>> spikes_in_trial_dend_local; // array with dendritic spike times in the last trial
+		vector<vector<double>> spikes_in_trial_interneuron_local; // array with interneuron spike times in the last trial
 		
 		vector<int> remodeled_local; // local indicators if neuron underwent axon remodelling
 		vector<int> remodeled_global; // global indicators if neuron underwent axon remodelling
@@ -182,19 +172,12 @@ protected:
 		vector<double> firing_rate_local; // array with local firing rates of HVC(RA) neurons
 		vector<double> firing_rate_global; // array with global firing rates of HVC(RA) neurons
     
-        bool* gaba_reached_mature_local; // local indicators for neurons that GABA potential reached mature value
+        vector<int> gaba_reached_mature_local; // local indicators for neurons that GABA potential reached mature value
 
         vector<intBuffer> num_bursts_in_recent_trials; // array of circular buffer containing recent neuron rates
 
-		vector<double>* spikes_in_trial_local; // local rray with spike times of single trial
-		vector<double>* weights_RA_I_local; // array with synapses from RA to I neurons
-		vector<double>* weights_I_RA_local; // array with senapses from I to RA neurons
-		vector<int>* syn_ID_RA_I_local; // array with synaptic ID numbers from RA to I neurons
-		vector<int>* syn_ID_I_RA_local; // array with synaptic ID numbers from I to RA neurons
-		
-		vector<int>* active_synapses_local; // array of vectors with IDs of active synapses
-		vector<int>* active_supersynapses_local; // array of vectors with IDs of supersynapses
-		vector<int> Id_RA_local; // Id of RA neurons in each process
+		vector<int> Id_RA_local; // local array with id of RA neurons in each process
+		vector<int> Id_RA_global; // global array with ids of RA neurons in all processes
 		vector<int> Id_I_local; // Id of I neurons in each process
 
 		// update conductances and glutamate
@@ -233,11 +216,11 @@ protected:
 		// constants for STDP-rules
 		double STDP_WINDOW; // window for STDP beyond which we ignore all spikes
 
-        double ACTIVATION; // threshold for synapse activation
+        double ACTIVATION_THRESHOLD; // threshold for synapse activation
         double SUPERSYNAPSE_THRESHOLD; // threshold for supersynapse activation
         double BETA; // potentiation decay parameter
         double BETA_SUPERSYNAPSE; // potentiation decay parameter for supersynapse
-        double G_MAX; // maximum synaptic weight
+        double WEIGHT_MAX; // maximum synaptic weight
         double A_D; // LTD amplitude 
         double A_P; // LTP amplitude
 		double T_P; // time for the most efficient LTP
@@ -253,7 +236,9 @@ protected:
 		void set_training_current(double t); // set current to training neurons. t - current injection time.
         void set_training_current(); // set current to training neurons
 		
-		void write_chain_test(int num_trials, std::vector<int>& num_dend_spikes, std::vector<double>& mean_burst_time, std::vector<double>& std_burst_time, const char* filename); // write results of chain test to file
+		void write_chain_test(int num_trials, std::vector<int>& total_num_dend_spikes, std::vector<double>& average_num_dendritic_spikes_in_trials, 
+                              std::vector<double>& average_num_somatic_spikes_in_trials, std::vector<double>& mean_burst_time, 
+                              std::vector<double>& std_burst_time, const char* filename); // write results of chain test to file
 		
 		void mature_trial(); // simulation trial without STDP rules
 		void LTD(double &w, double t); // long-term depression STDP rule
@@ -263,20 +248,39 @@ protected:
 		void update_all_synapses(); // update synapses between RA neurons and apply potentiation decay
 		void axon_remodeling(int i); // remove all targets from neuron i except for supersynapses
 
+        // setting simulation parameters
+        void set_network_parameters(const struct NetworkParameters& network_params); // set network parameters
+        void set_noise_parameters(const struct NoiseParameters& noise_params); // set noise parameters
+        void set_synaptic_parameters(const struct SynapticParameters& syn_params); // set synaptic parameters
+        void set_gaba_parameters(const struct GabaParameters& gaba_params); // set GABA parameters of maturation
+        void set_spatial_parameters(const struct SpatialParameters& spatial_params); // set spatial parameters
+        void set_time_parameters(const struct TimeParameters& time_params); // set time parameters
+    
+        // internal printing functions
+        void print_active(); // print active indicators
+        void print_super(); // print super indicators
+
+        // reading data from files
+        void read_global_index_array(const char* filename); // read global array with HVC(RA) neuronal ids
+        void read_invariable_synapses(const char* fileRA2I, const char* fileI2RA); // read HVC(RA) -> HVC(I) and HVC(I) -> HVC(RA)
+                                                                                                     // connections from the file
+        void read_super_synapses(const char* filename); // read supersynapses from the file
+        void read_active_synapses(const char* filename); // read active synapses from the file
+        void read_maturation_info(const char* filename); // read maturation information from the file
+        void read_weights(const char* filename); // read all synaptic weights from the file
+
         // internal write functions
         std::string outputDirectory; // directory to which write output
 
-        void write_synaptic_parameters(const char* filename); // write synaptic parameters to a file
-        void write_gaba_parameters(const char* filename); // write gaba parameters to a file
-        void write_noise_parameters(const char* filename); // write noise parameters to a file
-        void write_spatial_parameters(const char* filename); // write spatial parameters to a file
-        void write_time_parameters(const char* filename); // write time parameters to a file
-
+        void write_global_index_array(const char* filename); // write global array with HVC(RA) neuronal ids to file
         void write_weights_time_sequence_from_source_to_target(const std::vector<int>& source, const std::vector<int>&target, const char* filename); // write time
                                                                                                      // dynamics of synaptic weights from source to target neurons
         void write_maturation_time_sequence(const std::vector<int>& neurons, const char* filename); // write maturation time sequence of neurons to a file
+        
         // MPI support
-		void gather_mature_data(std::vector<std::vector<double>>& average_dendritic_spike_time); // gather data from all processes in case of mature chain trial
+		void resize_arrays_for_I(int n_local, int n_total); // resize data arrays for HVC(I) neurons
+        void resize_arrays_for_RA(int n_local, int n_total); // resize data arrays for HVC(RA) neurons
+        void gather_mature_data(std::vector<std::vector<double>>& average_dendritic_spike_time); // gather data from all processes in case of mature chain trial
 
         int MPI_size; // number of processes
         int MPI_rank; // rank of the process

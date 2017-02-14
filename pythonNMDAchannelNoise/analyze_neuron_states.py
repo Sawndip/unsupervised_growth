@@ -96,7 +96,7 @@ f3 = plt.figure()
 ax = f3.add_subplot(111)
 
 source_neuron = 0 # real id of source neuron
-target_neuron = 22 # real id of target neuron
+target_neuron = 83 # real id of target neuron
 
 ind_source = source.index(source_neuron) # index of source neuron in the list
 ind_target = target.index(target_neuron) # index of target neuron in the list

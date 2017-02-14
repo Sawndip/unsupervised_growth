@@ -16,8 +16,8 @@ import math
 
 N = 300 # number of neurons
 
-fileDend = "/home/eugene/Output/time_info_dend.bin"
-fileSoma = "/home/eugene/Output/time_info_soma.bin"
+fileDend = "/home/eugene/hodgkinData/gabaMaturation300117/matureTest/dend_spikes_in_trial.bin"
+fileSoma = "/home/eugene/hodgkinData/gabaMaturation300117/matureTest/soma_spikes_in_trial.bin"
 
 TRIAL_DURATION = 1000
 

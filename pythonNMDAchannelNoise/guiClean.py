@@ -18,17 +18,19 @@ from matplotlib.figure import Figure
 
 SIDE = 100
 FONT_SIZE = 5
-SUPERSYNAPSE_THRESHOLD = 0.015
-ACTIVATION_THRESHOLD = 0.0005
 TRIAL_DURATION = 1000
 
-filename_weights = "/home/eugene/Output/weights.bin"
-filename_spike_times_soma = "/home/eugene/Output/spike_times_soma.bin"
-filename_spike_times_dend = "/home/eugene/Output/spike_times_dend.bin"
+outdir = "/home/eugene/Output/networks/gabaMaturation100217/"
 
-filename_num_synapses = "/home/eugene/Output/num_synapses.bin"
-filename_spike_times_I = "/home/eugene/Output/spike_times_interneuron.bin"
-filename_RA_RA_super = "/home/eugene/Output/RA_RA_super_connections.bin"
+filename_weights = os.path.join(outdir, "weights.bin")
+filename_weight_statistics = os.path.join(outdir, "weight_statistics.bin")
+
+filename_spike_times_soma = os.path.join(outdir, "spike_times_soma.bin")
+filename_spike_times_dend = os.path.join(outdir, "spike_times_dend.bin")
+
+filename_num_synapses = os.path.join(outdir, "num_synapses.bin")
+filename_spike_times_I = os.path.join(outdir, "spike_times_interneuron.bin")
+filename_RA_RA_super = os.path.join(outdir, "RA_RA_super_connections.bin")
 
 class My_gui(tk.Tk):
     def __init__(self, *args, **kwargs):
@@ -44,7 +46,11 @@ class My_gui(tk.Tk):
         self.frames = {}
         
         self.pool = Updator()
-        self.pIsUpdated = False
+        
+        self.weightDistributionUpdated = False
+        self.weightStatisticsUpdated = False                
+        self.numSynapsesUpdated = False
+        self.spikeTimesUpdated = False
         
         for page in (PageOne, PageTwo, PageThree, PageFour, PageFive, PageSix):
             frame = page(container, self, self.pool)
@@ -54,17 +60,40 @@ class My_gui(tk.Tk):
         
         self.show_page(PageOne)
         self.update()
-    def poolIsUpdated(self):
-        return self.pIsUpdated
+   
            
     def update(self):
-        #print "Pool is updated!"
-        if self.pool.needs_update():
-            self.pool.update()
-            self.pIsUpdated = True
+        """
+        Update all data if necessary
+        """
+        # check if weight distribution needs to be updated
+        if self.pool.weight_distribution_need_update():
+            self.pool.update_weights_info()
+            self.weightDistributionUpdated = True
         else:
-            self.pIsUpdated = False
-            
+            self.weightDistributionUpdated = False
+        
+        # check if weight statistics need to be updated
+        if self.pool.weight_statistics_need_update():
+            self.pool.update_weight_statistics()
+            self.weightStatisticsUpdated = True
+        else:
+            self.weightStatisticsUpdated = False
+        
+        # check if num_synapses need to be updated
+        if self.pool.num_synapses_need_update():
+            self.pool.update_num_synapses()
+            self.numSynapsesUpdated = True
+        else:
+            self.numSynapsesUpdated = False
+                
+        # check if raster plots need to be updated
+        if self.pool.spike_times_need_update():
+            self.pool.update_spike_times()
+            self.spikeTimesUpdated = True
+        else:
+            self.spikeTimesUpdated = False
+        
         self.after(5000, self.update)
         
     def show_page(self, cont):
@@ -146,13 +175,17 @@ class PageOne(tk.Frame):
         """
         Refreshes page of needed
         """
-        if controller.poolIsUpdated():
-            #print "Distribution page update"            
+        if controller.weightDistributionUpdated:
             self.pool.draw_weight_hist(self.ax_dist)
             self.canvas_dist.draw()
+                    
+        if controller.weightStatisticsUpdated:
             self.pool.draw_weight_statistics(self.ax1_weight_statistics, self.ax2_weight_statistics)
-            self.canvas_weight_statistics.draw()            
+            self.canvas_weight_statistics.draw()   
+        
         controller.after(5000, self.update, controller)
+        
+        
             
 class PageTwo(tk.Frame):
     """
@@ -222,7 +255,7 @@ class PageTwo(tk.Frame):
         """
         Refreshes page of needed
         """
-        if controller.poolIsUpdated():
+        if controller.numSynapsesUpdated:
             self.pool.draw_active_synapse_dynamics(self.ax_active)
             self.canvas_active.draw()
             self.pool.draw_supersynapse_dynamics(self.ax_super)
@@ -300,7 +333,7 @@ class PageThree(tk.Frame):
         """
         Refreshes page if needed
         """
-        if controller.poolIsUpdated():
+        if controller.spikeTimesUpdated:
             #print "Distribution page update"            
             self.pool.draw_raster_all_soma(self.ax_soma)
             self.canvas_soma.draw()
@@ -377,7 +410,7 @@ class PageFour(tk.Frame):
         """
         Refreshes page if needed
         """
-        if controller.poolIsUpdated():
+        if controller.spikeTimesUpdated:
             #print "Distribution page update"            
             self.pool.draw_raster_strongly_connected_soma(self.ax_strongly_connected_soma)
             self.canvas_strongly_connected_soma.draw()
@@ -437,7 +470,7 @@ class PageFive(tk.Frame):
         """
         Refreshes page if needed
         """
-        if controller.poolIsUpdated():
+        if controller.spikeTimesUpdated:
             #print "Distribution page update"            
             self.pool.draw_raster_all_I(self.ax_interneuron)
             self.canvas_interneuron.draw()
@@ -489,7 +522,7 @@ class PageSix(tk.Frame):
         """
         Refreshes page if needed
         """
-        if controller.poolIsUpdated():
+        if controller.spikeTimesUpdated:
             pass
             #print "Distribution page update"            
                            
@@ -500,7 +533,9 @@ class Updator:
     class Update updates all graphs
     """
     def __init__(self):
-        self.file_weights = filename_weights # file with all synaptic weights
+        self.file_weights = filename_weights # file with all synaptic weights between HVC(RA) neurons
+        self.file_weight_statistics = filename_weight_statistics # file with mean synaptic weights and standard deviations of synaptic weight
+        
         self.file_spike_times_soma = filename_spike_times_soma # file with somatic spike times of all HVC(RA) neurons
         self.file_spike_times_dend = filename_spike_times_dend # file with dendritic spike times of all HVC(RA) neurons        
         self.file_spike_times_I = filename_spike_times_I # file with spike times of all HVC(I) neurons
@@ -509,24 +544,49 @@ class Updator:
                 
         self.std_weights = [] # standard variation of synaptic weight distribution
         self.mean_weights = [] # mean of synaptic weight distribution
-        self.time = [] # simulation time in trials
+        self.time_weight_statistics = [] # time for statistical graphs for synaptic weight analysis
+                
+        self.time_num_synapses = [] # time for number of synapses graphs
         self.num_active_synapses = [] # number of active synapses
         self.num_supersynapses = [] # number of supersynapses
 
+        self.mod_time_num_synapses = 0 # modification time of file with number of synapses                
         self.mod_time_wgh = 0 # modification time of file with synaptic weights
-        self.mod_time_spikes_RA = 0 # modification time of file with RA spikes
+        self.mod_time_weight_statistics = 0 # modification time of file with statistics of synaptic weight distribution
+                
+        self.mod_time_spikes_soma = 0 # modification time of file with RA somatic spikes
+        self.mod_time_spikes_dend = 0 # modification time of file with RA dendritic spikes
         self.mod_time_spikes_I = 0 # modification time of file with I spikes
         self.mod_time_super = 0 # modification time of file with sypersynaptic connections
                 
         
-        
-    def needs_update(self):
+    def weight_statistics_need_update(self):
         """
-        Returns true if all files were modified
+        Returns true if statistics weight file was modified
+        """
+        return self.mod_time_weight_statistics!=os.path.getmtime(self.file_weight_statistics)
+    
+    
+    def weight_distribution_need_update(self):
+        """
+        Returns true if weight file was modified
+        """
+        return self.mod_time_wgh!=os.path.getmtime(self.file_weights)
+        
+    
+    def num_synapses_need_update(self):
+        """
+        Returns true if num_synapses file was modified
+        """
+        return self.mod_time_num_synapses!=os.path.getmtime(self.file_num_synapses)
+    
+    def spike_times_need_update(self):
+        """
+        Returns true if all spike time files and file with RA-RA superconnections were updated
         """
         return (self.mod_time_super!=os.path.getmtime(self.file_super) and \
-                self.mod_time_wgh!=os.path.getmtime(self.file_weights) and \
-                self.mod_time_spikes_RA!=os.path.getmtime(self.file_spike_times_soma) and \
+                self.mod_time_spikes_soma!=os.path.getmtime(self.file_spike_times_soma) and \
+                self.mod_time_spikes_dend!=os.path.getmtime(self.file_spike_times_dend) and \
                 self.mod_time_spikes_I!=os.path.getmtime(self.file_spike_times_I))
     
     def update(self):
@@ -542,7 +602,10 @@ class Updator:
         Updates spike times of all neurons in the network
         """
         # update modification time of file with spike times
-        self.mod_time_spikes_RA = os.path.getmtime(self.file_spike_times_soma)
+        self.mod_time_spikes_soma = os.path.getmtime(self.file_spike_times_soma)
+        self.mod_time_spikes_dend = os.path.getmtime(self.file_spike_times_dend)
+        self.mod_time_spikes_I = os.path.getmtime(self.file_spike_times_I)
+                
         
         # get spike times of all HVC(RA) and HVC(I) neurons in the network
         trial_number, self.spike_times_dend, self.fired_dend_id = self.get_spike_times(self.file_spike_times_dend)
@@ -551,8 +614,6 @@ class Updator:
         
         #print self.spike_times_I        
         
-        # update time
-        self.time.append(trial_number)
         
         # get ordered spike times of strongly connected neurons
         self.get_spike_times_strongly_connected()
@@ -562,14 +623,15 @@ class Updator:
         Updates number of active and supersynapses
         """
         # update number of active and super synapses
-        self.trial_number_num_synapses, self.num_active_synapses, self.num_supersynapses = read.read_num_synapses(self.file_num_synapses)
-          
+        self.mod_time_num_synapses = os.path.getmtime(self.file_num_synapses)        
         
+        (self.time_num_synapses, self.num_active_synapses, self.num_supersynapses) = read.read_num_synapses(self.file_num_synapses)
+       
     def update_weights_info(self):
         """
-        Updates number of synapses, weight histogram and statistical measures of synaptic weight distribution
+        Updates weight histogram 
         """
-        (self.N_RA, weights) = read.read_weights(self.file_weights)
+        (self.N_RA, trial_number, weights) = read.read_weights(self.file_weights)
         self.mod_time_wgh = os.path.getmtime(self.file_weights)
         
         self.weights = [item for sublist in weights for item in sublist]
@@ -580,15 +642,15 @@ class Updator:
         
         self.hist, self.bin_edges = np.histogram(self.weights, bins=100)
         
-        # update mean and std dependences on time        
-        sigma = std(self.weights)
-        mu = mean(self.weights)
+    def update_weight_statistics(self):
+        """
+        Updates mean synaptic weight and standard deviation of synaptic weight distribution
+        """
+        self.mod_time_weight_statistics = os.path.getmtime(self.file_weight_statistics)        
         
-        self.mean_weights.append(mu)
-        self.std_weights.append(sigma)        
-        
-        
-        
+        (self.time_weight_statistics, self.mean_weights, self.std_weights) = read.read_weight_statistics(self.file_weight_statistics)
+       
+     
     def get_spike_times(self, filename):
         """
         Reads spike times of neurons and checks if they are in range
@@ -614,6 +676,9 @@ class Updator:
         """
         Returns spike times ordered sequence of strongly connected neurons
         """
+        # update file modification time
+        self.mod_time_super = os.path.getmtime(self.file_super)        
+        
         # read supersynapses from file
         (unused, RA_super_targets, unused) = read.read_connections(self.file_super)
 
@@ -764,7 +829,8 @@ class Updator:
         #print self.active_synapses
         #print self.supersynapses        
         axes.clear()
-        axes.plot(self.trial_number_num_synapses, self.num_active_synapses, 'g', label="Active")
+       
+        axes.plot(self.time_num_synapses, self.num_active_synapses, 'g', label="Active")
           
         axes.set_xlabel("time (s)")
         axes.set_ylabel("number of active synapses")
@@ -774,7 +840,9 @@ class Updator:
         Draw number of supersynapses
         """
         axes.clear()
-        axes.plot(self.trial_number_num_synapses, self.num_supersynapses, 'b', label="Supersynapses")
+    
+                
+        axes.plot(self.time_num_synapses, self.num_supersynapses, 'b', label="Supersynapses")
         
         axes.set_xlabel("time (s)")
         axes.set_ylabel("number of super synapses")
@@ -801,13 +869,13 @@ class Updator:
         Draw mean and standard deviation of synaptic weight distribution
         """
         ax1.clear()
-        ax1.plot(self.time, self.mean_weights)
+        ax1.plot(self.time_weight_statistics, self.mean_weights)
         ax1.set_ylabel("mean synaptic weight")
         ax1.ticklabel_format(style="sci", axis="y", scilimits=(0,0))
         ax1.get_xaxis().set_visible(False)        
         
         ax2.clear()
-        ax2.plot(self.time, self.std_weights)
+        ax2.plot(self.time_weight_statistics, self.std_weights)
         ax2.set_ylabel("std of synaptic weights")
         ax2.set_xlabel("time")
         ax2.ticklabel_format(style="sci", axis="y", scilimits=(0,0))

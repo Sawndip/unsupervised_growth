@@ -1,6 +1,6 @@
-#include "PoolParallel.h"
+#include "../PoolParallel.h"
 #include <mpi.h>
-#include "Configuration.h"
+#include "../Configuration.h"
 #include <string>
 
 using namespace std;
@@ -8,7 +8,10 @@ using namespace std;
 int main(int argc, char** argv)
 {
     
-    std::string configurationFile = "/home/eugene/Output/networks/gabaMaturation100217/parameters.cfg"; // configuration file
+    std::string configurationFile = "/home/eugene/projects/chaingrowth/ParallelNMDAchannelNoise/parameters.cfg"; // configuration file
+    
+    std::string dataDir = "/home/eugene/Output/networks/gabaMaturation300117/"; // directory with data
+
     int rank; // MPI process rank
     Configuration cfg;
 
@@ -22,19 +25,21 @@ int main(int argc, char** argv)
 
 	PoolParallel pool(cfg);
 
-    pool.initialize_coordinates();
-	pool.initialize_connections();
+    pool.read_network_state(dataDir);
+    
+    //pool.initialize_coordinates();
+	//pool.initialize_connections();
 
     //pool.print_invariable_connections();
 
 	pool.print_simulation_parameters();
     
-   	int save_freq_short = 50;
-	int save_freq_long = 100;
+   	int save_freq_short = 20;
+	int save_freq_long = 20;
 
     double start_time = MPI_Wtime();
-
-    pool.chain_growth(save_freq_short, save_freq_long);
+    
+    //pool.chain_growth(save_freq_short, save_freq_long);
 	
     double end_time = MPI_Wtime();
 

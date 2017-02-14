@@ -17,7 +17,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import reading
 
-simFileAbs = "/home/eugene/Output/RAneurons/RA22.bin"	#	datafile name
+simFileAbs = "/home/eugene/hodgkinData/gabaMaturation300117/membraneTraces/RA43_trial4"	#	datafile name
 #simFileAbs = "/home/eugene/Output/RA.bin"	#	datafile name
 
 #testFileRel = "1.bin"

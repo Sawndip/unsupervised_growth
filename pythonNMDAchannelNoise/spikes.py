@@ -34,8 +34,8 @@ def remap_ID(order):
     
 
 
-filename = "/home/eugene/Output/time_info_soma.bin"
-RARA = "/home/eugene/Output/RA_RA_super_connections.bin"
+filename = "/home/eugene/hodgkinData/gabaMaturation300117/matureTest/soma_spikes_in_trial.bin"
+RARA = "/home/eugene/hodgkinData/gabaMaturation300117/RA_RA_super_connections.bin"
 
 (trial_number, simulation_time, spike_times, neuron_fired) = reading.read_time_info(filename)
 
@@ -116,8 +116,8 @@ random_ID_stronglyConnected = remap_ID(stronglyConnectedFired)
 
 print "random IDs assigned to neurons: ", random_ID
 
-f = plt.figure()
-ax1 = f.add_subplot(211)
+f1 = plt.figure()
+ax1 = f1.add_subplot(111)
 
 for i in range(len(spike_times)):
     ax1.vlines(spike_times[i], random_ID[i]-0.5, random_ID[i]+0.5)
@@ -131,7 +131,8 @@ ax1.set_ylabel("real neuron ID")
 ax1.set_xlabel("relative spike time (ms)")
 ax1.set_title("Ordered spikes")
 
-ax2 = f.add_subplot(212)
+f2 = plt.figure()
+ax2 = f2.add_subplot(111)
 
 for i in range(len(stronglyConnectedSpikeTimes)):
     ax2.vlines(stronglyConnectedSpikeTimes[i], random_ID_stronglyConnected[i]-0.5, random_ID_stronglyConnected[i]+0.5)

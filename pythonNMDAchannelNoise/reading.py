@@ -87,6 +87,20 @@ def read_coordinates(filename):
     
     return (xx, yy)
 
+def read_global_index_array(filename):
+    """
+    Read global array with HVC(RA) neuronal ids
+    """
+    with open(filename, 'rb') as file:
+        data = file.read()
+    file.close()        
+    N_RA = struct.unpack('<i', data[:SIZE_OF_INT])[0]
+    Id_RA_global = np.zeros(N_RA)
+    
+    for i in range(N_RA):
+        Id_RA_global[i] = struct.unpack('<i', data[(SIZE_OF_INT * (i+1)):(SIZE_OF_INT * (i+2))])[0]
+        
+    return (N_RA, Id_RA_global) 
 
 def read_weights(filename):
     """
@@ -96,16 +110,17 @@ def read_weights(filename):
         data = file.read()
     file.close()        
     N_RA = struct.unpack('<i', data[:SIZE_OF_INT])[0]
+    trial_number = struct.unpack('<i', data[SIZE_OF_INT:2*SIZE_OF_INT])[0]
     weights = np.zeros((N_RA, N_RA))
     
-    pos = SIZE_OF_INT     
+    pos = 2*SIZE_OF_INT     
     
     for i in range(N_RA):
         for j in range(N_RA):
             weights[i][j] = struct.unpack('<d', data[pos:(pos + SIZE_OF_DOUBLE)])[0]
             pos += SIZE_OF_DOUBLE
     
-    return (N_RA, weights)    
+    return (N_RA, trial_number, weights)  
     
 def read_hhi(filename):
     """
@@ -272,7 +287,26 @@ def get_I2RA_graph(N_RA, filename):
     #weights = map(lambda x: x*10, weights)
         
     return (N_I, edges, weights)  
+
+
+def read_execution_time(filename):
+    """
+    Reads average execution time of a trial from file
+    """
+    with open(filename, "rb") as file:
+        data = file.read()
+        file.close()
     
+    N_RA = struct.unpack("<i", data[:SIZE_OF_INT])[0] # num of RA neurons
+    N_I = struct.unpack("<i", data[SIZE_OF_INT:2*SIZE_OF_INT])[0] # num of I neurons
+    np = struct.unpack("<i", data[2*SIZE_OF_INT:3*SIZE_OF_INT])[0] # num of processses
+    
+    timestep = struct.unpack("<d", data[3*SIZE_OF_INT:(3*SIZE_OF_INT+SIZE_OF_DOUBLE)])[0] # simulation timestep
+    network_update_frequency = struct.unpack("<d", data[(3*SIZE_OF_INT+SIZE_OF_DOUBLE):(3*SIZE_OF_INT+2*SIZE_OF_DOUBLE)])[0]    
+    average_execution_time = struct.unpack("<d", data[(3*SIZE_OF_INT+2*SIZE_OF_DOUBLE):(3*SIZE_OF_INT+3*SIZE_OF_DOUBLE)])[0]    
+    
+    return (N_RA, N_I, np, timestep, network_update_frequency, average_execution_time)
+ 
 def read_time_info(filename):
     with open(filename, "rb") as file:
         data = file.read()
@@ -396,6 +430,33 @@ def read_synaptic_weights_time_sequence(filename):
         ind += SIZE_OF_INT
         
     return source, target, t, weights
+
+def read_weight_statistics(filename):
+    """
+    Read mean synaptc weights and standard deviation of synaptic weights
+    as a function of time
+    """
+    with open(filename, "rb") as file:
+        data = file.read()
+        file.close()
+    
+    trial_number = []
+    mean = []
+    std = []
+    
+    num_datapoints = len(data) / (SIZE_OF_INT + 2*SIZE_OF_DOUBLE)
+    
+    ind = 0
+    
+    for i in xrange(num_datapoints):
+        
+        trial_number.append(struct.unpack("<i", data[ind:(ind+SIZE_OF_INT)])[0])
+        mean.append(struct.unpack("<d", data[(ind+SIZE_OF_INT):(ind + SIZE_OF_INT + SIZE_OF_DOUBLE)])[0])
+        std.append(struct.unpack("<d", data[(ind + SIZE_OF_INT + SIZE_OF_DOUBLE):(ind + SIZE_OF_INT + 2*SIZE_OF_DOUBLE)])[0])
+        
+        ind += SIZE_OF_INT + 2*SIZE_OF_DOUBLE
+   
+    return (trial_number, mean, std)
 
 def read_num_synapses(filename):
     """
@@ -548,18 +609,23 @@ def read_chain_test(filename):
     N_RA = struct.unpack("<i", data[:SIZE_OF_INT])[0]  
     num_trials = struct.unpack("<i", data[(SIZE_OF_INT):(2*SIZE_OF_INT)])[0]
     
-    num_dend_spikes = []
+    firing_robustness = []    
+    average_num_dend_spikes_in_trial = []
+    average_num_soma_spikes_in_trial = []
     mean_burst_time = []
     std_burst_time = []    
     
     ind = 2*SIZE_OF_INT
     
-    for i in xrange(N_RA):    
-        num_dend_spikes.append(struct.unpack("<i", data[ind:(ind + SIZE_OF_INT)])[0])
+    for i in xrange(N_RA):
+        firing_robustness.append(struct.unpack("<d", data[ind:(ind + SIZE_OF_DOUBLE)])[0])
         
-        mean_burst_time.append(struct.unpack("<d", data[(ind + SIZE_OF_INT):(ind + SIZE_OF_INT + SIZE_OF_DOUBLE)])[0])
-        std_burst_time.append(struct.unpack("<d", data[(ind + SIZE_OF_INT + SIZE_OF_DOUBLE):(ind + SIZE_OF_INT + 2 * SIZE_OF_DOUBLE)])[0])
+        average_num_dend_spikes_in_trial.append(struct.unpack("<d", data[(ind + SIZE_OF_DOUBLE):(ind + 2*SIZE_OF_DOUBLE)])[0])
+        average_num_soma_spikes_in_trial.append(struct.unpack("<d", data[(ind + 2*SIZE_OF_DOUBLE):(ind + 3*SIZE_OF_DOUBLE)])[0])
+        
+        mean_burst_time.append(struct.unpack("<d", data[(ind + 3*SIZE_OF_DOUBLE):(ind + 4*SIZE_OF_DOUBLE)])[0])
+        std_burst_time.append(struct.unpack("<d", data[(ind + 4*SIZE_OF_DOUBLE):(ind + 5 * SIZE_OF_DOUBLE)])[0])
     
-        ind = ind + SIZE_OF_INT + 2*SIZE_OF_DOUBLE
-    return N_RA, num_trials, num_dend_spikes, mean_burst_time, std_burst_time
+        ind = ind + 5*SIZE_OF_DOUBLE
+    return N_RA, num_trials, firing_robustness, average_num_dend_spikes_in_trial, average_num_soma_spikes_in_trial,mean_burst_time, std_burst_time
     
