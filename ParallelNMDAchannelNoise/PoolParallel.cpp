@@ -1694,18 +1694,19 @@ void PoolParallel::chain_growth(int save_freq_short, int save_freq_long)
     bool data_gathered; // indicator if data was already gathered
     bool training = true; // indicator to inject training current
 
-    int trial_to_add_neurons = 1500;
+    int trial_to_add_neurons = 2500;
     int N = 100;
 
 	while (true)
     {
-        if (trial_number == trial_to_add_neurons)
+       /* if (trial_number == trial_to_add_neurons)
         {
             if (MPI_rank == 0)
                 std::cout << "Adding new neurons!" << std::endl;
             
             this->add_new_neurons(N);
         }
+        */
 		//break;
 		data_gathered = false;
 
@@ -1733,6 +1734,7 @@ void PoolParallel::chain_growth(int save_freq_short, int save_freq_long)
             this->write_interneuron_spike_times(fileTimeInterneuron.c_str());
            
 	    	this->write_supersynapses(fileSuperGraph.c_str());
+	    	this->write_active_synapses(fileActiveGraph.c_str());
 			this->write_maturation_info(fileMaturationGraph.c_str());
 		
             this->write_weights_time_sequence_from_source_to_target(source, target, fileWeightsSourceToTarget.c_str());
@@ -3142,10 +3144,10 @@ void PoolParallel::gather_data()
                                         N_RA, MPI_DOUBLE, i, 0, MPI_COMM_WORLD, &status);
                 MPI_Get_count(&status, MPI_DOUBLE, &count);
                 //printf("Recv weights; from i = %d  count = %d\n", i, count);
-                if (supersyn_sizes_global[receive_index] != 0)
+                if (supersyn_sizes_global[index_in_global_array] != 0)
                 {
                     MPI_Recv(&supersynapses_global[receive_index][0],
-                        supersyn_sizes_global[receive_index], MPI_INT, i, 0, MPI_COMM_WORLD, &status);
+                        supersyn_sizes_global[index_in_global_array], MPI_INT, i, 0, MPI_COMM_WORLD, &status);
 
                     MPI_Get_count(&status, MPI_INT, &count);
                     //printf("Recv supersynapses; from i = %d  count = %d\n", i, count);

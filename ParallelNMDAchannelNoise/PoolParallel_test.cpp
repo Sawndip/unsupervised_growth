@@ -8,7 +8,7 @@ using namespace std;
 int main(int argc, char** argv)
 {
     
-    std::string configurationFile = "/home/eugene/Output/networks/gabaMaturation100217/parameters.cfg"; // configuration file
+    std::string configurationFile = "/home/eugene/Output/networks/gabaMaturation150217/parameters.cfg"; // configuration file
     int rank; // MPI process rank
     Configuration cfg;
 
@@ -29,7 +29,7 @@ int main(int argc, char** argv)
 
 	pool.print_simulation_parameters();
     
-   	int save_freq_short = 50;
+   	int save_freq_short = 40;
 	int save_freq_long = 100;
 
     double start_time = MPI_Wtime();

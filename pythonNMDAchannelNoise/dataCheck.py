@@ -102,6 +102,3 @@ print gaba_potential_before == gaba_potential_after[:N_RA_before]
 print firing_rate_before == firing_rate_after[:N_RA_before]
 print remodeled_before == remodeled_after[:N_RA_before]
 print mature_before == mature_after[:N_RA_before]
-
-print gaba_potential_after
-print firing_rate_after

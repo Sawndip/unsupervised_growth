@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib import cm
 
-filename = "/home/eugene/Output/mature.bin"
+filename = "/home/eugene/Output/networks/gabaMaturation100217/mature.bin"
 
 trial_number, gaba_potential, firing_rate, remodeled, mature = reading.read_maturation_info(filename)
 
