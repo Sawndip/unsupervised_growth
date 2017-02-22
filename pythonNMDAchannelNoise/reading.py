@@ -182,23 +182,23 @@ def read_hh2(fileName):
     Ndend = struct.unpack("<i", fileContent[2*SIZE_OF_INT:3*SIZE_OF_INT])[0]
     #timeStep = struct.unpack("<d", fileContent[3*SIZE_OF_INT:(3*SIZE_OF_INT+SIZE_OF_DOUBLE)])[0]
     
-    t = np.zeros((dataPointsNumber, 1))
-    Vs = np.zeros((dataPointsNumber, 1))
-    Is = np.zeros((dataPointsNumber, 1))
-    n = np.zeros((dataPointsNumber, 1))
-    h = np.zeros((dataPointsNumber, 1))
-    Vd = np.zeros((dataPointsNumber, 1))
-    Id = np.zeros((dataPointsNumber, 1))
-    r = np.zeros((dataPointsNumber, 1))
-    c = np.zeros((dataPointsNumber, 1))
-    Ca = np.zeros((dataPointsNumber, 1))
-    Gexc_d = np.zeros((dataPointsNumber, 1))
-    Ginh_d = np.zeros((dataPointsNumber, 1))
-    Gexc_s = np.zeros((dataPointsNumber, 1))
-    Ginh_s = np.zeros((dataPointsNumber, 1))
+    t = np.zeros(dataPointsNumber)
+    Vs = np.zeros(dataPointsNumber)
+    Is = np.zeros(dataPointsNumber)
+    n = np.zeros(dataPointsNumber)
+    h = np.zeros(dataPointsNumber)
+    Vd = np.zeros(dataPointsNumber)
+    Id = np.zeros(dataPointsNumber)
+    r = np.zeros(dataPointsNumber)
+    c = np.zeros(dataPointsNumber)
+    Ca = np.zeros(dataPointsNumber)
+    Gexc_d = np.zeros(dataPointsNumber)
+    Ginh_d = np.zeros(dataPointsNumber)
+    Gexc_s = np.zeros(dataPointsNumber)
+    Ginh_s = np.zeros(dataPointsNumber)
     
-    flag = np.zeros((dataPointsNumber, 1))
-    Ei = np.zeros((dataPointsNumber, 1))
+    flag = np.zeros(dataPointsNumber)
+    Ei = np.zeros(dataPointsNumber)
 
     ind = 3*SIZE_OF_INT + SIZE_OF_DOUBLE
     

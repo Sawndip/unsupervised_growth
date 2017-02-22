@@ -346,6 +346,16 @@ void HHI_final::R4_step_with_target_update()
 
 }
 
+void HHI_final::DP8_step_with_target_update()
+{
+	this->state_noise_check();
+	
+    if (this->get_fired())
+		this->postsyn_update();
+	
+    this->DP8_step();
+}
+
 void HHI_final::Euler_step_no_target_update()
 {
 	this->state_noise_check();

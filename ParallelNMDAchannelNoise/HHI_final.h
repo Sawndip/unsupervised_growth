@@ -47,6 +47,7 @@ public:
 	void Runge6_step();	//	do one step of Runge-Kutta order 6
 	
 	void DP8_step_no_target_update(); // do one step of Dormand Prince order 8 without update of target conductances
+	void DP8_step_with_target_update(); // do one step of Dormand Prince order 8 with update of target conductances
 	void DP8_step(); // do one step of Dormand Prince order 8 method 
 	
 	void Euler_step_no_target_update(); // do one Euler step without update of target conductances

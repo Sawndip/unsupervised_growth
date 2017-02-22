@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import reading
 
-FileRel = "/home/eugene/Output/Ineurons/I19.bin"	#	datafile name
+FileRel = "/home/eugene/Output/networks/IdealChainTest220217/I/I25_trial1.bin"	#	datafile name
 #testFileRel = "1.bin"
 SIZE_OF_DOUBLE = 8
 SIZE_OF_INT = 4

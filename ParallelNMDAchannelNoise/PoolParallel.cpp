@@ -886,14 +886,15 @@ void PoolParallel::send_connections()
 
 		for (int i = 0; i < N_RA; i++)
 		{
-			syn_num_RA[i] = syn_ID_RA_I_global[i].size();
+			syn_num_RA[i] = static_cast<int>(syn_ID_RA_I_global[i].size());
 			//printf("Master process; syn_num_RA[%d] = %d\n", i, syn_num_RA[i]);
 		}
 
 		for (int i = 0; i < N_I; i++)
 		{
-			syn_num_I[i] = syn_ID_I_RA_global[i].size();
+			syn_num_I[i] = static_cast<int>(syn_ID_I_RA_global[i].size());
 
+			//printf("Master process; syn_num_I[%d] = %d\n", i, syn_num_I[i]);
 		}
 
 
@@ -908,7 +909,10 @@ void PoolParallel::send_connections()
 		&syn_num_I_local[0], N_I_local, MPI_INT, 0, MPI_COMM_WORLD);
 
 	//for (int i = 0; i < N_RA_local; i++)
-		//printf("My rank = %d; sun_num_RA[%d] = %d\n", MPI_rank, i, syn_num_RA_local[i]);
+	//	printf("My rank = %d; sun_num_RA[%d] = %d\n", MPI_rank, Id_RA_local[i], syn_num_RA_local[i]);
+	
+    //for (int i = 0; i < N_I_local; i++)
+	//	printf("My rank = %d; sun_num_I[%d] = %d\n", MPI_rank, Id_I_local[i], syn_num_I_local[i]);
 
 	for (int i = 0; i < N_RA_local; i++)
 	{
@@ -1013,6 +1017,63 @@ void PoolParallel::send_connections()
         delete [] displs_syn_num_RA;
         delete [] displs_syn_num_I;
     }
+}
+
+void PoolParallel::initialize_ideal_chain_connections(int num_layers)
+{
+    if (MPI_rank == 0)
+    {
+        // connections from HVC(RA) to HVC(I) and vice versa
+        
+        for (int i = 0; i < num_layers; i++)
+        {
+            // from HVC(RA) to HVC(I)
+            for (int j = 0; j < Nss; j++)
+            {
+                double G = this->sample_Ge2i();
+
+                weights_RA_I_global[i*Nss + j].push_back(G);
+                syn_ID_RA_I_global[i*Nss + j].push_back(i*Nss + j);
+            }
+        
+            // from HVC(I) to HVC(RA)
+            for (int j = 0; j < Nss; j++)
+            {
+                double G = this->sample_Gi2e();
+
+                weights_I_RA_global[i*Nss + j].push_back(G);
+                syn_ID_I_RA_global[i*Nss + j].push_back((i+1)*Nss + j);
+
+            }
+        }
+    }
+
+    this->send_connections();
+
+    std::string fileRA2I = outputDirectory + "RA_I_connections.bin";
+    std::string fileI2RA = outputDirectory + "I_RA_connections.bin";
+    std::string filePajekFixed = outputDirectory + "fixed.net";
+
+    this->write_invariable_synapses(fileRA2I.c_str(), fileI2RA.c_str());
+    this->write_pajek_fixed(filePajekFixed.c_str());
+    
+    // initialize excitatory connections for all chain layers
+    for (int i = 0; i < num_layers; i++)
+    {
+        for (int j = 0; j < N_RA_local; j++)
+        {
+            if ( (Id_RA_local[j] >= Nss * i) && (Id_RA_local[j] < Nss * (i + 1)) )
+            {
+                int diff = Nss - (Id_RA_local[j] - Nss * i);
+
+                for (int k = 0; k < Nss; k ++)
+                    weights_local[j][Id_RA_local[j] + diff + k] = WEIGHT_MAX;
+            }
+        }
+    }
+    
+
+    this->update_all_synapses();
 }
 
 void PoolParallel::initialize_chain_connections(int num_layers)
@@ -1239,6 +1300,31 @@ void PoolParallel::print_invariable_connections()
     }
 }
 
+void PoolParallel::print_received_invariable_connections()
+{
+    /*
+    for (int i = 0; i < N_RA_local; i++)
+    {
+        std::cout << "RA neuron " << Id_RA_local[i] << "has " << weights_RA_I_local[i].size() << " connections to I neurons:\n";
+        
+        for (size_t j = 0; j < weights_RA_I_local[i].size(); j++)
+            std::cout << syn_ID_RA_I_local[i][j] << "\t";
+
+        std:: cout << std::endl;
+    }
+    */
+    
+    for (int i = 0; i < N_I_local; i++)
+    {
+        std::cout << "I neuron " << Id_I_local[i] << "has " << weights_I_RA_local[i].size() << " connections to RA neurons:\n";
+        
+        for (size_t j = 0; j < weights_I_RA_local[i].size(); j++)
+            std::cout << syn_ID_I_RA_local[i][j] << "\t";
+
+        std:: cout << std::endl;
+    }
+}
+
 void PoolParallel::randomize_after_trial()
 {
     std::fill(spike_times_dend_global.begin(), spike_times_dend_global.end(), -200.0);
@@ -1302,6 +1388,57 @@ int PoolParallel::get_trial_number()
 }
 
 
+void PoolParallel::ideal_chain_test(int num_layers, int num_trials)
+{
+    // initialize coordintates and ideal chain connections
+    this->initialize_coordinates();
+    this->initialize_ideal_chain_connections(num_layers);
+   
+    this->gather_data();
+
+    //this->print_received_invariable_connections();
+
+    
+
+    // write active and super synapses to files
+    std::string fileActiveGraph = outputDirectory + "RA_RA_active_connections.bin";
+    std::string fileSuperGraph = outputDirectory + "RA_RA_super_connections.bin";
+	    	
+    this->write_supersynapses(fileSuperGraph.c_str());
+    this->write_active_synapses(fileActiveGraph.c_str());
+
+    // make all neurons mature
+    for (int i = 0; i < N_RA_local; i++)
+        gaba_potential_local[i] = E_GABA_MATURE;
+
+    // unused array with average dendritic spike times. Needed for gathering mature data
+    std::vector<std::vector<double>> average_dendritic_spike_time; // array with average dendritic spike time in every trial
+
+	average_dendritic_spike_time.resize(N_RA);
+    
+    for (int i = 0; i < num_trials; i++)
+    {
+        this->mature_trial();
+        this->gather_mature_data(average_dendritic_spike_time);
+
+        for (int n = 1; n <= num_layers; n++)
+            for (int j = 0; j < Nss; j++)
+                this->write_RA((outputDirectory + "RA/RA" + std::to_string(n*Nss + j) + "_trial" + std::to_string(i+1) + ".bin").c_str(), n*Nss + j);
+        
+        for (int n = 0; n <= num_layers; n++)
+            for (int j = 0; j < Nss; j++)
+                this->write_I((outputDirectory + "I/I" + std::to_string(n*Nss + j) + "_trial" + std::to_string(i+1) + ".bin").c_str(), n*Nss + j);
+
+        // write all occured spikes to files
+        this->write_soma_spike_times((outputDirectory + "soma_spikes_trial" + std::to_string(i+1) + ".bin").c_str());
+        this->write_dend_spike_times((outputDirectory + "dend_spikes_trial" + std::to_string(i+1) + ".bin").c_str());
+        
+        this->randomize_after_trial();
+    }
+
+    
+}
+
 void PoolParallel::mature_chain_test(int num_trials, std::string dataDir)
 {
     std::string file_soma_spikes = outputDirectory + "soma_spikes_in_trial.bin"; // file with somatic spikes in trial
@@ -1327,8 +1464,27 @@ void PoolParallel::mature_chain_test(int num_trials, std::string dataDir)
             num_somatic_spikes_in_trials[j].resize(num_trials);
         }
     }
-	
-    std::vector<int> RAtoWrite = {123, 207, 29, 172, 168, 243, 163};
+    // neurons for gabaMaturation 300117	
+    /*std::vector<int> RAtoWrite = {71, 186, 187, 84, 44, 175, 219, 238, 224, 70, 288, 117, 99, 276, 23, 24, 165, 
+                                  128, 184, 155, 114, 203, 257, 65, 273, 183, 294, 19, 35, 97, 142, 233, 6, 192, 
+                                  248, 295, 38, 69, 207, 268, 49, 263, 132, 101, 33, 206, 90, 252, 77, 43, 293, 36, 
+                                  5, 180, 282, 65, 34, 267, 208, 66, 146, 179};
+    */
+    /*
+    // neurons for gabaMaturation 310117	
+    std::vector<int> RAtoWrite = {201, 209, 124, 275, 40, 87, 66, 282, 222, 285, 115, 58, 183, 123, 244, 96, 226,
+                                  110, 15, 20, 178, 215, 192, 128, 280, 38, 7, 235, 273, 258, 227, 132, 169, 172, 
+                                  243, 100, 188};
+    */
+    // neurons for gabaMaturation 010217	
+    std::vector<int> RAtoWrite = {179, 129, 128, 268, 130, 142, 15, 115, 273, 19, 23, 282, 29, 261, 290, 163, 292, 
+                                  37, 167, 168, 169, 199, 172, 51, 182, 60, 68, 69, 256, 201, 207, 208, 209, 82, 85, 
+                                  87, 90, 92, 122, 144, 226, 227, 131, 101, 81, 259, 231, 110, 114, 243, 117, 120, 250, 123, 124, 213};
+
+    std::vector<int> ItoWrite;
+
+    for (int i = 0; i < N_I; i++)
+        ItoWrite.push_back(i);
 
     for (int i = 0; i < num_trials; i++)
 	{
@@ -1348,8 +1504,11 @@ void PoolParallel::mature_chain_test(int num_trials, std::string dataDir)
 
         }
 
-        for (size_t j = 0; j < RAtoWrite.size(); j++)
-            this->write_RA((outputDirectory + "RA" + std::to_string(RAtoWrite[j]) + "_trial" + std::to_string(i+1) + ".bin").c_str(), RAtoWrite[j]);
+        //for (size_t j = 0; j < RAtoWrite.size(); j++)
+        //    this->write_RA((outputDirectory + "RA/RA" + std::to_string(RAtoWrite[j]) + "_trial" + std::to_string(i+1) + ".bin").c_str(), RAtoWrite[j]);
+        
+        for (size_t j = 0; j < ItoWrite.size(); j++)
+            this->write_I((outputDirectory + "I/I" + std::to_string(ItoWrite[j]) + "_trial" + std::to_string(i+1) + ".bin").c_str(), ItoWrite[j]);
         
         if (i == 0)
         {
@@ -1697,7 +1856,15 @@ void PoolParallel::chain_growth(int save_freq_short, int save_freq_long)
     int trial_to_add_neurons = 2500;
     int N = 100;
 
-	while (true)
+    std::vector<int> RAtoWrite{0, 1, 2, 3};
+
+    std::vector<int> source{0, 1, 2, 3};
+    std::vector<int> target{};
+
+    for (int i = 0; i < N_RA; i++)
+        target.push_back(i);
+	
+    while (true)
     {
        /* if (trial_number == trial_to_add_neurons)
         {
@@ -1718,10 +1885,6 @@ void PoolParallel::chain_growth(int save_freq_short, int save_freq_long)
 
         //pool.statistics();
 
-		std::vector<int> RAtoWrite{0, 1, 2, 3};
-
-        std::vector<int> source{0, 1, 2, 3};
-        std::vector<int> target{0};
 
         if (trial_number % save_freq_short == 0)
         {

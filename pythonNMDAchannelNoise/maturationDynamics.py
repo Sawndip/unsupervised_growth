@@ -22,6 +22,7 @@ f1 = plt.figure()
 plt.suptitle("Maturation for neuron {0}".format(neuron_id))
 
 ax1 = f1.add_subplot(211)
+
 ax1.plot(t, firing_rate[neuron_id])
 ax1.set_ylabel("r")
 #ax1.set_xlim([0, 2000])

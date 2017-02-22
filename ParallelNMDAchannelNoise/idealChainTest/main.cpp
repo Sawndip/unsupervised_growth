@@ -8,9 +8,7 @@ using namespace std;
 int main(int argc, char** argv)
 {
     
-    
-    std::string dataDir = "/home/eugene/huxleyData/gabaMaturation150217/data/"; // directory with data 
-    std::string configurationFile = dataDir + "parameters.cfg"; // configuration file
+    std::string configurationFile = "/home/eugene/Output/networks/IdealChainTest220217/parameters.cfg"; // configuration file
     
     int rank; // MPI process rank
     Configuration cfg;
@@ -28,10 +26,11 @@ int main(int argc, char** argv)
 	pool.print_simulation_parameters();
     
     double start_time = MPI_Wtime();
-    
-    int num_trials = 20; // number to trials to perform
+   
+    int num_trials = 10;
+    int num_layers = 10; // number of synfire chain groups
 
-    pool.mature_chain_test(num_trials, dataDir);
+    pool.ideal_chain_test(num_layers, num_trials);
 	
     double end_time = MPI_Wtime();
 

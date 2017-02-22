@@ -13,8 +13,8 @@ import matplotlib.pyplot as plt
 
 import numpy as np
 
-filenameStates = "/home/eugene/Output/maturation_time_sequence.bin"
-filenameWeights = "/home/eugene/Output/weightsTimeSequence.bin"
+filenameStates = "/home/eugene/Output/networks/test170217/maturation_time_sequence.bin"
+filenameWeights = "/home/eugene/Output/networks/test170217/weightsTimeSequence.bin"
 
 (target, t, remodeled, mature, gaba_potential, firing_rate) = reading.read_maturation_time_sequence(filenameStates)
 (source, target, t, weights) = reading.read_synaptic_weights_time_sequence(filenameWeights)

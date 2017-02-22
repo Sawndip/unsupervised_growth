@@ -40,7 +40,10 @@ public:
                                                                                     // interneuron; First interneuron in turn is connected to num_RA_targets RA
                                                                                     // neurons. Strength if inhibitory connection increases by Gie_mean in each
                                                                                     // next group of RA neurons
+    void ideal_chain_test(int num_layers, int num_trials); // run testing trial with ideal chain connections
 
+    void initialize_ideal_chain_connections(int num_layers); // initialize connections like in ideal synfire chain: previous chain layer makes connections on interneurons that
+                                               // in turn connect to the subsequent chain layer
 
     void initialize_chain_connections(int num_layers); // initialize connections like in a real synfire chain
 
@@ -56,6 +59,7 @@ public:
 
 	void randomize_after_trial(); // set all neurons to the resting state
     void print_invariable_connections(); // get number of connections for invariable synapses
+    void print_received_invariable_connections(); // show received invariable connections
 	// write to file functions
 	void gather_data(); // gather data from all processes
 
