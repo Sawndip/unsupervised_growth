@@ -45,7 +45,8 @@ public:
     void initialize_ideal_chain_connections(int num_layers); // initialize connections like in ideal synfire chain: previous chain layer makes connections on interneurons that
                                                // in turn connect to the subsequent chain layer
 
-    void initialize_chain_connections(int num_layers); // initialize connections like in a real synfire chain
+    void initialize_random_chain_connections(int num_layers); // initialize connections like in a real synfire chain, but wire HVC(RA) neurons randomly, ignoring 
+                                                              // any inhibitory structure
 
     int get_trial_number(); // get current number of trials performed
 

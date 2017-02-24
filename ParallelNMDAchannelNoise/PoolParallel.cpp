@@ -1076,8 +1076,19 @@ void PoolParallel::initialize_ideal_chain_connections(int num_layers)
     this->update_all_synapses();
 }
 
-void PoolParallel::initialize_chain_connections(int num_layers)
+void PoolParallel::initialize_random_chain_connections(int num_layers)
 {
+    std::vector<std::vector<int>> chain; // neurons in the chain
+
+    chain.resize(num_layers);
+    chain[0].resize(N_TR);
+
+    for (int i = 0; i < N_TR; i++)
+        chain[0][i] = i;
+
+    for (int i = 1; i < num_layers; i++)
+        chain[i].resize(Nss);
+
     if (MPI_rank == 0)
     {
 
@@ -1111,40 +1122,89 @@ void PoolParallel::initialize_chain_connections(int num_layers)
 		         }
 			 }
 		 }
+        
+        // chain connections
+        std::vector<int> neuronsInChain; // id of HVC(RA) neurons in chain
+
+        for (int i = 0; i < N_TR; i++)
+            neuronsInChain.push_back(i);
+
+        // recruit layers
+        for (int i = 1; i < num_layers; i++)
+        {
+            // recruit neurons in the layer
+            for (int j = 0; j < Nss; j++)
+            {
+                bool neuronAlreadyInChain = false; // indicator that selected neuron is already in the chain
+
+                int target_id; // id of the recruited target
+            
+                do
+                {
+                    // sample target id
+                    target_id = generator.sample_integer(N_TR, N_RA);
+                    
+                    // check if target is already in the chain
+                    std::vector<int>::iterator pos = std::find(neuronsInChain.begin(), neuronsInChain.end(), target_id);
+                    
+                    if (pos != neuronsInChain.end())
+                        neuronAlreadyInChain = true;
+                    else
+                        neuronAlreadyInChain = false;
+
+                } while (neuronAlreadyInChain);
+
+                chain[i][j] = target_id;
+                neuronsInChain.push_back(target_id);
+            }
+        }
+
+        // print chain
+        std::cout << "Chain:\n" << std::endl;
+        for (int i = 0; i < num_layers; i++)
+        {
+            for (size_t j = 0; j < chain[i].size(); j++)
+                std::cout << chain[i][j] << "\t";
+            std::cout << std::endl;
+        }
 	}
 
-    this->send_connections();
+    //this->send_connections();
 
     std::string fileRA2I = outputDirectory + "RA_I_connections.bin";
     std::string fileI2RA = outputDirectory + "I_RA_connections.bin";
     std::string filePajekFixed = outputDirectory + "fixed.net";
 
-    //this->write_invariable_synapses(fileRA2I.c_str(), fileI2RA.c_str());
-    //this->write_pajek_fixed(filePajekFixed.c_str());
+    this->write_invariable_synapses(fileRA2I.c_str(), fileI2RA.c_str());
+    this->write_pajek_fixed(filePajekFixed.c_str());
 
-    // initialize connections for training neurons separately
-    for (int i = 0; i < N_RA_local; i++)
+    // send neurons in the chain
+    for (int i = 1; i < num_layers; i++)
+        MPI_Bcast(&chain[i][0], Nss, MPI_INT, 0, MPI_COMM_WORLD);
+
+    // connect neurons according to the chain
+
+    for (int i = 0; i < num_layers-1; i++)
     {
-        if (Id_RA_local[i] < N_TR)
-            for (int j = 0; j < Nss; j++)
-            {
-                int diff = N_TR - Id_RA_local[i];
-
-                weights_local[i][Id_RA_local[i] + diff + j] = WEIGHT_MAX;
-            }
-
-    }
-    // initialize connections for all subsequent chain layers
-    for (int i = 0; i < num_layers; i++)
-    {
-        for (int j = 0; j < N_RA_local; j++)
+        // all neurons in the source layer
+        for (size_t j = 0; j < chain[i].size(); j++)
         {
-            if ( (Id_RA_local[j] >= N_TR + Nss * i) && (Id_RA_local[j] < N_TR + Nss * (i + 1)) )
+            // connect to all neurons in the next layer
+            for (size_t k = 0; k < chain[i+1].size(); k++)
             {
-                int diff = Nss - (Id_RA_local[j] - N_TR - Nss * i);
+                // determine the location of the source neuron
+                int rank, shift;
+                
+                this->get_neuronRA_location(chain[i][j], &rank, &shift);
+                
 
-                for (int k = 0; k < Nss; k ++)
-                    weights_local[j][Id_RA_local[j] + diff + k] = WEIGHT_MAX;
+                if (MPI_rank == rank)
+                {
+                    weights_local[shift][chain[i+1][k]] = WEIGHT_MAX;
+            
+                    std::cout << "Rank = " << MPI_rank << " shift = " << shift << " Id_RA_local = " << Id_RA_local[shift] << " source_id = " << chain[i][j] 
+                              << std::endl;
+                }
             }
         }
     }
@@ -1167,7 +1227,7 @@ void PoolParallel::initialize_test_connections(int num_RA_targets, int num_RA_ta
         syn_ID_RA_I_global[0].push_back(0);
 
 		// connect HVC(I) neuron to 
-      double inhibition_strength = 0;  
+      double inhibition_strength = 0.6;  
             
         for (int j = N_TR; j < num_RA_targets; j++)
         {

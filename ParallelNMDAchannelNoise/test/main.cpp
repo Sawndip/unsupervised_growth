@@ -8,11 +8,11 @@ using namespace std;
 int main(int argc, char** argv)
 {
     
-    std::string configurationFile = "/home/eugene/Output/networks/test170217/parameters.cfg"; // configuration file
+    std::string configurationFile = "/home/eugene/Output/networks/test230217/parameters.cfg"; // configuration file
     int rank; // MPI process rank
 
     int num_RA_targets = 100;
-    int num_RA_in_group = 5;
+    int num_RA_in_group = 10;
     Configuration cfg;
 
     MPI_Init(&argc, &argv);
@@ -32,7 +32,7 @@ int main(int argc, char** argv)
 
 	pool.print_simulation_parameters();
     
-   	int save_freq_short = 5;
+   	int save_freq_short = 20;
 	int save_freq_long = 100;
 
     double start_time = MPI_Wtime();

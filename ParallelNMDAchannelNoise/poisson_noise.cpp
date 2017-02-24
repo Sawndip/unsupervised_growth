@@ -35,3 +35,4 @@ double Poisson_noise::normal_distribution()
 {
 	return mean + d(generator)*sd;
 }
+

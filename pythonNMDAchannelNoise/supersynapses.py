@@ -8,8 +8,8 @@ Script reads supersynapses from file
 """
 import reading
 
-filename_super = "/home/eugene/Output/networks/IdealChainTest220217/RA_RA_super_connections.bin"
-filename_active = "/home/eugene/Output/networks/IdealChainTest220217/RA_RA_active_connections.bin"
+filename_super = "/home/eugene/Output/networks/test230217/RA_RA_super_connections.bin"
+filename_active = "/home/eugene/Output/networks/test230217/RA_RA_active_connections.bin"
 
 
 (N_RA, targets_ID_super, targets_G_super) = reading.read_connections(filename_super)
