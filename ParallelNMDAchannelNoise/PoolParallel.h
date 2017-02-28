@@ -28,62 +28,35 @@ public:
     void read_network_state(std::string dirname); // read network state from files in the directory dirname
 
 	void initialize_coordinates(); // initialize coordinates of neurons
-    void initialize_coordinates_for_added_neurons(int n_total_old); // initialize coordinates for added neurons; 
-                                                                    // n_total_old - total number of HVC(RA) neurons before new neurons are added;
-	void initialize_generator(); // initialize generator for processes
 
-    void initialize_connections(); // initialize connections for neurons
-    void initialize_connections_for_added_neurons(int n_total_old); // initialize connections for added neurons; 
-                                                                    // n_total_old - total number of HVC(RA) neurons before new neurons are added;
 
     void initialize_test_connections(int num_RA_targets, int num_RA_target_groups); // initialize test connections: first training neuron is connected to the first
                                                                                     // interneuron; First interneuron in turn is connected to num_RA_targets RA
                                                                                     // neurons. Strength if inhibitory connection increases by Gie_mean in each
                                                                                     // next group of RA neurons
-    void ideal_chain_test(int num_layers, int num_trials); // run testing trial with ideal chain connections
-
-    void initialize_ideal_chain_connections(int num_layers); // initialize connections like in ideal synfire chain: previous chain layer makes connections on interneurons that
-                                               // in turn connect to the subsequent chain layer
-
-    void initialize_random_chain_connections(int num_layers); // initialize connections like in a real synfire chain, but wire HVC(RA) neurons randomly, ignoring 
-                                                              // any inhibitory structure
-
-    int get_trial_number(); // get current number of trials performed
-
-	void send_connections(); // send fixed connections connections to all processes
 	
-    void chain_growth(int save_freq_short, int save_freq_long); // run chain growth algorithm; save data for graph update every 
-                                                                // save_freq_short trials; data for analysis every save_freq_long trials
-    void add_new_neurons(int N); // add N immature neurons to network
-    void mature_chain_test(int num_trials, std::string dataDir); // test of mature network
-	void trial(int training); // make one trial
+    void chain_growth_default(int save_freq_short, int save_freq_long); // run chain growth algorithm with default connections and coordinates initialization;
+                                                                        // save data for graph update every save_freq_short trials; 
+                                                                        // data for analysis every save_freq_long trials
 
-	void randomize_after_trial(); // set all neurons to the resting state
+    void chain_growth_manual(int save_freq_short, int save_freq_long); // run chain growth with manually specified coordinates and connections. 
+                                                                       // NOTE: coordinates and connections MUST be initialized before using chain_growth_manual
+
+    void test_grown_chain(int num_trials, std::string dataDir); // test grown synfire chain. All data files should be located in directory dataDir
+    void test_random_chain(int num_layers, int num_trials); // test chain with ideal synfire chain connections. Neurons in the chain are wired ignoring
+                                                            // any inhibibory structure
+    void test_ideal_chain(int num_layers, int num_trials); // run testing trial with ideal chain connections
+
+
+
     void print_invariable_connections(); // get number of connections for invariable synapses
     void print_received_invariable_connections(); // show received invariable connections
-	// write to file functions
-	void gather_data(); // gather data from all processes
-
-	void write_num_synapses(const char* fileSynapses); // write amount of active synapses and supersynapses
-	void write_active_synapses(const char* RA_RA); // write RA to RA active connections
-	void write_supersynapses(const char* RA_RA); // write RA to RA supersynapses
-	void write_invariable_synapses(const char* RA_I, const char* I_RA); // write RA to I and I to RA connections
-	void write_coordinates(const char* xy_RA, const char* xy_I); // write coordinates of neurons
-	void write_RA(const char * filename, int n); // write dynamics of RA neuron to a file
-	void write_I(const char * filename, int n); // write dynamics of I neuron to a file
-	void write_weights(const char * filename); // write weights of all synapses in network
-	void write_weight_statistics(const char * filename); // write mean synaptic weight and synaptic weight standard deviation
-    void write_soma_spike_times(const char* filename); // write somatic spike information to a file
-    void write_dend_spike_times(const char* filename); // write dendritic spike information to a file
-    void write_interneuron_spike_times(const char* filename); // write interneuron spike information to a file
-	void write_maturation_info(const char* filename); // write mature neurons
-    void write_time_info(const char* filename); // write simulation time information
-
-    void write_pajek_fixed(const char* filename); // write fixed synapses to a file for pajek
 
 	void print_simulation_parameters(); // print simulation parameters
 protected:
-		// number of neurons
+        std::string outputDirectory; // directory to which write output
+		
+        // number of neurons
 		int N_TR; // number of training HVC(RA) neurons
 		int N_RA; // number of HVC(RA) neurons
 		int N_I; // number of HVC(I) neurons
@@ -194,6 +167,15 @@ protected:
 		vector<double> update_Gi_RA_global;
 		vector<double> update_Ge_I_global;
 
+        // neurons to be replaced in neurogenesis process
+        vector<int> replace_local_id_local; // local id of neurons to be replaced stored locally
+        vector<int> replace_real_id_local; // real id of neurons to be replaced stored locally
+        vector<int> replace_process_rank_local; // process rank that contains neuron to be replace
+        
+        vector<int> replace_local_id_global; // all local id of neurons to be replaced
+        vector<int> replace_real_id_global; // all real id of neurons to be replaced
+        vector<int> replace_process_rank_global; // all process ranks that contain neurons to be replaced
+
 		//const static double ACTIVATION; // activation threshold for synapses
 		double p_RA2I(int i, int j); // probability of connection from RA to I neuron
 		double p_I2RA(int i, int j); // probability of connection from I to RA neuron
@@ -241,17 +223,46 @@ protected:
 		void set_training_current(double t); // set current to training neurons. t - current injection time.
         void set_training_current(); // set current to training neurons
 		
-		void write_chain_test(int num_trials, std::vector<int>& total_num_dend_spikes, std::vector<double>& average_num_dendritic_spikes_in_trials, 
-                              std::vector<double>& average_num_somatic_spikes_in_trials, std::vector<double>& mean_burst_time, 
-                              std::vector<double>& std_burst_time, const char* filename); // write results of chain test to file
-		
+	    // noise generator	
+	    void initialize_generator(); // initialize generator for processes
+        
+        // trials
+	    void trial(int training); // make one trial
 		void mature_trial(); // simulation trial without STDP rules
-		void LTD(double &w, double t); // long-term depression STDP rule
+        void test_mature_chain(int num_trials); // test of mature network
+	    
+        void randomize_after_trial(); // set all neurons to the resting state
+		
+        // supporting STDP rules
+        void LTD(double &w, double t); // long-term depression STDP rule
 		void LTP(double &w, double t); // long-term potentiation STDP rule
 		void potentiation_decay(); // apply potentiation decay to all RA-RA synapses
 		void update_synapse(int i, int j); // update synapse from neuron i to neuron j
 		void update_all_synapses(); // update synapses between RA neurons and apply potentiation decay
 		void axon_remodeling(int i); // remove all targets from neuron i except for supersynapses
+
+        // neurogenesis support
+        void add_new_neurons(int N); // add N immature neurons to network
+        void replace_neurons(); // replace all neurons specified by replace arrays
+        void kill_neuron(int local_id, int global_id, int process_rank); // erase all outgoing and incoming connections from HVC(RA) 
+                                                                         // neurons for replaced neuron. Clean indicator arrays, active and super synapses
+        void initialize_coordinates_for_replaced_neuron(int global_id); // change coordinates of replaced neuron to new coordinates
+        void initialize_connections_for_replaced_neuron(int global_id); // erase all previous connections from and onto the replaced neuron. Create new connections.
+        
+        void initialize_coordinates_for_added_neurons(int n_total_old); // initialize coordinates for added neurons; 
+                                                                    // n_total_old - total number of HVC(RA) neurons before new neurons are added;
+        
+        void initialize_connections_for_added_neurons(int n_total_old); // initialize connections for added neurons; 
+                                                                    // n_total_old - total number of HVC(RA) neurons before new neurons are added;
+        // spatial initialization
+        void initialize_connections(); // initialize connections for neurons based on Gaussian distributions
+        
+        // testing functions
+        void initialize_ideal_chain_connections(int num_layers); // initialize connections like in ideal synfire chain: previous chain layer makes connections on
+                                                             // interneurons that in turn connect to the subsequent chain layer
+
+        void initialize_random_chain_connections(int num_layers); // initialize connections like in a real synfire chain, but wire HVC(RA) neurons randomly, ignoring 
+                                                                  // any inhibitory structure
 
         // setting simulation parameters
         void set_network_parameters(const struct NetworkParameters& network_params); // set network parameters
@@ -275,17 +286,43 @@ protected:
         void read_weights(const char* filename); // read all synaptic weights from the file
 
         // internal write functions
-        std::string outputDirectory; // directory to which write output
 
         void write_global_index_array(const char* filename); // write global array with HVC(RA) neuronal ids to file
         void write_weights_time_sequence_from_source_to_target(const std::vector<int>& source, const std::vector<int>&target, const char* filename); // write time
-                                                                                                     // dynamics of synaptic weights from source to target neurons
         void write_maturation_time_sequence(const std::vector<int>& neurons, const char* filename); // write maturation time sequence of neurons to a file
+        void write_replaced_neurons(std::vector<int>& real_id, const char* filename); // write replaced neurons to a file
+		
+        void write_chain_test(int num_trials, std::vector<int>& total_num_dend_spikes, std::vector<double>& average_num_dendritic_spikes_in_trials, 
+                              std::vector<double>& average_num_somatic_spikes_in_trials, std::vector<double>& mean_burst_time, 
+                              std::vector<double>& std_burst_time, const char* filename); // write results of chain test to file
         
+        void write_num_synapses(const char* fileSynapses); // write amount of active synapses and supersynapses
+        void write_active_synapses(const char* RA_RA); // write RA to RA active connections
+        void write_supersynapses(const char* RA_RA); // write RA to RA supersynapses
+        void write_invariable_synapses(const char* RA_I, const char* I_RA); // write RA to I and I to RA connections
+        void write_coordinates_RA(const char* filename); // write coordinates of HVC(RA) neurons
+        void write_coordinates_I(const char* filename); // write coordinates of HVC(I) neurons
+        void write_RA(const char * filename, int n); // write dynamics of RA neuron to a file
+        void write_I(const char * filename, int n); // write dynamics of I neuron to a file
+        void write_weights(const char * filename); // write weights of all synapses in network
+        void write_weight_statistics(const char * filename); // write mean synaptic weight and synaptic weight standard deviation
+        void write_soma_spike_times(const char* filename); // write somatic spike information to a file
+        void write_dend_spike_times(const char* filename); // write dendritic spike information to a file
+        void write_interneuron_spike_times(const char* filename); // write interneuron spike information to a file
+        void write_maturation_info(const char* filename); // write mature neurons
+        void write_time_info(const char* filename); // write simulation time information
+
+        void write_pajek_fixed(const char* filename); // write fixed synapses to a file for pajek
+
         // MPI support
 		void resize_arrays_for_I(int n_local, int n_total); // resize data arrays for HVC(I) neurons
         void resize_arrays_for_RA(int n_local, int n_total); // resize data arrays for HVC(RA) neurons
+        
+	    void send_connections(); // send fixed connections connections to all processes
+        
         void gather_mature_data(std::vector<std::vector<double>>& average_dendritic_spike_time); // gather data from all processes in case of mature chain trial
+	    void gather_data(); // gather data from all processes
+        void gather_neurons_2replace(); // gather neurons that are to be replaced from all processes
 
         int MPI_size; // number of processes
         int MPI_rank; // rank of the process

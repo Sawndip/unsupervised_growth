@@ -299,9 +299,8 @@ void PoolParallel::initialize_coordinates_for_added_neurons(int n_total_old)
 		}
         
         std::string fileRAxy = outputDirectory + "RA_xy_after_addition.bin";
-        std::string fileIxy = outputDirectory + "I_xy_after_addition.bin";
 
-        this->write_coordinates(fileRAxy.c_str(), fileIxy.c_str());
+        this->write_coordinates_RA(fileRAxy.c_str());
     }
 
 
@@ -386,7 +385,8 @@ void PoolParallel::initialize_coordinates()
         std::string fileRAxy = outputDirectory + "RA_xy.bin";
         std::string fileIxy = outputDirectory + "I_xy.bin";
 
-        this->write_coordinates(fileRAxy.c_str(), fileIxy.c_str());
+        this->write_coordinates_RA(fileRAxy.c_str());
+        this->write_coordinates_I(fileIxy.c_str());
     }
 }
 
@@ -1169,7 +1169,7 @@ void PoolParallel::initialize_random_chain_connections(int num_layers)
         }
 	}
 
-    //this->send_connections();
+    this->send_connections();
 
     std::string fileRA2I = outputDirectory + "RA_I_connections.bin";
     std::string fileI2RA = outputDirectory + "I_RA_connections.bin";
@@ -1211,6 +1211,12 @@ void PoolParallel::initialize_random_chain_connections(int num_layers)
 
     this->update_all_synapses();
     this->gather_data();
+    
+    std::string fileActiveGraph = outputDirectory + "RA_RA_active_connections.bin";
+    std::string fileSuperGraph = outputDirectory + "RA_RA_super_connections.bin";
+	    	
+    this->write_supersynapses(fileSuperGraph.c_str());
+    this->write_active_synapses(fileActiveGraph.c_str());
 }
 
 void PoolParallel::initialize_test_connections(int num_RA_targets, int num_RA_target_groups)
@@ -1441,14 +1447,7 @@ void PoolParallel::set_training_current()
     }
 }
 
-
-int PoolParallel::get_trial_number()
-{
-    return trial_number;
-}
-
-
-void PoolParallel::ideal_chain_test(int num_layers, int num_trials)
+void PoolParallel::test_ideal_chain(int num_layers, int num_trials)
 {
     // initialize coordintates and ideal chain connections
     this->initialize_coordinates();
@@ -1494,19 +1493,35 @@ void PoolParallel::ideal_chain_test(int num_layers, int num_trials)
         this->write_dend_spike_times((outputDirectory + "dend_spikes_trial" + std::to_string(i+1) + ".bin").c_str());
         
         this->randomize_after_trial();
-    }
-
-    
+    }   
 }
 
-void PoolParallel::mature_chain_test(int num_trials, std::string dataDir)
+void PoolParallel::test_grown_chain(int num_trials, std::string dataDir)
+{
+    this->read_network_state(dataDir); // read data from file
+    this->test_mature_chain(num_trials); // test network
+}
+
+void PoolParallel::test_random_chain(int num_layers, int num_trials)
+{
+    this->initialize_coordinates();
+    this->initialize_random_chain_connections(num_layers);
+
+    // set all neurons to be mature
+    for (int i = 0; i < N_RA_local; i++)
+    {
+        mature_local[i] = 1;
+        gaba_potential_local[i] = E_GABA_MATURE;
+    }
+
+    this->test_mature_chain(num_trials);
+}
+
+void PoolParallel::test_mature_chain(int num_trials)
 {
     std::string file_soma_spikes = outputDirectory + "soma_spikes_in_trial.bin"; // file with somatic spikes in trial
     std::string file_dend_spikes = outputDirectory + "dend_spikes_in_trial.bin"; // file with dendritic spikes in trial
     std::string file_chain_test = outputDirectory + "mature_chain_test.bin"; // trial with mature chain test info
-
-    // read data from files
-    this->read_network_state(dataDir);
 
 	std::vector<std::vector<double>> average_dendritic_spike_time; // array with average dendritic spike time in every trial
 	std::vector<std::vector<int>> num_dendritic_spikes_in_trials; // number of dendritic spikes produced in all trials
@@ -1537,10 +1552,12 @@ void PoolParallel::mature_chain_test(int num_trials, std::string dataDir)
                                   243, 100, 188};
     */
     // neurons for gabaMaturation 010217	
-    std::vector<int> RAtoWrite = {179, 129, 128, 268, 130, 142, 15, 115, 273, 19, 23, 282, 29, 261, 290, 163, 292, 
+    /*std::vector<int> RAtoWrite = {179, 129, 128, 268, 130, 142, 15, 115, 273, 19, 23, 282, 29, 261, 290, 163, 292, 
                                   37, 167, 168, 169, 199, 172, 51, 182, 60, 68, 69, 256, 201, 207, 208, 209, 82, 85, 
                                   87, 90, 92, 122, 144, 226, 227, 131, 101, 81, 259, 231, 110, 114, 243, 117, 120, 250, 123, 124, 213};
+    */
 
+    std::vector<int> RAtoWrite = {102, 236, 118, 90, 256, 38, 179, 252, 254, 168, 51, 145, 202, 191, 26, 149, 72, 269, 106, 49, 86, 62, 247, 91}; 
     std::vector<int> ItoWrite;
 
     for (int i = 0; i < N_I; i++)
@@ -1564,8 +1581,8 @@ void PoolParallel::mature_chain_test(int num_trials, std::string dataDir)
 
         }
 
-        //for (size_t j = 0; j < RAtoWrite.size(); j++)
-        //    this->write_RA((outputDirectory + "RA/RA" + std::to_string(RAtoWrite[j]) + "_trial" + std::to_string(i+1) + ".bin").c_str(), RAtoWrite[j]);
+        for (size_t j = 0; j < RAtoWrite.size(); j++)
+            this->write_RA((outputDirectory + "RA/RA" + std::to_string(RAtoWrite[j]) + "_trial" + std::to_string(i+1) + ".bin").c_str(), RAtoWrite[j]);
         
         for (size_t j = 0; j < ItoWrite.size(); j++)
             this->write_I((outputDirectory + "I/I" + std::to_string(ItoWrite[j]) + "_trial" + std::to_string(i+1) + ".bin").c_str(), ItoWrite[j]);
@@ -1888,8 +1905,19 @@ void PoolParallel::run_trials_with_save(int num_trials)
 
 }
 
-void PoolParallel::chain_growth(int save_freq_short, int save_freq_long)
+void PoolParallel::chain_growth_default(int save_freq_short, int save_freq_long)
 {
+    // initialize default coordinates and connections
+    this->initialize_coordinates();
+    this->initialize_connections();
+    
+    // run chain growth
+    this->chain_growth_manual(save_freq_short, save_freq_long);
+}
+
+void PoolParallel::chain_growth_manual(int save_freq_short, int save_freq_long)
+{
+
     std::string fileRA = outputDirectory + "RA.bin";
     std::string fileI = outputDirectory + "I.bin";
     
@@ -2451,13 +2479,293 @@ void PoolParallel::trial(int training)
 		//	std::cout << std::endl;
 		//}
 	}
-
-	
-
+    // update GABA potential based on firing rates
 	this->update_Ei();
+    
+    // gather all neurons that are to be replaced
+    this->gather_neurons_2replace();
+    
+    // if some neurons are to be replaced, replace them
+    if (replace_real_id_global.size() > 0)
+        this->replace_neurons();
 
-//printf("internal time = %f\n", internal_time);
-	//printf("t*timeStep = %f\n", t*timeStep);
+
+}
+
+void PoolParallel::gather_neurons_2replace()
+{
+    // gather all neurons that are to be replaced
+    // get number of neurons to replace
+    int num_2replace_local = static_cast<int>(replace_local_id_local.size()); // number of neurons to replace on the process
+
+    int num_2replace_total; // total number of neurons to replace
+
+    MPI_Allreduce(&num_2replace_local, &num_2replace_total, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+
+    replace_local_id_global.resize(num_2replace_total);
+    replace_real_id_global.resize(num_2replace_total);
+    replace_process_rank_global.resize(num_2replace_total);
+
+    // gather ids and process ranks of neurons to replace
+    int* recvcounts = new int[MPI_size];
+    int* displs = new int[MPI_size];
+
+    // get array with number of neurons to replace in each process
+    MPI_Allgather(&num_2replace_local, 1, MPI_INT, &recvcounts[0], 1, MPI_INT, MPI_COMM_WORLD);
+
+    displs[0] = 0;
+    for (int i = 1; i < MPI_size; i++)
+    {
+        displs[i] = displs[i-1] + recvcounts[i-1];
+    }
+
+    // get neurons to replace
+    MPI_Allgatherv(&replace_local_id_local[0], num_2replace_local, MPI_INT,
+        &replace_local_id_global[0], recvcounts, displs, MPI_INT, MPI_COMM_WORLD);
+    
+    MPI_Allgatherv(&replace_real_id_local[0], num_2replace_local, MPI_INT,
+        &replace_real_id_global[0], recvcounts, displs, MPI_INT, MPI_COMM_WORLD);
+    
+    MPI_Allgatherv(&replace_process_rank_local[0], num_2replace_local, MPI_INT,
+        &replace_process_rank_global[0], recvcounts, displs, MPI_INT, MPI_COMM_WORLD);
+
+    delete[] recvcounts;
+    delete[] displs;
+}
+
+void PoolParallel::kill_neuron(int local_id, int global_id, int process_rank)
+{
+    // if process contains neuron to replace
+    if (MPI_rank == process_rank)
+    {
+        // zero all local weight matrices and delete all existing synapses from and out of the neuron
+        // zero weights from neuron
+        for (int i = 0; i < N_RA; i++)
+            std::fill(weights_local[local_id].begin(), weights_local[local_id].end(), 0.0);
+
+        // delete active and super synapses
+        supersynapses_local[local_id].clear();
+        active_synapses_local[local_id].clear();
+        
+        // set active and supersynapse indicators to zero
+        active_indicators_local[local_id].reset();
+        supersynapses_indicators_local[local_id].reset();
+
+        // reset gaba_potential, remodeled and mature states
+        gaba_potential_local[local_id] = E_GABA_IMMATURE;
+        remodeled_local[local_id] = 0;
+        mature_local[local_id] = 0;
+
+        gaba_reached_mature_local[local_id] = 0;
+	
+        firing_rate_local[local_id] = 0.0;
+        
+        // clear all recent bursts
+        for (int j = 0; j < RATE_WINDOW_LONG; j++)
+            num_bursts_in_recent_trials[local_id].push_back(0);
+    }
+
+    // do for all processes
+    // erase all super and active synapses to a neuron
+    for (int i = 0; i < N_RA_local; i++)
+    {
+        std::vector<int>::iterator pos = std::find(active_synapses_local[i].begin(), active_synapses_local[i].end(), global_id);
+
+        if (pos != active_synapses_local[i].end())
+        {
+            active_synapses_local[i].erase(pos);
+            
+            // set active indicator to false
+            active_indicators_local[i][global_id] = false;
+        }
+
+        pos = std::find(supersynapses_local[i].begin(), supersynapses_local[i].end(), global_id);
+
+        if (pos != supersynapses_local[i].end())
+        {
+            // if neuron was saturated, set remodeled to false
+            if (static_cast<int>(supersynapses_local[i].size()) == Nss)
+            {
+                if (remodeled_local[i] != 1)
+                    std::cerr << "In replace_neuron. Neuron " << Id_RA_local[i] << " has maximum supersynapses but is nor remodeled!" << std::endl;
+                
+            }
+            else
+            {
+                if (remodeled_local[i] == 1)
+                    std::cerr << "In replace_neuron. Neuron " << Id_RA_local[i] << " is remodeled but its number of output supersynapses is "
+                              <<  supersynapses_local[i].size() << " which is smaller than maximum " << Nss << std::endl;
+                
+            }
+
+            supersynapses_local[i].erase(pos);
+            remodeled_local[i] = 0;   
+            
+            // set supersynapses indicator to false
+            supersynapses_indicators_local[i][global_id] = false;
+        }
+
+    }
+
+    // zero weights to neuron
+    for (int i = 0; i < N_RA_local; i++)
+        weights_local[i][local_id] = 0.0;
+}
+
+void PoolParallel::initialize_coordinates_for_replaced_neuron(int global_id)
+{
+    if (MPI_rank == 0)
+    {
+        double xx; // temporary x-coordinate
+        double yy; // temporary y-coordinate
+
+        bool close; // are neurons too close or not
+
+        do
+        {
+            close = false;
+            xx = 0.5*SIDE / (sqrt(N_I)+1) + generator.random(SIDE - SIDE / (sqrt(N_I)+1));
+            yy = 0.5*SIDE / (sqrt(N_I)+1) + generator.random(SIDE - SIDE / (sqrt(N_I)+1));
+
+            // check distances to all I neurons
+
+            for (int j = 0; j < N_I; j++)
+            {
+                if (distance(xx,yy,xx_I[j],yy_I[j]) < MIN_INTERNEURON_DISTANCE)
+                {
+                    close = true;
+                    break;
+                }
+            }
+
+            // check distances to all previous RA neurons
+            if (!close)
+            {
+                for (int j = 0; j < N_RA; j++)
+                {
+                    if (distance(xx, yy, xx_RA[j], yy_RA[j]) < MIN_INTERNEURON_DISTANCE)
+                    {
+                        close = true;
+                        break;
+                    }
+
+                }
+            }
+        } while(close);
+
+        xx_RA[global_id] = xx;
+        yy_RA[global_id] = yy;
+        
+    }
+}
+
+void PoolParallel::initialize_connections_for_replaced_neuron(int global_id)
+{
+    if (MPI_rank == 0)
+    {
+        // erase all previous connections from replaced neuron to interneurons
+        weights_RA_I_global[global_id].clear();
+        syn_ID_RA_I_global[global_id].clear();
+
+        // erase all previous connections from interneurons to replaced neuron
+        for (int i = 0; i < N_I; i++)
+        {
+            std::vector<int>::iterator pos = std::find(syn_ID_I_RA_global[i].begin(), syn_ID_I_RA_global[i].end(), global_id);
+
+            // if interneuron targets replaced neuron, erase connection
+            if (pos != syn_ID_I_RA_global[i].end())
+            {
+                int index_in_array = std::distance(syn_ID_I_RA_global[i].begin(), pos);
+
+                syn_ID_I_RA_global[i].erase(pos);
+                weights_I_RA_global[i].erase(weights_I_RA_global[i].begin() + index_in_array);
+            }
+
+        }
+
+      // make new connections to interneurons
+        for (int j = 0; j < N_I; j++)
+        {
+             if (generator.random(1) < p_RA2I(global_id,j))
+             {
+                 double G = this->sample_Ge2i();
+
+                 weights_RA_I_global[global_id].push_back(G);
+                 syn_ID_RA_I_global[global_id].push_back(j);
+             }
+         }
+
+
+		// make new connections from interneurons to replaced neuron
+		for (int i = 0; i < N_I; i++)
+     	{
+             if (generator.random(1) < p_I2RA(i,global_id))
+             {
+                 double G = this->sample_Gi2e();
+
+                 weights_I_RA_global[i].push_back(G);
+                 syn_ID_I_RA_global[i].push_back(global_id);
+             }
+		 }
+    }
+}
+
+void PoolParallel::replace_neurons()
+{
+    // write active, supersynapses and weights before replacing neurons
+    this->write_weights((outputDirectory + "weights_before_replacement_trial" + std::to_string(trial_number) + ".bin").c_str());
+    this->write_active_synapses((outputDirectory + "RA_RA_active_connections_before_replacement_trial" + std::to_string(trial_number) + ".bin").c_str());
+    this->write_supersynapses((outputDirectory + "RA_RA_super_connections_before_replacement_trial" + std::to_string(trial_number) + ".bin").c_str());
+    this->write_maturation_info((outputDirectory + "mature_before_replacement_trial" + std::to_string(trial_number) + ".bin").c_str());
+
+    // loop through all neurons that are to be replaced
+    for (size_t i = 0; i < replace_local_id_global.size(); i++)
+    {
+        // zero all weight matrices and delete all existing synapses from and out of the neurons
+        this->kill_neuron(replace_local_id_global[i], replace_real_id_global[i], replace_process_rank_global[i]);
+
+        // initialize new coordinates and create new connections
+        this->initialize_coordinates_for_replaced_neuron(replace_real_id_global[i]);
+        this->initialize_connections_for_replaced_neuron(replace_real_id_global[i]);  
+    }
+
+    this->send_connections();
+
+    // write all changes to files
+    if (MPI_rank == 0)
+    {
+        // write new coordinates
+        std::string fileRAxy = outputDirectory + "RA_xy_after_replacement_trial" + std::to_string(trial_number) + ".bin";
+
+        this->write_coordinates_RA(fileRAxy.c_str());
+        
+        // write invariable connections
+        std::string fileRA2I = outputDirectory + "RA_I_connections_after_replacement_trial" + std::to_string(trial_number) + ".bin";
+        std::string fileI2RA = outputDirectory + "I_RA_connections_after_replacement_trial" + std::to_string(trial_number) + ".bin";
+        std::string filePajekFixed = outputDirectory + "fixed_after_replacement_trial" + std::to_string(trial_number) + ".net";
+
+        this->write_invariable_synapses(fileRA2I.c_str(), fileI2RA.c_str());
+        this->write_pajek_fixed(filePajekFixed.c_str());
+
+        // write replaced neurons to a file
+        std::string fileReplaced = outputDirectory + "replaced_neurons_trial" + std::to_string(trial_number) + ".bin";
+        
+        this->write_replaced_neurons(replace_real_id_global, fileReplaced.c_str());
+    }
+
+    // clear all arrays with neurons to be replaced
+    replace_local_id_local.clear();
+    replace_real_id_local.clear();
+    replace_process_rank_local.clear();
+    replace_local_id_global.clear();
+    replace_real_id_global.clear();
+    replace_process_rank_global.clear();
+    
+    // write active, supersynapses and weights after replacing neurons
+    this->write_weights((outputDirectory + "weights_after_replacement_trial" + std::to_string(trial_number) + ".bin").c_str());
+    this->write_active_synapses((outputDirectory + "RA_RA_active_connections_after_replacement_trial" + std::to_string(trial_number) + ".bin").c_str());
+    this->write_supersynapses((outputDirectory + "RA_RA_super_connections_after_replacement_trial" + std::to_string(trial_number) + ".bin").c_str());
+    this->write_maturation_info((outputDirectory + "mature_after_replacement_trial" + std::to_string(trial_number) + ".bin").c_str());
 }
 
 void PoolParallel::add_new_neurons(int N)
@@ -2740,7 +3048,9 @@ void PoolParallel::update_Ei()
 		// if not a training neuron and if firing rate in wide window is smaller than death threshold, replace neuron with a new one
 		else if ( (Id_RA_local[i] >= N_TR) && (firing_rate_long <= DEATH_RATE_THRESHOLD) )
 		{
-
+            replace_local_id_local.push_back(i);
+            replace_real_id_local.push_back(Id_RA_local[i]);
+            replace_process_rank_local.push_back(MPI_rank);
 		}
 	}
 }
@@ -3785,37 +4095,51 @@ void PoolParallel::write_num_synapses(const char* fileSynapses)
 
 }
 
-void PoolParallel::write_coordinates(const char* xy_RA, const char* xy_I)
+void PoolParallel::write_coordinates_RA(const char* filename)
 {
-
     if (MPI_rank == 0)
     {
-        std::ofstream out_RA;
-        std::ofstream out_I;
+        std::ofstream out;
 
         // open files
-        out_RA.open(xy_RA, std::ios::binary | std::ios::out);
-        out_I.open(xy_I, std::ios::binary | std::ios::out);
+        out.open(filename, std::ios::binary | std::ios::out);
 
         // write number of neurons
-        out_RA.write(reinterpret_cast<char*>(&N_RA), sizeof(N_RA));
-        out_I.write(reinterpret_cast<char*>(&N_I), sizeof(N_I));
+        out.write(reinterpret_cast<char*>(&N_RA), sizeof(N_RA));
 
         // write coordinates
         for (int i = 0; i < N_RA; i++)
         {
-            out_RA.write(reinterpret_cast<char*>(&xx_RA[i]), sizeof(xx_RA[i]));
-            out_RA.write(reinterpret_cast<char*>(&yy_RA[i]), sizeof(yy_RA[i]));
+            out.write(reinterpret_cast<char*>(&xx_RA[i]), sizeof(xx_RA[i]));
+            out.write(reinterpret_cast<char*>(&yy_RA[i]), sizeof(yy_RA[i]));
         }
 
+        // close files
+        out.close();
+	}
+}
+
+void PoolParallel::write_coordinates_I(const char* filename)
+{
+    if (MPI_rank == 0)
+    {
+        std::ofstream out;
+
+        // open files
+        out.open(filename, std::ios::binary | std::ios::out);
+
+        // write number of neurons
+        out.write(reinterpret_cast<char*>(&N_I), sizeof(N_I));
+
+        // write coordinates
         for (int i = 0; i < N_I; i++)
         {
-            out_I.write(reinterpret_cast<char*>(&xx_I[i]), sizeof(xx_I[i]));
-            out_I.write(reinterpret_cast<char*>(&yy_I[i]), sizeof(yy_I[i]));
+            out.write(reinterpret_cast<char*>(&xx_I[i]), sizeof(xx_I[i]));
+            out.write(reinterpret_cast<char*>(&yy_I[i]), sizeof(yy_I[i]));
         }
+
         // close files
-        out_RA.close();
-        out_I.close();
+        out.close();
 	}
 }
 
@@ -4216,6 +4540,26 @@ void PoolParallel::write_global_index_array(const char* filename)
 
         for (size_t i = 0; i < Id_RA_global.size(); i++)
             out.write(reinterpret_cast<char *>(&Id_RA_global[i]), sizeof(Id_RA_global[i]));
+		
+        out.close();
+	}
+}
+
+void PoolParallel::write_replaced_neurons(std::vector<int>& global_id_2replace, const char* filename)
+{
+    if (MPI_rank == 0)
+    {
+        std::ofstream out;
+      
+        out.open(filename, std::ios::out | std::ios::binary);
+
+        int num_replaced = static_cast<int>(global_id_2replace.size()); // number of replaced neurons
+
+        // write number of replaced neurons
+        out.write(reinterpret_cast<char *>(&num_replaced), sizeof(num_replaced));
+
+        for (int i = 0; i < num_replaced; i++)
+            out.write(reinterpret_cast<char *>(&global_id_2replace[i]), sizeof(global_id_2replace[i]));
 		
         out.close();
 	}

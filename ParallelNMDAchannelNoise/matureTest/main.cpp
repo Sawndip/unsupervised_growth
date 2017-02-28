@@ -31,7 +31,7 @@ int main(int argc, char** argv)
     
     int num_trials = 20; // number to trials to perform
 
-    pool.mature_chain_test(num_trials, dataDir);
+    pool.test_grown_chain(num_trials, dataDir);
 	
     double end_time = MPI_Wtime();
 

@@ -11,17 +11,101 @@ import numpy as np
 import matplotlib.pyplot as plt
 from collections import defaultdict
 
-dataDir = "/home/eugene/Output/networks/IdealChainTest220217/RA/"
+dataDir = "/home/eugene/Output/networks/RandomChainTest240217/RA/"
 
 DENDRITIC_THRESHOLD = 0.0 # threshold for burst spike in mV
 INHIBITORY_KICK_THRESHOLD = 0.1 # threshold for inhibitory inputs
 INHIBITORY_SPIKE_RESOLUTION = 1.0 # resolution in ms wihin which we treat inhibitory spike as the same
+TIMESTEP = 0.02 # timestep of neuron dynamics in ms
+WINDOW_SIZE = 50.0 # window in which to calculate input conductances
+
+def calculate_average_input_conductance_for_neurons(neurons, num_trials, dataDir):
+    """
+    Calculates average input condictances. Average performed for all neurons in neurons
+    and for number of trials num_trials. Files with neuron trials are located in
+    dataDir
+    """
+    num_points_in_window = int(WINDOW_SIZE / TIMESTEP) # number of datapoints inside window
+    
+    # if even, add one more datapoint    
+    if num_points_in_window % 2 == 0:
+        num_points_in_window += 1
+    
+    average_exc_input = np.zeros(num_points_in_window, np.float32)
+    average_inh_input = np.zeros(num_points_in_window, np.float32)
+
+    # loop through all neurons    
+    for neuron_id in neurons:    
+        t_input, exc_input, inh_input = calculate_average_input_conductance_for_neuron(neuron_id, num_trials, dataDir)
+        
+        average_exc_input += exc_input
+        average_inh_input += inh_input
+        
+    average_exc_input /= float(len(neurons))
+    average_inh_input /= float(len(neurons))
+    
+    return t_input, average_exc_input, average_inh_input
+    
+        
+
+def calculate_average_input_conductance_for_neuron(neuron_id, num_trials, dataDir):
+    """
+    Calculates average input conductance for neuron neuron_id. Average is taken
+    for num_trials and is aligned to neuron's dendritic burst
+    """
+    num_points_in_window = int(WINDOW_SIZE / TIMESTEP) # number of datapoints inside window
+    
+    # if even, add one more datapoint    
+    if num_points_in_window % 2 == 0:
+        num_points_in_window += 1
+        
+    half_window = num_points_in_window / 2
+    print half_window
+    print num_points_in_window
+    
+    exc_input = np.zeros((num_trials,num_points_in_window), np.float32)
+    inh_input = np.zeros((num_trials,num_points_in_window), np.float32)
+    
+    successful_trials = np.zeros(num_trials, np.bool) # array with bools indicating trials with dendritic bursts    
+    
+    for n in range(num_trials):
+        filename = dataDir + "RA" + str(neuron_id) + "_trial" + str(n+1) + ".bin"
+        (t, Vs, _, _, _, Vd, _, _, _, _, Gexc_d, Ginh_d, _, _, _, _, _, _) = reading.read_hh2(filename)
+        
+        burst_times, burst_indices = get_burst_times(t, Vd) # obtain dendritic burst times        
+        
+        if len(burst_times) > 0:        
+            successful_trials[n] = True
+            # loop through all dendritic burst times
+            for burst_index in burst_indices:
+                for i in range(num_points_in_window):
+                    exc_input[n][i] += Gexc_d[burst_index - half_window + i]
+                    inh_input[n][i] += Ginh_d[burst_index - half_window + i]
+                    
+            # average over number of dendritic bursts:
+            exc_input[n] = exc_input[n] / float(len(burst_indices))
+            inh_input[n] = inh_input[n] / float(len(burst_indices))
+        # if no dendritic bursts was produced
+        else:
+            average_exc_input = np.zeros(num_points_in_window, np.float32)
+            average_inh_input = np.zeros(num_points_in_window, np.float32)
+            t_input = np.linspace(-half_window * TIMESTEP, half_window * TIMESTEP, num_points_in_window)
+            
+            return t_input, average_exc_input, average_inh_input
+            
+    print exc_input.shape
+    average_exc_input = np.sum(exc_input[successful_trials], axis=0) / np.sum(successful_trials)
+    average_inh_input = np.sum(inh_input[successful_trials], axis=0) / np.sum(successful_trials)
+    t_input = np.linspace(-half_window * TIMESTEP, half_window * TIMESTEP, num_points_in_window)
+        
+    return t_input, average_exc_input, average_inh_input
 
 def get_burst_times(t, Vd):
     """
     Extracts dendritic burst times from voltage data
     """
     burst_times = []
+    burst_indices = []
     flag = False
         
     for i, v in enumerate(Vd):
@@ -29,9 +113,10 @@ def get_burst_times(t, Vd):
             flag = True
         elif flag == True and v < DENDRITIC_THRESHOLD:
             burst_times.append(t[i])
+            burst_indices.append(i)
             flag = False
         
-    return burst_times
+    return burst_times, burst_indices
 
 def get_inhibitory_input_times(t, Ginh_d):
     """
@@ -56,7 +141,7 @@ def inh_input_burst_difference(t, Vd, Ginh_d):
     """
     Calculates difference between inhibitory input times and burst time
     """
-    burst_times = get_burst_times(t, Vd)
+    burst_times, _ = get_burst_times(t, Vd)
     inhibitory_kick_times, inhibitory_kick_strength = get_inhibitory_input_times(t, Ginh_d)
     
     dt = []    
@@ -184,6 +269,36 @@ neurons = [n*num_neurons_in_layer + j for n in range(1, num_layers) for j in ran
 
 print neurons       
            
-average_inh_input_burst_difference_all_neurons(neurons, num_trials)
+#average_inh_input_burst_difference_all_neurons(neurons, num_trials)
+
+neuron_id = 106
+num_trials = 20
+
+#neurons = [276, 23, 99, 24, 155, 128, 165, 114, 184, 203, 257, 183, 294, 273]
+neurons = [102, 236, 118, 90, 256, 38, 179, 252, 254, 168, 51, 145, 202, 191, 26, 149, \
+            72, 269, 106, 49, 86, 62, 247, 91]
+
+#t_input, average_exc_input, average_inh_input = calculate_average_input_conductance_for_neuron(neuron_id, num_trials, dataDir)
+t_input, average_exc_input, average_inh_input = calculate_average_input_conductance_for_neurons(neurons, num_trials, dataDir)
+
+print t_input
+print t_input.shape
+print average_exc_input.shape
+
+f = plt.figure()
+
+ax1 = f.add_subplot(211)
+ax1.set_title("Average conductances of 24 neurons from RandomChainTest240217".format(neuron_id))
+
+#ax1.set_title("Conductances for neuron {0}".format(neuron_id))
+ax1.plot(t_input, average_exc_input)
+ax1.set_ylabel("$G_{exc, d}$")
+
+ax2 = f.add_subplot(212)
+
+ax2.plot(t_input, average_inh_input)
+ax2.set_xlabel("time (ms)")
+ax2.set_ylabel("$G_{inh, d}$")
+
 
 plt.show()

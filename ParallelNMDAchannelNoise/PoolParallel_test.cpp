@@ -8,7 +8,7 @@ using namespace std;
 int main(int argc, char** argv)
 {
     
-    std::string configurationFile = "/home/eugene/Output/networks/gabaMaturation240217/parameters.cfg"; // configuration file
+    std::string configurationFile = "/home/eugene/Output/networks/test240217/parameters.cfg"; // configuration file
     int rank; // MPI process rank
     Configuration cfg;
 
@@ -22,8 +22,8 @@ int main(int argc, char** argv)
 
 	PoolParallel pool(cfg);
 
-    pool.initialize_coordinates();
-	pool.initialize_connections();
+    //pool.initialize_coordinates();
+	//pool.initialize_connections();
 
     //pool.print_invariable_connections();
 
@@ -34,7 +34,7 @@ int main(int argc, char** argv)
 
     double start_time = MPI_Wtime();
 
-    pool.chain_growth(save_freq_short, save_freq_long);
+    pool.chain_growth_default(save_freq_short, save_freq_long);
 	
     double end_time = MPI_Wtime();
 

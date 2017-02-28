@@ -30,7 +30,7 @@ int main(int argc, char** argv)
     int num_trials = 10;
     int num_layers = 10; // number of synfire chain groups
 
-    pool.ideal_chain_test(num_layers, num_trials);
+    pool.test_ideal_chain(num_layers, num_trials);
 	
     double end_time = MPI_Wtime();
 

@@ -8,7 +8,7 @@ using namespace std;
 int main(int argc, char** argv)
 {
     
-    std::string configurationFile = "/home/eugene/Output/networks/RandomChainTest220217/parameters.cfg"; // configuration file
+    std::string configurationFile = "/home/eugene/Output/networks/RandomChainTest240217/parameters.cfg"; // configuration file
     
     int rank; // MPI process rank
     Configuration cfg;
@@ -27,12 +27,11 @@ int main(int argc, char** argv)
     
     double start_time = MPI_Wtime();
    
-    int num_trials = 10;
-    int num_layers = 6; // number of synfire chain groups
+    int num_trials = 20;
+    int num_layers = 40; // number of synfire chain groups
 
-    pool.initialize_coordinates();
-    pool.initialize_random_chain_connections(num_layers);
-	
+    pool.test_random_chain(num_layers, num_trials);
+
     double end_time = MPI_Wtime();
 
     if (rank == 0)

@@ -37,7 +37,7 @@ int main(int argc, char** argv)
 
     double start_time = MPI_Wtime();
 
-    pool.chain_growth(save_freq_short, save_freq_long);
+    pool.chain_growth_manual(save_freq_short, save_freq_long);
 	
     double end_time = MPI_Wtime();
 

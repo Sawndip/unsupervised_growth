@@ -9,9 +9,9 @@ Script plots membrane traces for same HVC(RA) neuron
 import reading
 import matplotlib.pyplot as plt
 
-file1 = "/home/eugene/hodgkinData/gabaMaturation300117/membraneTraces/RA/RA206_trial1.bin"
-file2 = "/home/eugene/hodgkinData/gabaMaturation300117/membraneTraces/RA/RA206_trial2.bin"
-file3 = "/home/eugene/hodgkinData/gabaMaturation300117/membraneTraces/RA/RA206_trial3.bin"
+file1 = "/home/eugene/Output/networks/RandomChainTest240217/RA/RA256_trial1.bin"
+file2 = "/home/eugene/Output/networks/RandomChainTest240217/RA/RA256_trial2.bin"
+file3 = "/home/eugene/Output/networks/RandomChainTest240217/RA/RA256_trial3.bin"
 
 
 (t_1, Vs_1, _, _, _, Vd_1, _, _, _, _, Gexc_d_1, Ginh_d_1, _, _, _, _, _, _) = reading.read_hh2(file1)
