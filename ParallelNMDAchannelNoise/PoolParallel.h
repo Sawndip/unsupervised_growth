@@ -176,6 +176,9 @@ protected:
         vector<int> replace_real_id_global; // all real id of neurons to be replaced
         vector<int> replace_process_rank_global; // all process ranks that contain neurons to be replaced
 
+        // neuron's internal time after previous replacement
+        vector<int> num_trials_after_replacement_local;
+
 		//const static double ACTIVATION; // activation threshold for synapses
 		double p_RA2I(int i, int j); // probability of connection from RA to I neuron
 		double p_I2RA(int i, int j); // probability of connection from I to RA neuron
@@ -218,6 +221,9 @@ protected:
 		double R; // learning rate
 		double F_0; // constant to prevent connections within the same chain group
 
+        double T_P1; // end of silent LTP window
+        double T_P2; // time of the best LTP response
+
         // current
         double WAITING_TIME; // time before training current is injected
 		void set_training_current(double t); // set current to training neurons. t - current injection time.
@@ -228,12 +234,15 @@ protected:
         
         // trials
 	    void trial(int training); // make one trial
+	    void trial_burst_stdp(int training); // make one trial with STDP rules applied to dendritic bursts
 		void mature_trial(); // simulation trial without STDP rules
         void test_mature_chain(int num_trials); // test of mature network
 	    
         void randomize_after_trial(); // set all neurons to the resting state
 		
         // supporting STDP rules
+        void LTD_burst(double &w, double t); // long-term depression for burst STDP rule
+        void LTP_burst(double &w, double t); // long-term potentiation for burst STDP rule
         void LTD(double &w, double t); // long-term depression STDP rule
 		void LTP(double &w, double t); // long-term potentiation STDP rule
 		void potentiation_decay(); // apply potentiation decay to all RA-RA synapses
@@ -323,6 +332,8 @@ protected:
         void gather_mature_data(std::vector<std::vector<double>>& average_dendritic_spike_time); // gather data from all processes in case of mature chain trial
 	    void gather_data(); // gather data from all processes
         void gather_neurons_2replace(); // gather neurons that are to be replaced from all processes
+        void gather_bursts(vector<int>& RA_fired_dend_real_ID, vector<int>& RA_fired_dend_global,
+                           vector<double>& spike_times_fired_dend_local); // gather dendritic bursts in the network
 
         int MPI_size; // number of processes
         int MPI_rank; // rank of the process

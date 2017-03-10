@@ -111,9 +111,15 @@ def read_weights(filename):
     file.close()        
     N_RA = struct.unpack('<i', data[:SIZE_OF_INT])[0]
     trial_number = struct.unpack('<i', data[SIZE_OF_INT:2*SIZE_OF_INT])[0]
-    weights = np.zeros((N_RA, N_RA))
+    weights = np.zeros((N_RA, N_RA), np.float32)
     
     pos = 2*SIZE_OF_INT     
+    
+    #print "N_RA = ", N_RA
+    #print "trial_number = ", trial_number
+    
+    #print "num bytes = ", len(data[2*SIZE_OF_INT:]) 
+    #print "num_datapoints = ",len(data[2*SIZE_OF_INT:]) / SIZE_OF_DOUBLE    
     
     for i in range(N_RA):
         for j in range(N_RA):
@@ -337,6 +343,24 @@ def read_time_info(filename):
     #spike_times = struct.unpack("<{0}d".format(N_RA), data[(2*SIZE_OF_INT+SIZE_OF_DOUBLE):])
     return (trial_number, simulation_time, spike_times, neuron_fired)
 
+def read_replaced_neurons(filename):
+    """
+    Reads which neurons were replaced from file
+    """
+    with open(filename, "rb") as file:
+        data = file.read()
+        file.close()
+    
+    num_replaced = struct.unpack("<i", data[:SIZE_OF_INT])[0] # number of replaced neurons
+
+    replaced_neurons = [] # id of replaced neurons
+    
+    for i in range(num_replaced):
+        replaced = struct.unpack("<i", data[(SIZE_OF_INT + i*SIZE_OF_INT):(SIZE_OF_INT + (i+1)*SIZE_OF_INT)])[0]
+        replaced_neurons.append(replaced)
+        
+    return replaced_neurons
+    
 def read_maturation_time_sequence(filename):
     """
     Reads neuron states of target neurons such as remodeled and mature indicators; gaba reverse potential

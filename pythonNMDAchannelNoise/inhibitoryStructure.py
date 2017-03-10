@@ -11,13 +11,35 @@ import numpy as np
 import matplotlib.pyplot as plt
 from collections import defaultdict
 
-dataDir = "/home/eugene/Output/networks/RandomChainTest240217/RA/"
+dataDir = "/home/eugene/hodgkinData/gabaMaturation010217/membraneTraces/RA/"
 
 DENDRITIC_THRESHOLD = 0.0 # threshold for burst spike in mV
 INHIBITORY_KICK_THRESHOLD = 0.1 # threshold for inhibitory inputs
 INHIBITORY_SPIKE_RESOLUTION = 1.0 # resolution in ms wihin which we treat inhibitory spike as the same
 TIMESTEP = 0.02 # timestep of neuron dynamics in ms
 WINDOW_SIZE = 50.0 # window in which to calculate input conductances
+
+def find_silent_neurons(neurons, num_trials, dataDir):
+    """
+    Finds neurons that did not fire in any of the training trials
+    """
+    num_successful_trials = [] # number of trials in which dendritic bursts were produced    
+    
+    for neuron_id in neurons:
+        counter = 0 # counter to count successful trials
+        for n in range(num_trials):
+            filename = dataDir + "RA" + str(neuron_id) + "_trial" + str(n+1) + ".bin"
+            (t, Vs, _, _, _, Vd, _, _, _, _, _, _, _, _, _, _, _, _) = reading.read_hh2(filename)
+            
+            burst_times, burst_indices = get_burst_times(t, Vd) # obtain dendritic burst times
+            
+            if len(burst_times) > 0:
+                counter += 1        
+        num_successful_trials.append(counter)
+    
+    not_fired = [n for i, n in enumerate(neurons) if num_successful_trials[i] == 0]    
+    
+    return not_fired, num_successful_trials
 
 def calculate_average_input_conductance_for_neurons(neurons, num_trials, dataDir):
     """
@@ -60,8 +82,8 @@ def calculate_average_input_conductance_for_neuron(neuron_id, num_trials, dataDi
         num_points_in_window += 1
         
     half_window = num_points_in_window / 2
-    print half_window
-    print num_points_in_window
+    #print half_window
+    #print num_points_in_window
     
     exc_input = np.zeros((num_trials,num_points_in_window), np.float32)
     inh_input = np.zeros((num_trials,num_points_in_window), np.float32)
@@ -85,20 +107,22 @@ def calculate_average_input_conductance_for_neuron(neuron_id, num_trials, dataDi
             # average over number of dendritic bursts:
             exc_input[n] = exc_input[n] / float(len(burst_indices))
             inh_input[n] = inh_input[n] / float(len(burst_indices))
-        # if no dendritic bursts was produced
-        else:
-            average_exc_input = np.zeros(num_points_in_window, np.float32)
-            average_inh_input = np.zeros(num_points_in_window, np.float32)
-            t_input = np.linspace(-half_window * TIMESTEP, half_window * TIMESTEP, num_points_in_window)
-            
-            return t_input, average_exc_input, average_inh_input
-            
-    print exc_input.shape
-    average_exc_input = np.sum(exc_input[successful_trials], axis=0) / np.sum(successful_trials)
-    average_inh_input = np.sum(inh_input[successful_trials], axis=0) / np.sum(successful_trials)
-    t_input = np.linspace(-half_window * TIMESTEP, half_window * TIMESTEP, num_points_in_window)
         
-    return t_input, average_exc_input, average_inh_input
+    #print exc_input.shape
+    
+    t_input = np.linspace(-half_window * TIMESTEP, half_window * TIMESTEP, num_points_in_window)
+
+    # if no dendritic bursts was produced            
+    if np.sum(successful_trials) == 0:        
+        average_exc_input = np.zeros(num_points_in_window, np.float32)
+        average_inh_input = np.zeros(num_points_in_window, np.float32)
+        return t_input, average_exc_input, average_inh_input
+    
+    else:    
+        average_exc_input = np.sum(exc_input[successful_trials], axis=0) / np.sum(successful_trials)
+        average_inh_input = np.sum(inh_input[successful_trials], axis=0) / np.sum(successful_trials)
+        
+        return t_input, average_exc_input, average_inh_input
 
 def get_burst_times(t, Vd):
     """
@@ -106,14 +130,15 @@ def get_burst_times(t, Vd):
     """
     burst_times = []
     burst_indices = []
-    flag = False
+    flag = False # indicator of crossing potential threshold
         
     for i, v in enumerate(Vd):
         if flag == False and v >= DENDRITIC_THRESHOLD:
             flag = True
-        elif flag == True and v < DENDRITIC_THRESHOLD:
             burst_times.append(t[i])
             burst_indices.append(i)
+            
+        elif flag == True and v < DENDRITIC_THRESHOLD:
             flag = False
         
     return burst_times, burst_indices
@@ -262,43 +287,122 @@ num_trials = 1
 #            82, 85, 87, 90, 92, 122, 144, 226, 227, 131, 101, 81, 259, 231, 110, 114, 243, 117, 120, \
 #            250, 123, 124, 213]
 #==============================================================================
-
-num_layers = 11
-num_neurons_in_layer = 4
-neurons = [n*num_neurons_in_layer + j for n in range(1, num_layers) for j in range(num_neurons_in_layer) ]    
-
-print neurons       
+    
            
 #average_inh_input_burst_difference_all_neurons(neurons, num_trials)
 
-neuron_id = 106
+
 num_trials = 20
 
-#neurons = [276, 23, 99, 24, 155, 128, 165, 114, 184, 203, 257, 183, 294, 273]
-neurons = [102, 236, 118, 90, 256, 38, 179, 252, 254, 168, 51, 145, 202, 191, 26, 149, \
-            72, 269, 106, 49, 86, 62, 247, 91]
 
+#==============================================================================
+# # gabaMaturation 300117
+# neurons_all = [155, 128, 165, 114, 184, 273, 203, 257, 183, 294, 19, 35, 97, 142, 6, 233, \
+#                192, 295, 38, 248, 69, 207, 49, 263]
+#==============================================================================
+
+#==============================================================================
+# # gabaMaturation 310117
+# neurons_all = [96, 226 , 110, 15, 178, 20, 215, 192, 128, 7, 38, 280]
+# 
+#==============================================================================
+
+# gabaMaturation 010217
+neurons_all = [131, 69, 90, 15, 169, 179, 226, 123, 207, 29, 120, 231, 243, 117, 172, 163, \
+               60, 167, 142]
+
+#==============================================================================
+# #RandomChainConnections240217
+# neurons_all = [225, 198, 204, 114, 193, 78, 47, 177, 206, 22, 110, 264, 42, 169, 155, 299, 235, \
+#            118, 89, 255, 90, 178, 251, 253, 98, 167, 51, 145, 201, 75, 190, 148, 72, 268, 194, 105, 49, 86, 246, \
+#            184, 27, 109, 216, 173]
+#==============================================================================
+
+#==============================================================================
+# #RandomChainConnections010317
+# neurons_all = [288, 12, 197, 172, 264, 146, 136, 9, 187, 259, 101, 243, 161, 247, 44, 67, 143, 200, 257, 17, \
+#                212, 34, 46, 214, 226, 240, 294, 160, 127, 236, 15, 196, 195, 88, 41, 230, 69, 42, 292, 262, \
+#                98, 297, 144, 266, 108, 179, 272, 50, 233, 102, 271, 206, 103, 26, 232, 121, 248, 120, 215, 205, \
+#                36, 254, 92, 148]
+#==============================================================================
+
+
+#neurons_all = [174, 216, 27, 185, 152, 97, 101, 181, 165, 14, 234, 60, 213, 94, 287, 155, 109, 170, \
+#                42, 265, 110, 22, 194, 207, 115, 177]
+
+#==============================================================================
+# not_fired, num_successful_trials = find_silent_neurons(neurons_all, num_trials, dataDir)
+#         
+# print("neurons that did not fire: ",not_fired)
+# print("number of successful trials for each neuron:",num_successful_trials)
+# 
+#==============================================================================
+
+#neurons_all = range(4, 4+4*20)
+
+
+neuron_1 = 131
+neuron_2 = 142
 #t_input, average_exc_input, average_inh_input = calculate_average_input_conductance_for_neuron(neuron_id, num_trials, dataDir)
-t_input, average_exc_input, average_inh_input = calculate_average_input_conductance_for_neurons(neurons, num_trials, dataDir)
+t_input, average_exc_input, average_inh_input = calculate_average_input_conductance_for_neurons(neurons_all, num_trials, dataDir)
+_, average_exc_input_1, average_inh_input_1 = calculate_average_input_conductance_for_neuron(neuron_1, num_trials, dataDir)
+_, average_exc_input_2, average_inh_input_2 = calculate_average_input_conductance_for_neuron(neuron_2, num_trials, dataDir)
 
-print t_input
-print t_input.shape
-print average_exc_input.shape
 
 f = plt.figure()
 
 ax1 = f.add_subplot(211)
-ax1.set_title("Average conductances of 24 neurons from RandomChainTest240217".format(neuron_id))
+ax1.set_title("Average conductances of {0} neurons from gabaMaturation010217".format(len(neurons_all)))
 
 #ax1.set_title("Conductances for neuron {0}".format(neuron_id))
 ax1.plot(t_input, average_exc_input)
 ax1.set_ylabel("$G_{exc, d}$")
+_, ymax = ax1.get_ylim()
+ax1.set_ylim([0, ymax])
 
 ax2 = f.add_subplot(212)
 
 ax2.plot(t_input, average_inh_input)
 ax2.set_xlabel("time (ms)")
 ax2.set_ylabel("$G_{inh, d}$")
+_, ymax = ax2.get_ylim()
+ax2.set_ylim([0, ymax])
+
+f = plt.figure()
+ax1 = f.add_subplot(221)
+
+ax1.set_title("Conductances for neuron {0}".format(neuron_1))
+ax1.plot(t_input, average_exc_input_1)
+ax1.set_ylabel("$G_{exc, d}$")
+_, ymax = ax1.get_ylim()
+ax1.set_ylim([0, ymax])
+
+ax2 = f.add_subplot(223)
+
+ax2.plot(t_input, average_inh_input_1)
+ax2.set_xlabel("time (ms)")
+ax2.set_ylabel("$G_{inh, d}$")
+_, ymax = ax2.get_ylim()
+ax2.set_ylim([0, ymax])
+
+ax1 = f.add_subplot(222)
+
+ax1.set_title("Conductances for neuron {0}".format(neuron_2))
+ax1.plot(t_input, average_exc_input_2)
+ax1.set_ylabel("$G_{exc, d}$")
+_, ymax = ax1.get_ylim()
+ax1.set_ylim([0, ymax])
+
+ax2 = f.add_subplot(224)
+
+ax2.plot(t_input, average_inh_input_2)
+ax2.set_xlabel("time (ms)")
+ax2.set_ylabel("$G_{inh, d}$")
+_, ymax = ax2.get_ylim()
+ax2.set_ylim([0, ymax])
 
 
 plt.show()
+
+
+

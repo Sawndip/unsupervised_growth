@@ -8,7 +8,7 @@ using namespace std;
 int main(int argc, char** argv)
 {
     
-    std::string configurationFile = "/home/eugene/Output/networks/test240217/parameters.cfg"; // configuration file
+    std::string configurationFile = "/home/eugene/Output/networks/gabaMaturation010317/parameters.cfg"; // configuration file
     int rank; // MPI process rank
     Configuration cfg;
 

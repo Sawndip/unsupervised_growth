@@ -466,6 +466,7 @@ void HH2_final::state_noise_check()
 
 void HH2_final::state_check()
 {
+    // somatic spike is defined as membrane potential second crossing of th threshold (when potential gows down)
 	if ((flag_soma[itime] == 1) && (Vs[itime] < threshold))
 	{
 		spike_time = time[itime];
@@ -485,18 +486,19 @@ void HH2_final::state_check()
 		}
 	}
 
-	if ((flag_dend[itime] == 1) && (Vd[itime] < threshold_dend))
+    // dendritic spike is defined as membrane potential first crossing of the threshold (when potential gows up)
+	if ((flag_dend[itime] == 0) && (Vd[itime] >= threshold_dend))
 	{
 		spike_time_dend = time[itime];
-		flag_dend[itime + 1] = 0;
+		flag_dend[itime + 1] = 1;
 		fired_dend = true;
 		Nspikes_dend = Nspikes_dend + 1;
 	}
 	else
 	{
 		//	check if we should change the state of neuron (voltage crossed the threshold)
-		if ((flag_dend[itime] == 0) && (Vd[itime] > threshold_dend))
-			flag_dend[itime + 1] = 1;
+		if ((flag_dend[itime] == 1) && (Vd[itime] < threshold_dend))
+			flag_dend[itime + 1] = 0;
 		else
 		{
 			fired_dend = false;

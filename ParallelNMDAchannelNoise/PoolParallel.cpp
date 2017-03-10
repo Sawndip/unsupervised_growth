@@ -20,6 +20,9 @@ PoolParallel::PoolParallel(const Configuration& cfg)
     network_time = 0.0;
     trial_number = 0;
 
+    T_P1 = 2.0;
+    T_P2 = 3.0;
+
     this->initialize_generator();
 
     // set network parameters
@@ -2031,6 +2034,416 @@ void PoolParallel::chain_growth_manual(int save_freq_short, int save_freq_long)
 
 }
 
+void PoolParallel::trial_burst_stdp(int training)
+{
+	int some_RA_neuron_fired_soma_local;
+	int some_RA_neuron_fired_dend_local;
+
+	int some_I_neuron_fired_local;
+	int some_RA_neuron_fired_soma_global;
+	int some_RA_neuron_fired_dend_global;
+
+	int some_I_neuron_fired_global;
+
+    std::vector<double> spike_times_fired_dend_local;
+    
+    std::vector<int> RA_neurons_fired_dend_global;
+    std::vector<int> RA_neurons_fired_dend_realID;
+
+    internal_time = 0;
+    network_time = network_update_frequency;
+
+    // advance internal time of each neuron
+    for (int i = 0; i < N_RA_local; i++)
+        num_trials_after_replacement_local[i] += 1;
+
+    //printf("network time = %f\n", network_time);
+
+    // if training trial
+    if (training > 0)
+        this->set_training_current();
+
+	// initialize update arrays and fired indicators
+	std::fill(update_Ge_RA_local.begin(), update_Ge_RA_local.end(), 0.0);
+	std::fill(update_Ge_RA_global.begin(), update_Ge_RA_global.end(), 0.0);
+	std::fill(update_Gi_RA_local.begin(), update_Gi_RA_local.end(), 0.0);
+	std::fill(update_Gi_RA_global.begin(), update_Gi_RA_global.end(), 0.0);
+	std::fill(update_Ge_I_local.begin(), update_Ge_I_local.end(), 0.0);
+	std::fill(update_Ge_I_global.begin(), update_Ge_I_global.end(), 0.0);
+
+    some_RA_neuron_fired_soma_local = 0;
+	some_RA_neuron_fired_soma_global = 0;
+
+	some_RA_neuron_fired_dend_local = 0;
+    some_RA_neuron_fired_dend_global = 0;
+
+    some_I_neuron_fired_local = 0;
+    some_I_neuron_fired_global = 0;
+	
+    // evolve dynamics
+    for (int t = 1; t < size; t++)
+	{
+		internal_time += timeStep;
+		
+		for (int i = 0; i < N_RA_local; i++)
+		{
+            // set GABA potential
+            HVCRA_local[i].set_Ei(gaba_potential_local[i]);
+            
+            // Debraband step
+            HVCRA_local[i].Debraband_step_no_target_update();
+            
+            // if some neuron produced somatic spike, do LTD for all previous dendritic spikes
+            if (HVCRA_local[i].get_fired_soma())
+            {
+                some_RA_neuron_fired_soma_local = 1;
+                spikes_in_trial_soma_local[i].push_back(internal_time);
+
+                // loop over all inhibitory targets of fired neurons
+                size_t num_I_targets = syn_ID_RA_I_local[i].size();
+                for (size_t j = 0; j < num_I_targets; j++)
+                {
+                    int syn_ID = syn_ID_RA_I_local[i][j];
+                    update_Ge_I_local[syn_ID] += weights_RA_I_local[i][j];
+
+                }
+				
+                // loop over all excitatory targets
+                size_t num_RA_targets = active_synapses_local[i].size();
+                for (size_t j = 0; j < num_RA_targets; j++)
+                {
+                    int syn_ID = active_synapses_local[i][j];
+                    update_Ge_RA_local[syn_ID] += weights_local[i][syn_ID];
+                }
+
+
+                //for (int j = 0; j < last_soma_spikes_local[i].size(); j++)
+                //{
+                  //  printf("My rank = %d; Soma spikes of neuron %d:  spike_time = %f\n", MPI_rank, Id_RA_local[i],
+                    //    last_soma_spikes_local[i][j]);
+
+                //}
+
+                //printf("My rank = %d; Soma neuron %d fired; spike_time = %f\n", MPI_rank, Id_RA_local[i], spike_times_soma_local[i]);
+
+            } // end if get fired soma
+            
+            // if some neuron produced dendritic spike, store this neuron in array
+            if (HVCRA_local[i].get_fired_dend())
+            {
+                some_RA_neuron_fired_dend_local = 1;
+                spikes_in_trial_dend_local[i].push_back(internal_time);
+                //printf("My rank = %d; RA neuron %d fired; spike_time = %f\n", MPI_rank, Id_RA_local[i], internal_time);
+                RA_neurons_fired_dend_realID.push_back(Id_RA_local[i]);
+                spike_times_fired_dend_local.push_back(internal_time);
+                //printf("My rank = %d; Dend neuron %d fired; spike_time = %f\n", MPI_rank, Id_RA_local[i], spike_times_dend_local[i]);
+
+                // if neuron is saturated apply LTD only to supersynapses
+                if (static_cast<int>(supersynapses_local[i].size()) == Nss)
+                {
+                    for (size_t k = 0; k < supersynapses_local[i].size(); k++)
+                    {
+                        int supersynapse_id = supersynapses_local[i][k];
+                        
+                        if ( (spikes_in_trial_dend_global[supersynapse_id].size() > 0) && (Id_RA_local[i] != supersynapse_id) )
+                        {
+                            double dt = internal_time - spikes_in_trial_dend_global[supersynapse_id].back();
+
+                            //std::cout << "dt in saturated LTD = " << dt << std::endl;
+
+                            if (dt < STDP_WINDOW)
+                            {
+                                //double w = weights_local[i][supersynapse_id];     
+                       
+                                LTD_burst(weights_local[i][supersynapse_id], dt);
+                                
+                                //printf("LTD from saturated neuron %d onto %d; somatic spike: %f; dendritic spike: %f; dt = %f; dw = %f\n",
+                                //            Id_RA_local[i], supersynapse_id, spikes_in_trial_soma_local[i].back(), spike_times_dend_global[supersynapse_id],
+                                //            dt, weights_local[i][supersynapse_id] - w);
+                                
+                                update_synapse(i, supersynapse_id);
+                                
+                            }
+                        }
+                    }
+
+					// if some supersynapse desaturated, update all synapses
+                	if (static_cast<int>(supersynapses_local[i].size()) < Nss)
+						for (int j = 0; j < N_RA; j++)
+							this->update_synapse(i, j);
+                }
+                // if not saturated apply LTD rule with the last dendritic spike of all neurons and add glutamate to all neuron except the fired one
+                else
+                {
+                    for (int j = 0; j < N_RA; j++)
+                    {
+                        if ( (spikes_in_trial_dend_global[j].size() > 0) && (Id_RA_local[i] != j) )
+                        {
+                            double dt = internal_time - spikes_in_trial_dend_global[j].back();
+                            
+                            //std::cout << "dt in LTD = " << dt << std::endl;
+
+                            if (dt < STDP_WINDOW)
+                            {
+
+                                //double w = weights_local[i][j];
+
+                                LTD_burst(weights_local[i][j], dt);
+                     
+                                //printf("LTD from neuron %d onto %d; somatic spike: %f; dendritic spike: %f; dt = %f; dw = %f\n", Id_RA_local[i], j,
+                                //	spikes_in_trial_soma_local[i].back(), spike_times_dend_global[j], dt, weights_local[i][j] - w);
+                                
+                                update_synapse(i, j);
+                                    
+                            }
+                        }
+                    }
+                }
+
+            } // end if get_fired_dend
+
+		} // end for i -> N_RA_local
+
+		for (int i = 0; i < N_I_local; i++)
+		{
+            HVCI_local[i].DP8_step_no_target_update();
+            
+            //  if some I neuron spikes, change conductance update array
+            if (HVCI_local[i].get_fired())
+            {
+                //printf("My rank = %d; I neuron %d fired; spike_time = %f\n", MPI_rank, Id_I_local[i], internal_time);
+                some_I_neuron_fired_local = 1;
+                spikes_in_trial_interneuron_local[i].push_back(internal_time);
+
+                size_t num_RA_targets = syn_ID_I_RA_local[i].size();
+                // loop over all targets of fired neurons
+                for (size_t j = 0; j < num_RA_targets; j++)
+                {
+                    int syn_ID = syn_ID_I_RA_local[i][j];
+                    update_Gi_RA_local[syn_ID] += weights_I_RA_local[i][j];
+                    //printf("Rank = %d; i = %d; update_Gi_RA_local[%d] = %f; weights_I_RA_local[%d][%d] = %f\n", MPI_rank, i, syn_ID,
+                     //   update_Gi_RA_local[syn_ID], weights_I_RA_local[fired_ID][j], fired_ID, j);
+                }
+            }
+		} // end if i -> N_I_local
+
+        // if we need to update network state
+        // get if any neurons fired in some process
+
+        if (internal_time > network_time)
+        {
+            //if (MPI_rank == 0)
+            //{
+            //    std::cout << "internal time = " << internal_time << " > network_time = " << network_time << std::endl; 
+            //}
+
+            MPI_Allreduce(&some_RA_neuron_fired_soma_local, &some_RA_neuron_fired_soma_global, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+            MPI_Allreduce(&some_RA_neuron_fired_dend_local, &some_RA_neuron_fired_dend_global, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+            MPI_Allreduce(&some_I_neuron_fired_local, &some_I_neuron_fired_global, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+        
+            if (some_I_neuron_fired_global > 0)
+            {
+            // sum update array and send to all processes
+
+                MPI_Allreduce(&update_Gi_RA_local[0], &update_Gi_RA_global[0], N_RA, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+
+                for (int i = 0; i < N_RA_local; i++)
+                {
+                    HVCRA_local[i].raiseI(update_Gi_RA_global[Id_RA_local[i]]);
+                }
+            	
+				// update conductance arrays and fired indicators
+				some_I_neuron_fired_local = 0;
+            	some_I_neuron_fired_global = 0;
+				
+				std::fill(update_Gi_RA_local.begin(), update_Gi_RA_local.end(), 0.0);
+				std::fill(update_Gi_RA_global.begin(), update_Gi_RA_global.end(), 0.0);
+            }
+
+
+            //if (some_RA_neuron_fired_global == 1)
+            //    printf("Rank %d; some_RA_neuron_fired_global: %d\n", MPI_rank, some_RA_neuron_fired_global);
+
+            // if somatic compartment of any neuron in the pool fired, update synaptic conductances
+             if (some_RA_neuron_fired_soma_global > 0)
+             {
+            // sum all update arrays and send to all processes
+
+                MPI_Allreduce(&update_Ge_RA_local[0], &update_Ge_RA_global[0], N_RA, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+                MPI_Allreduce(&update_Ge_I_local[0], &update_Ge_I_global[0], N_I, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+
+                // now update excitatory conductances of all neurons
+                for (int i = 0; i < N_RA_local; i++)
+                {
+                    HVCRA_local[i].raiseE(update_Ge_RA_global[Id_RA_local[i]]); // update conductance
+				}
+
+                for (int i = 0; i < N_I_local; i++)
+                {
+                    HVCI_local[i].raiseE(update_Ge_I_global[Id_I_local[i]]);
+                }
+				
+				// update conductance arrays and fired indicators
+            	some_RA_neuron_fired_soma_local = 0;
+	        	some_RA_neuron_fired_soma_global = 0;
+				
+				std::fill(update_Ge_RA_local.begin(), update_Ge_RA_local.end(), 0.0);
+				std::fill(update_Ge_RA_global.begin(), update_Ge_RA_global.end(), 0.0);
+				
+				std::fill(update_Ge_I_local.begin(), update_Ge_I_local.end(), 0.0);
+				std::fill(update_Ge_I_global.begin(), update_Ge_I_global.end(), 0.0);
+            }
+
+            // if dendritic compartment of any neuron in the pool fired, update weights
+            if (some_RA_neuron_fired_dend_global > 0)
+            {
+                // gather all bursted neurons
+                this->gather_bursts(RA_neurons_fired_dend_realID, RA_neurons_fired_dend_global, spike_times_fired_dend_local);
+
+                /*
+                if (MPI_rank == 0)
+                {   for (int i = 0; i < N_RA; i++)
+                        printf("neuron %d; spike_time_dend = %f\n", i ,spike_times_dend_global[i]);
+                }
+                */
+
+                // apply LTP rule for all recent dendritic bursts and dendritic spike of fired neurons
+                for (int i = 0; i < N_RA_local; i++)
+                {
+                    // if neuron is saturated apply LTP only if dendritic spike occured in supersynapse
+                    if (static_cast<int>(supersynapses_local[i].size()) == Nss)
+                    {
+                        for (size_t j = 0; j < RA_neurons_fired_dend_global.size(); j++)
+                        {
+                            int fired_ID = RA_neurons_fired_dend_global[j];
+
+                            std::vector<int>::iterator pos = std::find(supersynapses_local[i].begin(),
+                                        supersynapses_local[i].end(), fired_ID);
+
+                            if (pos!=supersynapses_local[i].end())
+                            {
+                                for  (size_t k = 0; k < spikes_in_trial_dend_local[i].size(); k++)
+                                {
+                                    double dt = spikes_in_trial_dend_global[fired_ID].back() - spikes_in_trial_dend_local[i][k];
+
+                                    if (dt < STDP_WINDOW)
+                                    {
+                                        //double w = weights_local[i][fired_ID];
+                                        
+                                        LTP_burst(weights_local[i][fired_ID], dt);
+
+                                        //printf("LTP from saturated neuron %d onto %d; somatic spike at %f; dendritic spike at %f; dt = %f; dw = %f\n", 
+                                         //           Id_RA_local[i], fired_ID, spikes_in_trial_soma_local[i][k], spike_times_dend_global[fired_ID], 
+                                         //           dt, weights_local[i][fired_ID] - w);
+                                        
+                                        update_synapse(i, fired_ID);
+									}
+                                }
+                            }
+                        }
+
+                    }
+                    // if not saturated apply LTP for all dendritic spikes
+                    else
+                    {
+                        for (size_t j = 0; j < RA_neurons_fired_dend_global.size(); j++)
+                        {
+                            int fired_ID = RA_neurons_fired_dend_global[j];
+                            // don't allow self-to-self connections
+                            if (fired_ID != Id_RA_local[i])
+                            {
+                                // loop over last somatic spikes
+                                for  (size_t k = 0; k < spikes_in_trial_dend_local[i].size(); k++)
+                                {
+                                    double dt = spikes_in_trial_dend_global[fired_ID].back() - spikes_in_trial_dend_local[i][k];
+
+                                    if (dt < STDP_WINDOW)
+                                    {
+                                        //double w = weights_local[i][fired_ID];
+                                        
+                                        LTP_burst(weights_local[i][fired_ID], dt);
+                                        
+                                        //printf("LTP from neuron %d onto %d; somatic spike at %f; dendritic spike at %f; dt = %f; dw = %f\n", 
+                                          //          Id_RA_local[i], fired_ID, spikes_in_trial_soma_local[i][k], spike_times_dend_global[fired_ID], 
+                                            //        dt, weights_local[i][fired_ID] - w);
+                                        
+                                        update_synapse(i, fired_ID);
+                                  		
+									}
+                                }
+                            }
+                        }
+                   }
+
+                } // end for i -> N_RA_local
+
+               // check if we need axon remodeling
+
+                for (int i = 0; i < N_RA_local; i++)
+                {
+                    if ( (static_cast<int>(supersynapses_local[i].size()) == Nss) && (remodeled_local[i] == 0) )
+                    {
+					    this->axon_remodeling(i);
+
+				    }
+                }
+	        	
+				// update fired arrays and indicators
+				some_RA_neuron_fired_dend_local = 0;
+            	some_RA_neuron_fired_dend_global = 0;
+            	
+				RA_neurons_fired_dend_global.clear();
+            	RA_neurons_fired_dend_realID.clear();
+
+                spike_times_fired_dend_local.clear();
+            } // end if some_neuron_dend_fired
+            
+            network_time += network_update_frequency;
+            
+            //printf("network_time = %f\n", network_time);
+
+        }
+
+
+        //MPI_Barrier(MPI_COMM_WORLD);
+    }
+    this->potentiation_decay();
+    //printf("After potentiation decay")
+    this->update_all_synapses();
+	
+	// calculate new gaba reverse potential
+	// update rate
+	for (int i = 0; i < N_RA_local; i++)
+	{
+		num_bursts_in_recent_trials[i].push_front(static_cast<int>(spikes_in_trial_dend_local[i].size()));
+        
+        firing_rate_local[i] = std::accumulate(num_bursts_in_recent_trials[i].begin(), num_bursts_in_recent_trials[i].begin() + RATE_WINDOW_SHORT, 0.0)
+                                    / static_cast<double>(RATE_WINDOW_SHORT);
+
+
+		//if (std::accumulate(num_bursts_in_recent_trials[i].begin(), num_bursts_in_recent_trials[i].end(), 0.0) >= 1)
+		//{
+		//	std::cout << "Recent bursts of neuron " << Id_RA_local[i] << " :" << std::endl;
+			
+		//	for (size_t j = 0; j < num_bursts_in_recent_trials[i].size(); j++)
+		//		std::cout << num_bursts_in_recent_trials[i][j] << "\t";
+			
+		//	std::cout << std::endl;
+		//}
+	}
+    // update GABA potential based on firing rates
+	this->update_Ei();
+    
+    // gather all neurons that are to be replaced
+    this->gather_neurons_2replace();
+    
+    // if some neurons are to be replaced, replace them
+    if (replace_real_id_global.size() > 0)
+        this->replace_neurons();
+
+
+}
+
 
 
 void PoolParallel::trial(int training)
@@ -2052,6 +2465,10 @@ void PoolParallel::trial(int training)
 
     internal_time = 0;
     network_time = network_update_frequency;
+
+    // advance internal time of each neuron
+    for (int i = 0; i < N_RA_local; i++)
+        num_trials_after_replacement_local[i] += 1;
 
     //printf("network time = %f\n", network_time);
 
@@ -2492,6 +2909,68 @@ void PoolParallel::trial(int training)
 
 }
 
+void PoolParallel::gather_bursts(std::vector<int>& RA_neurons_fired_dend_realID, std::vector<int>& RA_neurons_fired_dend_global, 
+                                 std::vector<double>& spike_times_fired_dend_local)
+{
+        std::vector<int> spike_times_fired_dend_global;
+        int num_RA_fired_dend_local = RA_neurons_fired_dend_realID.size();
+        int num_RA_fired_dend_global;
+        //printf("Rank %d; num_RA_fired_local: %d\n", MPI_rank, num_RA_fired_local);
+
+        int* recvcounts = new int[MPI_size];
+        int* displs = new int[MPI_size];
+
+        // get total number of fired neurons
+        MPI_Allreduce(&num_RA_fired_dend_local, &num_RA_fired_dend_global, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+        RA_neurons_fired_dend_global.resize(num_RA_fired_dend_global);
+        spike_times_fired_dend_global.resize(num_RA_fired_dend_global);
+
+        //printf("Rank %d; fired RA num: %d\n", MPI_rank, num_RA_fired_local);
+
+        //if (MPI_rank == 0)
+        //{
+        //   printf("Master; fired RA num global: %d\n", num_RA_fired_global);
+        //   printf("Master; RA_neurons_fired_global.size(): %d\n", RA_neurons_fired_global.size());
+        //}
+
+        // get array with number of fired neurons in each process
+        MPI_Allgather(&num_RA_fired_dend_local, 1, MPI_INT, &recvcounts[0], 1, MPI_INT, MPI_COMM_WORLD);
+
+        displs[0] = 0;
+        for (int i = 1; i < MPI_size; i++)
+        {
+            displs[i] = displs[i-1] + recvcounts[i-1];
+        }
+
+
+        //for (int i = 0; i < RA_neurons_fired_realID.size(); i++)
+        //        printf("Rank %d; fired RA neuron: %d\n", MPI_rank, RA_neurons_fired_realID[i]);
+
+        // get fired neurons
+        MPI_Allgatherv(&RA_neurons_fired_dend_realID[0], num_RA_fired_dend_local, MPI_INT,
+            &RA_neurons_fired_dend_global[0], recvcounts, displs, MPI_INT, MPI_COMM_WORLD);
+        
+        MPI_Allgatherv(&spike_times_fired_dend_local[0], num_RA_fired_dend_local, MPI_DOUBLE,
+            &spike_times_fired_dend_global[0], recvcounts, displs, MPI_DOUBLE, MPI_COMM_WORLD);
+        /*
+        if (MPI_rank == 0)
+         {
+            printf("Master; RA_neurons_fired_dend_global.size(): %d\n", RA_neurons_fired_dend_global.size());
+            for (int i = 0; i < RA_neurons_fired_dend_global.size(); i++)
+                printf("Rank %d; Dend fired RA neuron: %d; spike_time = %f\n", MPI_rank, RA_neurons_fired_dend_global[i],
+                        internal_time);
+        }
+         */
+        // change spike times
+        for (size_t i = 0; i < RA_neurons_fired_dend_global.size(); i++)
+        {
+            spikes_in_trial_dend_global[RA_neurons_fired_dend_global[i]].push_back(spike_times_fired_dend_global[i]);   
+        }
+
+        delete [] recvcounts;
+        delete [] displs;
+}
+
 void PoolParallel::gather_neurons_2replace()
 {
     // gather all neurons that are to be replaced
@@ -2559,7 +3038,9 @@ void PoolParallel::kill_neuron(int local_id, int global_id, int process_rank)
         gaba_reached_mature_local[local_id] = 0;
 	
         firing_rate_local[local_id] = 0.0;
-        
+    
+        num_trials_after_replacement_local[local_id] = 0;
+
         // clear all recent bursts
         for (int j = 0; j < RATE_WINDOW_LONG; j++)
             num_bursts_in_recent_trials[local_id].push_back(0);
@@ -2609,7 +3090,7 @@ void PoolParallel::kill_neuron(int local_id, int global_id, int process_rank)
 
     // zero weights to neuron
     for (int i = 0; i < N_RA_local; i++)
-        weights_local[i][local_id] = 0.0;
+        weights_local[i][global_id] = 0.0;
 }
 
 void PoolParallel::initialize_coordinates_for_replaced_neuron(int global_id)
@@ -2713,6 +3194,8 @@ void PoolParallel::initialize_connections_for_replaced_neuron(int global_id)
 void PoolParallel::replace_neurons()
 {
     // write active, supersynapses and weights before replacing neurons
+    this->gather_data();
+
     this->write_weights((outputDirectory + "weights_before_replacement_trial" + std::to_string(trial_number) + ".bin").c_str());
     this->write_active_synapses((outputDirectory + "RA_RA_active_connections_before_replacement_trial" + std::to_string(trial_number) + ".bin").c_str());
     this->write_supersynapses((outputDirectory + "RA_RA_super_connections_before_replacement_trial" + std::to_string(trial_number) + ".bin").c_str());
@@ -2762,6 +3245,8 @@ void PoolParallel::replace_neurons()
     replace_process_rank_global.clear();
     
     // write active, supersynapses and weights after replacing neurons
+    this->gather_data();
+    
     this->write_weights((outputDirectory + "weights_after_replacement_trial" + std::to_string(trial_number) + ".bin").c_str());
     this->write_active_synapses((outputDirectory + "RA_RA_active_connections_after_replacement_trial" + std::to_string(trial_number) + ".bin").c_str());
     this->write_supersynapses((outputDirectory + "RA_RA_super_connections_after_replacement_trial" + std::to_string(trial_number) + ".bin").c_str());
@@ -3003,6 +3488,8 @@ void PoolParallel::resize_arrays_for_RA(int n_local, int n_total)
     firing_rate_local.resize(n_local);
 	firing_rate_global.resize(n_total);
 
+    num_trials_after_replacement_local.resize(n_local);
+
     // initialize circular buffers for somatic spikes
 	num_bursts_in_recent_trials.resize(n_local);
 
@@ -3046,7 +3533,7 @@ void PoolParallel::update_Ei()
             mature_local[i] = 1;
 
 		// if not a training neuron and if firing rate in wide window is smaller than death threshold, replace neuron with a new one
-		else if ( (Id_RA_local[i] >= N_TR) && (firing_rate_long <= DEATH_RATE_THRESHOLD) )
+		else if ( (Id_RA_local[i] >= N_TR) && (firing_rate_long <= DEATH_RATE_THRESHOLD) && (num_trials_after_replacement_local[i] >= RATE_WINDOW_LONG))
 		{
             replace_local_id_local.push_back(i);
             replace_real_id_local.push_back(Id_RA_local[i]);
@@ -3213,6 +3700,26 @@ double PoolParallel::p_I2RA(int i_I, int j_RA)
 		//printf("p = %f\n", prob);
  	}
 	return prob;
+}
+
+void PoolParallel::LTP_burst(double &w, double t)
+{
+	if ( (t >= T_P1) && (t < T_P2) )
+		w = w + R * A_P * (t - T_P1) / (T_P2 - T_P1);
+	
+    else if (t >= T_P2)
+		w = w + R * A_P * exp(-(t - T_P2) / TAU_P);
+
+    if (w < 0)
+        w = 0;
+
+    if (w > WEIGHT_MAX)
+        w = WEIGHT_MAX;
+}
+
+
+void PoolParallel::LTD_burst(double &w, double t)
+{
 }
 
 void PoolParallel::LTP(double &w, double t)
