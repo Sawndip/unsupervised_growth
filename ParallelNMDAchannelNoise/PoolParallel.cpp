@@ -20,7 +20,7 @@ PoolParallel::PoolParallel(const Configuration& cfg)
     network_time = 0.0;
     trial_number = 0;
 
-    T_P1 = 2.0;
+    T_P1 = 1.5;
     T_P2 = 3.0;
 
     this->initialize_generator();
@@ -1968,7 +1968,8 @@ void PoolParallel::chain_growth_manual(int save_freq_short, int save_freq_long)
 		//break;
 		data_gathered = false;
 
-        this->trial(training);
+        //this->trial(training);
+		this->trial_burst_stdp(training);
 
         if (MPI_rank == 0)
             std::cout << "Trial " << trial_number + 1 << std::endl;
@@ -2300,10 +2301,12 @@ void PoolParallel::trial_burst_stdp(int training)
                 // gather all bursted neurons
                 this->gather_bursts(RA_neurons_fired_dend_realID, RA_neurons_fired_dend_global, spike_times_fired_dend_local);
 
-                /*
+              	/* 
                 if (MPI_rank == 0)
-                {   for (int i = 0; i < N_RA; i++)
-                        printf("neuron %d; spike_time_dend = %f\n", i ,spike_times_dend_global[i]);
+                {
+					for (size_t i = 0; i < RA_neurons_fired_dend_global.size(); i++)
+                        printf("neuron %d bursted; spike_time_dend = %f\n", RA_neurons_fired_dend_global[i], 
+								spikes_in_trial_dend_global[RA_neurons_fired_dend_global[i]].back());
                 }
                 */
 
@@ -2326,6 +2329,7 @@ void PoolParallel::trial_burst_stdp(int training)
                                 {
                                     double dt = spikes_in_trial_dend_global[fired_ID].back() - spikes_in_trial_dend_local[i][k];
 
+									//std::cout << "From neuron " << Id_RA_local[i] << " to neuron " << fired_ID << " dt = " << dt << std::endl;
                                     if (dt < STDP_WINDOW)
                                     {
                                         //double w = weights_local[i][fired_ID];
@@ -2357,6 +2361,7 @@ void PoolParallel::trial_burst_stdp(int training)
                                 {
                                     double dt = spikes_in_trial_dend_global[fired_ID].back() - spikes_in_trial_dend_local[i][k];
 
+									//std::cout << "From neuron " << Id_RA_local[i] << " to neuron " << fired_ID << " dt = " << dt << std::endl;
                                     if (dt < STDP_WINDOW)
                                     {
                                         //double w = weights_local[i][fired_ID];
@@ -2912,7 +2917,7 @@ void PoolParallel::trial(int training)
 void PoolParallel::gather_bursts(std::vector<int>& RA_neurons_fired_dend_realID, std::vector<int>& RA_neurons_fired_dend_global, 
                                  std::vector<double>& spike_times_fired_dend_local)
 {
-        std::vector<int> spike_times_fired_dend_global;
+        std::vector<double> spike_times_fired_dend_global;
         int num_RA_fired_dend_local = RA_neurons_fired_dend_realID.size();
         int num_RA_fired_dend_global;
         //printf("Rank %d; num_RA_fired_local: %d\n", MPI_rank, num_RA_fired_local);
@@ -2964,7 +2969,10 @@ void PoolParallel::gather_bursts(std::vector<int>& RA_neurons_fired_dend_realID,
         // change spike times
         for (size_t i = 0; i < RA_neurons_fired_dend_global.size(); i++)
         {
-            spikes_in_trial_dend_global[RA_neurons_fired_dend_global[i]].push_back(spike_times_fired_dend_global[i]);   
+			//if (MPI_rank == 0)
+			//	std::cout << "neuron " << RA_neurons_fired_dend_global[i] << " bursted at " << spike_times_fired_dend_global[i] << std::endl;
+            
+			spikes_in_trial_dend_global[RA_neurons_fired_dend_global[i]].push_back(spike_times_fired_dend_global[i]);   
         }
 
         delete [] recvcounts;
