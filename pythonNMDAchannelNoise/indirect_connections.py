@@ -170,11 +170,11 @@ def indirect_connections_in_groups(training, RA2I_targets, RA2RA_targets, I2RA_t
             
 if __name__ == "__main__":
     
-    RA2I = "/home/eugene/Output/networks/gabaMaturation150217/RA_I_connections.bin"
-    I2RA = "/home/eugene/Output/networks/gabaMaturation150217/I_RA_connections.bin"
-    RA2RA = "/home/eugene/Output/networks/gabaMaturation150217/RA_RA_super_connections.bin"
-    fileMature = "/home/eugene/Output/networks/gabaMaturation150217/mature.bin"
-    fileBursts = "/home/eugene/Output/networks/gabaMaturation150217/spike_times_dend.bin"
+    RA2I = "/home/eugene/Output/networks/gabaMaturation130317/RA_I_connections.bin"
+    I2RA = "/home/eugene/Output/networks/gabaMaturation130317/I_RA_connections.bin"
+    RA2RA = "/home/eugene/Output/networks/gabaMaturation130317/RA_RA_super_connections.bin"
+    fileMature = "/home/eugene/Output/networks/gabaMaturation130317/mature.bin"
+    fileBursts = "/home/eugene/Output/networks/gabaMaturation130317/spike_times_dend.bin"
     
     (N_RA, RA2I_targets, RA2I_targets_G) = reading.read_connections(RA2I)
     (N_RA, RA2RA_targets, RA2RA_targets_G) = reading.read_connections(RA2RA)

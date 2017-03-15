@@ -3712,11 +3712,14 @@ double PoolParallel::p_I2RA(int i_I, int j_RA)
 
 void PoolParallel::LTP_burst(double &w, double t)
 {
-	if ( (t >= T_P1) && (t < T_P2) )
-		w = w + R * A_P * (t - T_P1) / (T_P2 - T_P1);
-	
-    else if (t >= T_P2)
-		w = w + R * A_P * exp(-(t - T_P2) / TAU_P);
+	if (t <= T_P)
+    {
+		w = w + R * A_P * ((1 + F_0) * t / T_P - F_0);
+    }
+	else
+    {
+		w = w + R * A_P * exp(-(t - T_P) / TAU_P);
+    }
 
     if (w < 0)
         w = 0;
@@ -3728,6 +3731,20 @@ void PoolParallel::LTP_burst(double &w, double t)
 
 void PoolParallel::LTD_burst(double &w, double t)
 {
+	if (t <= T_D)
+	{
+		w = w - R * A_D * ( F_0 + (1 -  F_0) * t / T_D);
+		
+
+       // std::cout << "w = " << w << std::endl;
+	}
+	else
+	{
+		w = w - R * A_D * exp(-(t - T_D) / TAU_D);
+
+	}
+	if (w < 0)
+    	w = 0;
 }
 
 void PoolParallel::LTP(double &w, double t)
