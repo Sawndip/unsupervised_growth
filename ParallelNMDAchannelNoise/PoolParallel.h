@@ -239,7 +239,8 @@ protected:
         void test_mature_chain(int num_trials); // test of mature network
 	    
         void randomize_after_trial(); // set all neurons to the resting state
-		
+		void set_all_mature(); // set all neurons to a mature state
+
         // supporting STDP rules
         void LTD_burst(double &w, double t); // long-term depression for burst STDP rule
         void LTP_burst(double &w, double t); // long-term potentiation for burst STDP rule

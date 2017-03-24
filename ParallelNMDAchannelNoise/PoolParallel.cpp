@@ -20,9 +20,6 @@ PoolParallel::PoolParallel(const Configuration& cfg)
     network_time = 0.0;
     trial_number = 0;
 
-    T_P1 = 1.5;
-    T_P2 = 3.0;
-
     this->initialize_generator();
 
     // set network parameters
@@ -1394,6 +1391,13 @@ void PoolParallel::print_received_invariable_connections()
     }
 }
 
+void PoolParallel::set_all_mature()
+{
+    for (int i = 0; i < N_RA_local; i++)
+        mature_local[i] = 1;
+
+}
+
 void PoolParallel::randomize_after_trial()
 {
     std::fill(spike_times_dend_global.begin(), spike_times_dend_global.end(), -200.0);
@@ -2097,27 +2101,31 @@ void PoolParallel::trial_burst_stdp(int training)
             // if some neuron produced somatic spike, do LTD for all previous dendritic spikes
             if (HVCRA_local[i].get_fired_soma())
             {
-                some_RA_neuron_fired_soma_local = 1;
                 spikes_in_trial_soma_local[i].push_back(internal_time);
-
-                // loop over all inhibitory targets of fired neurons
-                size_t num_I_targets = syn_ID_RA_I_local[i].size();
-                for (size_t j = 0; j < num_I_targets; j++)
+                
+                // allow neuron output only if neuron is mature
+                if (mature_local[i] == 1)
                 {
-                    int syn_ID = syn_ID_RA_I_local[i][j];
-                    update_Ge_I_local[syn_ID] += weights_RA_I_local[i][j];
+
+                    some_RA_neuron_fired_soma_local = 1;
+                    // loop over all inhibitory targets of fired neurons
+                    size_t num_I_targets = syn_ID_RA_I_local[i].size();
+                    for (size_t j = 0; j < num_I_targets; j++)
+                    {
+                        int syn_ID = syn_ID_RA_I_local[i][j];
+                        update_Ge_I_local[syn_ID] += weights_RA_I_local[i][j];
+
+                    }
+                    
+                    // loop over all excitatory targets
+                    size_t num_RA_targets = active_synapses_local[i].size();
+                    for (size_t j = 0; j < num_RA_targets; j++)
+                    {
+                        int syn_ID = active_synapses_local[i][j];
+                        update_Ge_RA_local[syn_ID] += weights_local[i][syn_ID];
+                    }
 
                 }
-				
-                // loop over all excitatory targets
-                size_t num_RA_targets = active_synapses_local[i].size();
-                for (size_t j = 0; j < num_RA_targets; j++)
-                {
-                    int syn_ID = active_synapses_local[i][j];
-                    update_Ge_RA_local[syn_ID] += weights_local[i][syn_ID];
-                }
-
-
                 //for (int j = 0; j < last_soma_spikes_local[i].size(); j++)
                 //{
                   //  printf("My rank = %d; Soma spikes of neuron %d:  spike_time = %f\n", MPI_rank, Id_RA_local[i],
@@ -2311,10 +2319,12 @@ void PoolParallel::trial_burst_stdp(int training)
                 */
 
                 // apply LTP rule for all recent dendritic bursts and dendritic spike of fired neurons
+                // but only if source neuron is mature
+
                 for (int i = 0; i < N_RA_local; i++)
                 {
                     // if neuron is saturated apply LTP only if dendritic spike occured in supersynapse
-                    if (static_cast<int>(supersynapses_local[i].size()) == Nss)
+                    if (( static_cast<int>(supersynapses_local[i].size()) == Nss) && (mature_local[i] == 1) )
                     {
                         for (size_t j = 0; j < RA_neurons_fired_dend_global.size(); j++)
                         {
@@ -2347,8 +2357,8 @@ void PoolParallel::trial_burst_stdp(int training)
                         }
 
                     }
-                    // if not saturated apply LTP for all dendritic spikes
-                    else
+                    // if not saturated and is mature apply LTP for all dendritic spikes
+                    else if (mature_local[i] == 1)
                     {
                         for (size_t j = 0; j < RA_neurons_fired_dend_global.size(); j++)
                         {
@@ -3714,7 +3724,7 @@ void PoolParallel::LTP_burst(double &w, double t)
 {
 	if (t <= T_P)
     {
-		w = w + R * A_P * ((1 + F_0) * t / T_P - F_0);
+		w = w + R * A_P * t / T_P;
     }
 	else
     {
@@ -3733,14 +3743,14 @@ void PoolParallel::LTD_burst(double &w, double t)
 {
 	if (t <= T_D)
 	{
-		w = w - R * A_D * ( F_0 + (1 -  F_0) * t / T_D);
+		w = w - w * R * A_D * t / T_D;
 		
 
        // std::cout << "w = " << w << std::endl;
 	}
 	else
 	{
-		w = w - R * A_D * exp(-(t - T_D) / TAU_D);
+		w = w - w * R * A_D * exp(-(t - T_D) / TAU_D);
 
 	}
 	if (w < 0)
