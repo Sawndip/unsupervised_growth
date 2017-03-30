@@ -78,22 +78,58 @@ def find_indirect_connections_from_previously_fired(neuron_id, burst_times, neur
         
     return previously_fired, num_connections_from_previously_fired
 
+def find_output_connections_to_neurons_not_in_chain(layer_neurons, neurons_in_chain, RA2RA_targets):
+    """
+    Outputs connections of neurons in the chain layer to the next layer.
+    Connections to neurons in the previous layer and to neurons inside the same
+    chain layer are ignored
+    """
+    neurons_in_next_layer = []
+    
+    for neuron in layer_neurons:
+        for target in RA2RA_targets[neuron]:
+            if target not in neurons_in_chain and target not in neurons_in_next_layer:
+                neurons_in_next_layer.append(target)
+
+    return neurons_in_next_layer
+
+def find_chain_formation_mechanism(chain, RA2I_targets, I2RA_targets, starting_layer):
+    """
+    Count three types of inhibition:
+    1.) Inhibition received from the previous layer
+    2.) Inhibition received from the layers prior to previous (layers 2 and 3 before)
+    3.) Inhibition received from the neurons in the same group
+    """
+    num_previous_layers = 2    
+    
+    # skip training layer
+    for i in range(starting_layer-1, len(chain)):
+        for j in range(num_previous_layers):
+            if i - j >= 0:
+                print get_indirect_connections_to_target(chain[i], chain[i-j], RA2I_targets, I2RA_targets)
+    
+
 def find_chain_layers(RA2RA_targets):
     """
     Find which neurons are in each chain layer
     """
-    chain = [] # chain structure
-
+    chain = [list(training_neurons)] # chain structure
+    
     # start from training neurons    
-    source_layer = set(list(training_neurons))
+    source_layer = list(training_neurons)
+    neurons_in_chain = set(list(training_neurons))
     
-    while len(source_layer) > 0:
-        chain.append(list(source_layer))
-        new_source_layer = set()
-        for i in source_layer:
-            new_source_layer.update(RA2RA_targets[i])
-        source_layer = new_source_layer
+    neurons_in_next_layer = find_output_connections_to_neurons_not_in_chain(source_layer, neurons_in_chain, RA2RA_targets)
+
+    print neurons_in_next_layer    
     
+    while len(neurons_in_next_layer) > 0:
+        neurons_in_chain.update(neurons_in_next_layer)
+        chain.append(neurons_in_next_layer)
+        source_layer = neurons_in_next_layer
+        neurons_in_next_layer = find_output_connections_to_neurons_not_in_chain(source_layer, neurons_in_chain, RA2RA_targets)
+        print neurons_in_next_layer   
+        
     return chain
 
 def get_indirect_inhibition(source, RA2I_targets, I2RA_targets, G):
@@ -170,11 +206,11 @@ def indirect_connections_in_groups(training, RA2I_targets, RA2RA_targets, I2RA_t
             
 if __name__ == "__main__":
     
-    RA2I = "/home/eugene/Output/networks/gabaMaturation130317/RA_I_connections.bin"
-    I2RA = "/home/eugene/Output/networks/gabaMaturation130317/I_RA_connections.bin"
-    RA2RA = "/home/eugene/Output/networks/gabaMaturation130317/RA_RA_super_connections.bin"
-    fileMature = "/home/eugene/Output/networks/gabaMaturation130317/mature.bin"
-    fileBursts = "/home/eugene/Output/networks/gabaMaturation130317/spike_times_dend.bin"
+    RA2I = "/home/eugene/Output/networks/gabaMaturation270317/RA_I_connections.bin"
+    I2RA = "/home/eugene/Output/networks/gabaMaturation270317/I_RA_connections.bin"
+    RA2RA = "/home/eugene/Output/networks/gabaMaturation270317/RA_RA_super_connections.bin"
+    fileMature = "/home/eugene/Output/networks/gabaMaturation270317/mature.bin"
+    fileBursts = "/home/eugene/Output/networks/gabaMaturation270317/spike_times_dend.bin"
     
     (N_RA, RA2I_targets, RA2I_targets_G) = reading.read_connections(RA2I)
     (N_RA, RA2RA_targets, RA2RA_targets_G) = reading.read_connections(RA2RA)
@@ -187,60 +223,69 @@ if __name__ == "__main__":
     
             
     training = [0, 1, 2, 3]
-    num_layers = 3
+    num_layers = 5
     
     #indirect_connections_in_groups(training, RA2I_targets, RA2RA_targets, I2RA_targets, num_layers)
     G = 0.2
     
     #print get_indirect_inhibition([0, 1, 2, 3], RA2I_targets, I2RA_targets, G)
     
-    num_indirect_connections_from_previous_layer = indirect_connections_in_groups(training, RA2I_targets, RA2RA_targets, I2RA_targets, num_layers)
+    chain = find_chain_layers(RA2RA_targets)    
+    print chain
+    starting_layer = 2    
+    find_chain_formation_mechanism(chain, RA2I_targets, I2RA_targets, starting_layer)
     
-    print num_indirect_connections_from_previous_layer
+    #num_indirect_connections_from_previous_layer = indirect_connections_in_groups(training, RA2I_targets, RA2RA_targets, I2RA_targets, num_layers)
+    
+    #print num_indirect_connections_from_previous_layer
     
     source = [0, 1, 2, 3]
-    targets = [219, 44, 238, 175]
+    targets = [148, 173, 129, 287]
     
     
-    print get_indirect_connections_to_target(source, targets, RA2I_targets, I2RA_targets)
+#==============================================================================
+#     print get_indirect_connections_to_target(source, targets, RA2I_targets, I2RA_targets)
+#     
+#     f = plt.figure()
+#     ax = f.add_subplot(111)
+#     
+#     for i in range(len(num_indirect_connections_from_previous_layer)):
+#         x = [i+1]*len(num_indirect_connections_from_previous_layer[i])    
+#         ax.scatter(x, num_indirect_connections_from_previous_layer[i])
+#     
+#     ax.set_title("Number of indirect connections from previous layer")
+#     ax.set_xlabel("layer id")
+#     ax.set_ylabel("# indirect connections")
+#     
+#     
+#     
+#     print find_chain_layers(RA2RA_targets)  
+#     
+#     
+# 
+#     (trial_number, simulation_time, burst_times, neurons_fired) = reading.read_time_info(fileBursts)
+#     
+#     burst_times = [t for sublist in list(burst_times) for t in sublist]
+#     neurons_fired = [ind for sublist in list(neurons_fired) for ind in sublist]
+#     
+#     
+#     
+#     burst_times, neurons_fired = zip(*sorted(zip(burst_times, neurons_fired)))
+#     
+#     print burst_times
+#     print neurons_fired
+#     
+#     neurons = [285, 213, 235, 20, 266, 134, 190, 17, 277, 153, 130, 207, 48, 129, 11, 89, 257, 258, 87, 9] 
+#     
+#     find_all_indirect_connections_from_previously_fired(neurons, burst_times, neurons_fired, RA2I_targets, I2RA_targets)
+#     
+#     
+#     
+#     
+#     plt.show()
+#==============================================================================
     
-    f = plt.figure()
-    ax = f.add_subplot(111)
     
-    for i in range(len(num_indirect_connections_from_previous_layer)):
-        x = [i+1]*len(num_indirect_connections_from_previous_layer[i])    
-        ax.scatter(x, num_indirect_connections_from_previous_layer[i])
-    
-    ax.set_title("Number of indirect connections from previous layer")
-    ax.set_xlabel("layer id")
-    ax.set_ylabel("# indirect connections")
-    
-    
-    
-    print find_chain_layers(RA2RA_targets)  
-    
-    
-
-    (trial_number, simulation_time, burst_times, neurons_fired) = reading.read_time_info(fileBursts)
-    
-    burst_times = [t for sublist in list(burst_times) for t in sublist]
-    neurons_fired = [ind for sublist in list(neurons_fired) for ind in sublist]
-    
-    
-    
-    burst_times, neurons_fired = zip(*sorted(zip(burst_times, neurons_fired)))
-    
-    print burst_times
-    print neurons_fired
-    
-    neurons = [285, 213, 235, 20, 266, 134, 190, 17, 277, 153, 130, 207, 48, 129, 11, 89, 257, 258, 87, 9] 
-    
-    find_all_indirect_connections_from_previously_fired(neurons, burst_times, neurons_fired, RA2I_targets, I2RA_targets)
-    
-    
-    
-    
-    plt.show()
     #mature = reading.read_mature(fileMature)
     
     #print "mature = ", mature

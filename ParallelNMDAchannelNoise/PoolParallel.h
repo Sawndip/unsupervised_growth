@@ -27,7 +27,6 @@ public:
     
     void read_network_state(std::string dirname); // read network state from files in the directory dirname
 
-	void initialize_coordinates(); // initialize coordinates of neurons
 
 
     void initialize_test_connections(int num_RA_targets, int num_RA_target_groups); // initialize test connections: first training neuron is connected to the first
@@ -39,10 +38,17 @@ public:
                                                                         // save data for graph update every save_freq_short trials; 
                                                                         // data for analysis every save_freq_long trials
 
+    void chain_growth_with_clustered_training(int save_freq_short, int save_freq_long); // run chain growth algorithm with default connections and coordinates 
+                                                                        // for clustered training neurons;
+                                                                        // save data for graph update every save_freq_short trials; 
+                                                                        // data for analysis every save_freq_long trials
+    
     void chain_growth_manual(int save_freq_short, int save_freq_long); // run chain growth with manually specified coordinates and connections. 
                                                                        // NOTE: coordinates and connections MUST be initialized before using chain_growth_manual
 
-    void test_grown_chain(int num_trials, std::string dataDir); // test grown synfire chain. All data files should be located in directory dataDir
+    void test_grown_chain(int num_trials, std::string dataDir, std::string outputDir); // test grown synfire chain. All data files should 
+                                                                            // be located in directory dataDir; output goes to directory outputDir
+
     void test_random_chain(int num_layers, int num_trials); // test chain with ideal synfire chain connections. Neurons in the chain are wired ignoring
                                                             // any inhibibory structure
     void test_ideal_chain(int num_layers, int num_trials); // run testing trial with ideal chain connections
@@ -256,6 +262,10 @@ protected:
         void replace_neurons(); // replace all neurons specified by replace arrays
         void kill_neuron(int local_id, int global_id, int process_rank); // erase all outgoing and incoming connections from HVC(RA) 
                                                                          // neurons for replaced neuron. Clean indicator arrays, active and super synapses
+	    void initialize_coordinates(); // initialize coordinates of neurons
+        
+        void initialize_coordinates_for_clustered_training(); // initialize coordinates so that first N_TR neurons are clustered
+
         void initialize_coordinates_for_replaced_neuron(int global_id); // change coordinates of replaced neuron to new coordinates
         void initialize_connections_for_replaced_neuron(int global_id); // erase all previous connections from and onto the replaced neuron. Create new connections.
         
@@ -310,6 +320,7 @@ protected:
         void write_active_synapses(const char* RA_RA); // write RA to RA active connections
         void write_supersynapses(const char* RA_RA); // write RA to RA supersynapses
         void write_invariable_synapses(const char* RA_I, const char* I_RA); // write RA to I and I to RA connections
+        void write_all_coordinates(); // write coordinates of HVC(RA) and HVC(I) neurons
         void write_coordinates_RA(const char* filename); // write coordinates of HVC(RA) neurons
         void write_coordinates_I(const char* filename); // write coordinates of HVC(I) neurons
         void write_RA(const char * filename, int n); // write dynamics of RA neuron to a file

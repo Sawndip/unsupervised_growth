@@ -9,8 +9,8 @@ Script plots synaptic weight dynamics of a synapse
 import reading
 import matplotlib.pyplot as plt
 
-filenameWeights = "/home/eugene/Output/networks/gabaMaturation130317/weightsTimeSequence.bin"
-filenameStates = "/home/eugene/Output/networks/gabaMaturation130317/maturation_time_sequence.bin"
+filenameWeights = "/home/eugene/Output/networks/gabaMaturation270317/weightsTimeSequence.bin"
+filenameStates = "/home/eugene/Output/networks/gabaMaturation270317/maturation_time_sequence.bin"
 
 (target, t, remodeled, mature, gaba_potential, firing_rate) = reading.read_maturation_time_sequence(filenameStates)
 
@@ -22,7 +22,7 @@ f = plt.figure()
 ax = f.add_subplot(111)
 
 source_neuron = 0 # real id of source neuron
-target_neuron = 16 # real id of target neuron
+target_neuron = 260 # real id of target neuron
 
 ind_source = source.index(source_neuron) # index of source neuron in the list
 ind_target = target.index(target_neuron) # index of target neuron in the list
@@ -35,7 +35,7 @@ ax.set_ylabel("w")
 
 # plot firing rate and gaba potential
 
-xmax = 20000 # max trial to show
+xmax = 3000 # max trial to show
 
 f = plt.figure()
 

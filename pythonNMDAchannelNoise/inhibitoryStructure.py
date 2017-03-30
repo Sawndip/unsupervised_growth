@@ -11,7 +11,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from collections import defaultdict
 
-dataDir = "/home/eugene/hodgkinData/gabaMaturation010217/membraneTraces/RA/"
+dataDir = "/home/eugene/Output/matureTest/gabaMaturation270317/RA/"
 
 DENDRITIC_THRESHOLD = 0.0 # threshold for burst spike in mV
 INHIBITORY_KICK_THRESHOLD = 0.1 # threshold for inhibitory inputs
@@ -307,9 +307,11 @@ num_trials = 20
 # 
 #==============================================================================
 
-# gabaMaturation 010217
-neurons_all = [131, 69, 90, 15, 169, 179, 226, 123, 207, 29, 120, 231, 243, 117, 172, 163, \
-               60, 167, 142]
+#==============================================================================
+# # gabaMaturation 010217
+# neurons_all = [131, 69, 90, 15, 169, 179, 226, 123, 207, 29, 120, 231, 243, 117, 172, 163, \
+#                60, 167, 142]
+#==============================================================================
 
 #==============================================================================
 # #RandomChainConnections240217
@@ -338,71 +340,82 @@ neurons_all = [131, 69, 90, 15, 169, 179, 226, 123, 207, 29, 120, 231, 243, 117,
 # 
 #==============================================================================
 
+# gabaMaturation 270317 huxley
+#neurons_all = [179, 66 , 11, 123, 173, 129, 148, 287, 199, 174, 285, 298, 144, 20, 161, 165, 205, 89, 17]
+neurons_all = [199, 174, 285, 298, 144, 20, 161, 165, 205, 89, 17]
+
 #neurons_all = range(4, 4+4*20)
 
 
-neuron_1 = 131
-neuron_2 = 142
-#t_input, average_exc_input, average_inh_input = calculate_average_input_conductance_for_neuron(neuron_id, num_trials, dataDir)
-t_input, average_exc_input, average_inh_input = calculate_average_input_conductance_for_neurons(neurons_all, num_trials, dataDir)
-_, average_exc_input_1, average_inh_input_1 = calculate_average_input_conductance_for_neuron(neuron_1, num_trials, dataDir)
-_, average_exc_input_2, average_inh_input_2 = calculate_average_input_conductance_for_neuron(neuron_2, num_trials, dataDir)
+# find chain layers
 
 
-f = plt.figure()
-
-ax1 = f.add_subplot(211)
-ax1.set_title("Average conductances of {0} neurons from gabaMaturation010217".format(len(neurons_all)))
-
-#ax1.set_title("Conductances for neuron {0}".format(neuron_id))
-ax1.plot(t_input, average_exc_input)
-ax1.set_ylabel("$G_{exc, d}$")
-_, ymax = ax1.get_ylim()
-ax1.set_ylim([0, ymax])
-
-ax2 = f.add_subplot(212)
-
-ax2.plot(t_input, average_inh_input)
-ax2.set_xlabel("time (ms)")
-ax2.set_ylabel("$G_{inh, d}$")
-_, ymax = ax2.get_ylim()
-ax2.set_ylim([0, ymax])
-
-f = plt.figure()
-ax1 = f.add_subplot(221)
-
-ax1.set_title("Conductances for neuron {0}".format(neuron_1))
-ax1.plot(t_input, average_exc_input_1)
-ax1.set_ylabel("$G_{exc, d}$")
-_, ymax = ax1.get_ylim()
-ax1.set_ylim([0, ymax])
-
-ax2 = f.add_subplot(223)
-
-ax2.plot(t_input, average_inh_input_1)
-ax2.set_xlabel("time (ms)")
-ax2.set_ylabel("$G_{inh, d}$")
-_, ymax = ax2.get_ylim()
-ax2.set_ylim([0, ymax])
-
-ax1 = f.add_subplot(222)
-
-ax1.set_title("Conductances for neuron {0}".format(neuron_2))
-ax1.plot(t_input, average_exc_input_2)
-ax1.set_ylabel("$G_{exc, d}$")
-_, ymax = ax1.get_ylim()
-ax1.set_ylim([0, ymax])
-
-ax2 = f.add_subplot(224)
-
-ax2.plot(t_input, average_inh_input_2)
-ax2.set_xlabel("time (ms)")
-ax2.set_ylabel("$G_{inh, d}$")
-_, ymax = ax2.get_ylim()
-ax2.set_ylim([0, ymax])
-
-
-plt.show()
-
+#==============================================================================
+# # calculate inhibitory conductance of chain neurons
+# 
+# neuron_1 = 179
+# neuron_2 = 17
+# #t_input, average_exc_input, average_inh_input = calculate_average_input_conductance_for_neuron(neuron_id, num_trials, dataDir)
+# t_input, average_exc_input, average_inh_input = calculate_average_input_conductance_for_neurons(neurons_all, num_trials, dataDir)
+# _, average_exc_input_1, average_inh_input_1 = calculate_average_input_conductance_for_neuron(neuron_1, num_trials, dataDir)
+# _, average_exc_input_2, average_inh_input_2 = calculate_average_input_conductance_for_neuron(neuron_2, num_trials, dataDir)
+# 
+# 
+# f = plt.figure()
+# 
+# ax1 = f.add_subplot(211)
+# ax1.set_title("Average conductances of {0} neurons from gabaMaturation270317 huxley".format(len(neurons_all)))
+# 
+# #ax1.set_title("Conductances for neuron {0}".format(neuron_id))
+# ax1.plot(t_input, average_exc_input)
+# ax1.set_ylabel("$G_{exc, d}$")
+# _, ymax = ax1.get_ylim()
+# ax1.set_ylim([0, ymax])
+# 
+# ax2 = f.add_subplot(212)
+# 
+# ax2.plot(t_input, average_inh_input)
+# ax2.set_xlabel("time (ms)")
+# ax2.set_ylabel("$G_{inh, d}$")
+# _, ymax = ax2.get_ylim()
+# ax2.set_ylim([0, ymax])
+# 
+# f = plt.figure()
+# ax1 = f.add_subplot(221)
+# 
+# ax1.set_title("Conductances for neuron {0}".format(neuron_1))
+# ax1.plot(t_input, average_exc_input_1)
+# ax1.set_ylabel("$G_{exc, d}$")
+# _, ymax = ax1.get_ylim()
+# ax1.set_ylim([0, ymax])
+# 
+# ax2 = f.add_subplot(223)
+# 
+# ax2.plot(t_input, average_inh_input_1)
+# ax2.set_xlabel("time (ms)")
+# ax2.set_ylabel("$G_{inh, d}$")
+# _, ymax = ax2.get_ylim()
+# ax2.set_ylim([0, ymax])
+# 
+# ax1 = f.add_subplot(222)
+# 
+# ax1.set_title("Conductances for neuron {0}".format(neuron_2))
+# ax1.plot(t_input, average_exc_input_2)
+# ax1.set_ylabel("$G_{exc, d}$")
+# _, ymax = ax1.get_ylim()
+# ax1.set_ylim([0, ymax])
+# 
+# ax2 = f.add_subplot(224)
+# 
+# ax2.plot(t_input, average_inh_input_2)
+# ax2.set_xlabel("time (ms)")
+# ax2.set_ylabel("$G_{inh, d}$")
+# _, ymax = ax2.get_ylim()
+# ax2.set_ylim([0, ymax])
+# 
+# 
+# plt.show()
+# 
+#==============================================================================
 
 

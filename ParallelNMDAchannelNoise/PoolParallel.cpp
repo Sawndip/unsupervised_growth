@@ -306,6 +306,49 @@ void PoolParallel::initialize_coordinates_for_added_neurons(int n_total_old)
 
 }
 
+void PoolParallel::initialize_coordinates_for_clustered_training()
+{
+    if (MPI_rank == 0)
+    {
+        this->initialize_coordinates();
+
+        // now select neuron 0 as the first training neuron and find distances to all other neurons in the pool
+
+        double xx = xx_RA[0];
+        double yy = yy_RA[0];
+
+        std::vector<double> distances_to_pool_neurons(xx_RA.size()-1); 
+
+        for (size_t i = 1; i < xx_RA.size(); i++)
+            distances_to_pool_neurons[i-1] = distance(xx, yy, xx_RA[i], yy_RA[i]);
+
+        // sort distances
+        std::vector<size_t> idx(distances_to_pool_neurons.size()); // vector with sorted indices of distances
+
+        std::iota(idx.begin(), idx.end(), 0);
+
+        std::sort(idx.begin(), idx.end(), [&distances_to_pool_neurons](size_t i1, size_t i2)
+                                            {return distances_to_pool_neurons[i1] < distances_to_pool_neurons[i2];});
+
+        // rearrange neuron coordinates: make N_TR - 1 neurons with smallest distances to have id from 1 to N_TR-1
+        // temporary coordinates for swapping neurons
+        double xx_temp;
+        double yy_temp;
+
+        for (int i = 0; i < N_TR-1; i++)
+        {
+            xx_temp = xx_RA[i+1];
+            yy_temp = yy_RA[i+1];
+
+            xx_RA[i+1] = xx_RA[idx[i]+1];
+            yy_RA[i+1] = yy_RA[idx[i]+1];
+
+            xx_RA[idx[i]+1] = xx_temp;
+            yy_RA[idx[i]+1] = yy_temp;
+        }
+    }
+}
+
 void PoolParallel::initialize_coordinates()
 {
     if (MPI_rank == 0)
@@ -382,11 +425,6 @@ void PoolParallel::initialize_coordinates()
             yy_RA.push_back(yy);
 		}
         
-        std::string fileRAxy = outputDirectory + "RA_xy.bin";
-        std::string fileIxy = outputDirectory + "I_xy.bin";
-
-        this->write_coordinates_RA(fileRAxy.c_str());
-        this->write_coordinates_I(fileIxy.c_str());
     }
 }
 
@@ -1458,6 +1496,7 @@ void PoolParallel::test_ideal_chain(int num_layers, int num_trials)
 {
     // initialize coordintates and ideal chain connections
     this->initialize_coordinates();
+    this->write_all_coordinates();
     this->initialize_ideal_chain_connections(num_layers);
    
     this->gather_data();
@@ -1503,15 +1542,17 @@ void PoolParallel::test_ideal_chain(int num_layers, int num_trials)
     }   
 }
 
-void PoolParallel::test_grown_chain(int num_trials, std::string dataDir)
+void PoolParallel::test_grown_chain(int num_trials, std::string dataDir, std::string outputDir)
 {
     this->read_network_state(dataDir); // read data from file
+    outputDirectory = outputDir;
     this->test_mature_chain(num_trials); // test network
 }
 
 void PoolParallel::test_random_chain(int num_layers, int num_trials)
 {
     this->initialize_coordinates();
+    this->write_all_coordinates();
     this->initialize_random_chain_connections(num_layers);
 
     // set all neurons to be mature
@@ -1564,7 +1605,8 @@ void PoolParallel::test_mature_chain(int num_trials)
                                   87, 90, 92, 122, 144, 226, 227, 131, 101, 81, 259, 231, 110, 114, 243, 117, 120, 250, 123, 124, 213};
     */
 
-    std::vector<int> RAtoWrite = {102, 236, 118, 90, 256, 38, 179, 252, 254, 168, 51, 145, 202, 191, 26, 149, 72, 269, 106, 49, 86, 62, 247, 91}; 
+    // neurons for gabaMaturation270317 huxley
+    std::vector<int> RAtoWrite = {179, 66, 11, 123, 173, 129, 148, 287, 199, 174, 285, 298, 144, 20, 161, 165, 205, 89, 17}; 
     std::vector<int> ItoWrite;
 
     for (int i = 0; i < N_I; i++)
@@ -1735,31 +1777,35 @@ void PoolParallel::mature_trial()
             // Debraband step
             HVCRA_local[i].Debraband_step_no_target_update();
             
-            // if some neuron produced somatic spike, do LTD for all previous dendritic spikes
+            // if some neuron produced somatic spike
             if (HVCRA_local[i].get_fired_soma())
             {
-                some_RA_neuron_fired_soma_local = 1;
                 spikes_in_trial_soma_local[i].push_back(internal_time);
                 
-                // loop over all inhibitory targets of fired neurons
-                size_t num_I_targets = syn_ID_RA_I_local[i].size();
-                for (size_t j = 0; j < num_I_targets; j++)
+                // if neuron is mature, update conductances of targets
+                if (mature_local[i] == 1)
                 {
-                    int syn_ID = syn_ID_RA_I_local[i][j];
-                    update_Ge_I_local[syn_ID] += weights_RA_I_local[i][j];
+                    some_RA_neuron_fired_soma_local = 1;
+                    // loop over all inhibitory targets of fired neurons
+                    size_t num_I_targets = syn_ID_RA_I_local[i].size();
+                    for (size_t j = 0; j < num_I_targets; j++)
+                    {
+                        int syn_ID = syn_ID_RA_I_local[i][j];
+                        update_Ge_I_local[syn_ID] += weights_RA_I_local[i][j];
 
-                }
-				
-                // loop over all excitatory targets
-                size_t num_RA_targets = active_synapses_local[i].size();
-                
-                //std::cout << "Neuron fired: " << Id_RA_local[i] << " num_RA_targets: " << num_RA_targets << std::endl;
+                    }
+                    
+                    // loop over all excitatory targets
+                    size_t num_RA_targets = active_synapses_local[i].size();
+                    
+                    //std::cout << "Neuron fired: " << Id_RA_local[i] << " num_RA_targets: " << num_RA_targets << std::endl;
 
-                for (size_t j = 0; j < num_RA_targets; j++)
-                {
-                    int syn_ID = active_synapses_local[i][j];
-                    update_Ge_RA_local[syn_ID] += weights_local[i][syn_ID];
-                    //std::cout << "Neuron fired: " << Id_RA_local[i] << " target: " << syn_ID << " synaptic weight: " << weights_local[i][syn_ID] << std::endl;
+                    for (size_t j = 0; j < num_RA_targets; j++)
+                    {
+                        int syn_ID = active_synapses_local[i][j];
+                        update_Ge_RA_local[syn_ID] += weights_local[i][syn_ID];
+                        //std::cout << "Neuron fired: " << Id_RA_local[i] << " target: " << syn_ID << " synaptic weight: " << weights_local[i][syn_ID] << std::endl;
+                    }
                 }
             } 
 
@@ -1912,10 +1958,22 @@ void PoolParallel::run_trials_with_save(int num_trials)
 
 }
 
+void PoolParallel::chain_growth_with_clustered_training(int save_freq_short, int save_freq_long)
+{
+    // initialize coordinates with clustered training neurons and connections
+    this->initialize_coordinates_for_clustered_training();
+    this->write_all_coordinates();
+    this->initialize_connections();
+    
+    // run chain growth
+    this->chain_growth_manual(save_freq_short, save_freq_long);
+}
+
 void PoolParallel::chain_growth_default(int save_freq_short, int save_freq_long)
 {
     // initialize default coordinates and connections
     this->initialize_coordinates();
+    this->write_all_coordinates();
     this->initialize_connections();
     
     // run chain growth
@@ -1956,8 +2014,8 @@ void PoolParallel::chain_growth_manual(int save_freq_short, int save_freq_long)
     std::vector<int> source{0, 1, 2, 3};
     std::vector<int> target{};
 
-    for (int i = 0; i < N_RA; i++)
-        target.push_back(i);
+    //for (int i = 0; i < N_RA; i++)
+    //    target.push_back(i);
 	
     while (true)
     {
@@ -4635,6 +4693,18 @@ void PoolParallel::write_num_synapses(const char* fileSynapses)
         out_synapses.close();
 	}
 
+}
+
+void PoolParallel::write_all_coordinates()
+{
+    if (MPI_rank == 0)
+    {
+        std::string fileRAxy = outputDirectory + "RA_xy.bin";
+        std::string fileIxy = outputDirectory + "I_xy.bin";
+
+        this->write_coordinates_RA(fileRAxy.c_str());
+        this->write_coordinates_I(fileIxy.c_str());
+    }
 }
 
 void PoolParallel::write_coordinates_RA(const char* filename)

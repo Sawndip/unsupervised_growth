@@ -7,11 +7,11 @@ Created on Wed May 11 12:41:50 2016
 
 filename = "/home/eugene/Output/super.net"
 
-RA_xy = "/home/eugene/Output/RA_xy.bin"
-I_xy = "/home/eugene/Output/I_xy.bin"
-RA2I = "/home/eugene/Output/RA_I_connections.bin"
-I2RA = "/home/eugene/Output/I_RA_connections.bin"
-RARA = "/home/eugene/Output/RA_RA_super_connections.bin"
+RA_xy = "/home/eugene/Output/networks/gabaMaturation270317/RA_xy.bin"
+I_xy = "/home/eugene/Output/networks/gabaMaturation270317/I_xy.bin"
+RA2I = "/home/eugene/Output/networks/gabaMaturation270317/RA_I_connections.bin"
+I2RA = "/home/eugene/Output/networks/gabaMaturation270317/I_RA_connections.bin"
+RARA = "/home/eugene/Output/networks/gabaMaturation270317/RA_RA_super_connections.bin"
 
 
 import reading
