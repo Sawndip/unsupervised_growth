@@ -41,10 +41,10 @@ HHI_final::HHI_final() : mu(0.0), sigma(0.0)
 	generator = nullptr;
 
     // Poisson noise
-	G_noise = 0.2;	//	maximum noise conductance
+	G_noise = 0.45;	//	maximum noise conductance
 	poisson_noise = false;	//	turn on the noise
 
-	lambda = 250; // intensity parameter for Poisson noise
+	lambda = 125; // intensity parameter for Poisson noise
 
 }
 

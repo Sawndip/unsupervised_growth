@@ -182,7 +182,10 @@ void PoolParallel::set_noise_parameters(const struct NoiseParameters& noise_para
 	}
 
     for (int i = 0; i < N_I_local; i++)
-	    HVCI_local[i].set_noise_generator(&generator);
+	{
+        HVCI_local[i].set_noise_generator(&generator);
+        HVCI_local[i].set_poisson_noise();
+    }
 }
 
 void PoolParallel::set_time_parameters(const struct TimeParameters& time_params)
@@ -1958,7 +1961,7 @@ void PoolParallel::run_trials_with_save(int num_trials)
 
 }
 
-void PoolParallel::chain_growth_with_clustered_training(int save_freq_short, int save_freq_long)
+void PoolParallel::chain_growth_with_clustered_training(bool training, int save_freq_short, int save_freq_long)
 {
     // initialize coordinates with clustered training neurons and connections
     this->initialize_coordinates_for_clustered_training();
@@ -1966,10 +1969,10 @@ void PoolParallel::chain_growth_with_clustered_training(int save_freq_short, int
     this->initialize_connections();
     
     // run chain growth
-    this->chain_growth_manual(save_freq_short, save_freq_long);
+    this->chain_growth_manual(training, save_freq_short, save_freq_long);
 }
 
-void PoolParallel::chain_growth_default(int save_freq_short, int save_freq_long)
+void PoolParallel::chain_growth_default(bool training, int save_freq_short, int save_freq_long)
 {
     // initialize default coordinates and connections
     this->initialize_coordinates();
@@ -1977,10 +1980,10 @@ void PoolParallel::chain_growth_default(int save_freq_short, int save_freq_long)
     this->initialize_connections();
     
     // run chain growth
-    this->chain_growth_manual(save_freq_short, save_freq_long);
+    this->chain_growth_manual(training, save_freq_short, save_freq_long);
 }
 
-void PoolParallel::chain_growth_manual(int save_freq_short, int save_freq_long)
+void PoolParallel::chain_growth_manual(bool training, int save_freq_short, int save_freq_long)
 {
 
     std::string fileRA = outputDirectory + "RA.bin";
@@ -2004,7 +2007,6 @@ void PoolParallel::chain_growth_manual(int save_freq_short, int save_freq_long)
     std::string Idir = outputDirectory + "Ineurons/";
 
     bool data_gathered; // indicator if data was already gathered
-    bool training = true; // indicator to inject training current
 
     int trial_to_add_neurons = 2500;
     int N = 100;
@@ -2016,7 +2018,10 @@ void PoolParallel::chain_growth_manual(int save_freq_short, int save_freq_long)
 
     //for (int i = 0; i < N_RA; i++)
     //    target.push_back(i);
-	
+
+    // make all neurons able to make output connections
+    //this->set_all_mature();
+
     while (true)
     {
        /* if (trial_number == trial_to_add_neurons)

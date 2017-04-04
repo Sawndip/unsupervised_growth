@@ -12,8 +12,8 @@ import numpy as np
 from matplotlib import cm
 import matplotlib as mpl
 
-file_chain_test = "/home/eugene/hodgkinData/gabaMaturation010217/matureTest/mature_chain_test.bin"
-file_RA_super = "/home/eugene/hodgkinData/gabaMaturation010217/RA_RA_super_connections.bin"
+file_chain_test = "/home/eugene/Output/matureTest/gabaMaturation270317/mature_chain_test.bin"
+file_RA_super = "/home/eugene/Output/networks/gabaMaturation270317/RA_RA_super_connections.bin"
 
 CURRENT_INJECTION_TIME = 100
 ROBUST_FIRING_THRESHOLD = 0.25

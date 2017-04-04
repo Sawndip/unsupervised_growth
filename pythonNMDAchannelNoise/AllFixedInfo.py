@@ -25,10 +25,10 @@ Script plots spatial distributions of fixed synapses
 
 filename = "/home/eugene/Output/super163.net"
 
-RA_xy = "/home/eugene/Output/networks/gabaMaturation240317/RA_xy.bin"
-I_xy = "/home/eugene/Output/networks/gabaMaturation240317/I_xy.bin"
-RA2I = "/home/eugene/Output/networks/gabaMaturation240317/RA_I_connections.bin"
-I2RA = "/home/eugene/Output/networks/gabaMaturation240317/I_RA_connections.bin"
+RA_xy = "/home/eugene/Output/networks/gabaMaturation030417/RA_xy.bin"
+I_xy = "/home/eugene/Output/networks/gabaMaturation030417/I_xy.bin"
+RA2I = "/home/eugene/Output/networks/gabaMaturation030417/RA_I_connections.bin"
+I2RA = "/home/eugene/Output/networks/gabaMaturation030417/I_RA_connections.bin"
 
 import reading
 import math

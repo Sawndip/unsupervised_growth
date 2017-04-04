@@ -34,16 +34,16 @@ public:
                                                                                     // neurons. Strength if inhibitory connection increases by Gie_mean in each
                                                                                     // next group of RA neurons
 	
-    void chain_growth_default(int save_freq_short, int save_freq_long); // run chain growth algorithm with default connections and coordinates initialization;
+    void chain_growth_default(bool training, int save_freq_short, int save_freq_long); // run chain growth algorithm with default connections and coordinates initialization;
                                                                         // save data for graph update every save_freq_short trials; 
                                                                         // data for analysis every save_freq_long trials
 
-    void chain_growth_with_clustered_training(int save_freq_short, int save_freq_long); // run chain growth algorithm with default connections and coordinates 
+    void chain_growth_with_clustered_training(bool training, int save_freq_short, int save_freq_long); // run chain growth algorithm with default connections and coordinates 
                                                                         // for clustered training neurons;
                                                                         // save data for graph update every save_freq_short trials; 
                                                                         // data for analysis every save_freq_long trials
     
-    void chain_growth_manual(int save_freq_short, int save_freq_long); // run chain growth with manually specified coordinates and connections. 
+    void chain_growth_manual(bool training, int save_freq_short, int save_freq_long); // run chain growth with manually specified coordinates and connections. 
                                                                        // NOTE: coordinates and connections MUST be initialized before using chain_growth_manual
 
     void test_grown_chain(int num_trials, std::string dataDir, std::string outputDir); // test grown synfire chain. All data files should 
