@@ -2,13 +2,23 @@
 #include <mpi.h>
 #include "Configuration.h"
 #include <string>
+#include <iostream>
 
 using namespace std;
 
 int main(int argc, char** argv)
 {
+
+    std::string configurationFile; // configuration file
+
+    if (argc > 1)
+    {
+        configurationFile = argv[1]; // configuration file
+        std::cout << "Path to configuration file: " << configurationFile << std::endl;
+    }
+    else
+        std::cerr << "Path to file with configuration was not provided!" << std::endl;
     
-    std::string configurationFile = "/home/eugene/Output/networks/gabaMaturation170417/parameters.cfg"; // configuration file
     int rank; // MPI process rank
     bool training = true; // indicator if training neurons are innervated
 
