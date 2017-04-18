@@ -8,7 +8,7 @@ using namespace std;
 int main(int argc, char** argv)
 {
     
-    std::string configurationFile = "/home/eugene/Output/networks/gabaMaturation030417/parameters.cfg"; // configuration file
+    std::string configurationFile = "/home/eugene/Output/networks/gabaMaturation170417/parameters.cfg"; // configuration file
     int rank; // MPI process rank
     bool training = true; // indicator if training neurons are innervated
 
@@ -38,6 +38,7 @@ int main(int argc, char** argv)
 
     //pool.chain_growth_default(save_freq_short, save_freq_long);
     pool.chain_growth_with_clustered_training(training, save_freq_short, save_freq_long);
+    //pool.chain_growth_with_no_RA2I_connections(save_freq_short, save_freq_long);
 	
     double end_time = MPI_Wtime();
 

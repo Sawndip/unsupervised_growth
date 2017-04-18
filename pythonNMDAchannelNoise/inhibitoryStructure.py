@@ -11,7 +11,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 from collections import defaultdict
 
-dataDir = "/home/eugene/Output/matureTest/gabaMaturation270317/RA/"
+
+dataDir = "/home/eugene/Output/matureTest/gabaMaturation130417/RA/"
 
 DENDRITIC_THRESHOLD = 0.0 # threshold for burst spike in mV
 INHIBITORY_KICK_THRESHOLD = 0.1 # threshold for inhibitory inputs
@@ -340,9 +341,49 @@ num_trials = 20
 # 
 #==============================================================================
 
-# gabaMaturation 270317 huxley
-#neurons_all = [179, 66 , 11, 123, 173, 129, 148, 287, 199, 174, 285, 298, 144, 20, 161, 165, 205, 89, 17]
-neurons_all = [199, 174, 285, 298, 144, 20, 161, 165, 205, 89, 17]
+#==============================================================================
+# # gabaMaturation 270317 huxley
+# #neurons_all = [179, 66 , 11, 123, 173, 129, 148, 287, 199, 174, 285, 298, 144, 20, 161, 165, 205, 89, 17]
+# #neurons_all = [199, 174, 285, 298, 144, 20, 161, 165, 205, 89, 17]
+# 
+#==============================================================================
+
+# gabaMaturation 010417 hodgkin (skip three layers)
+#==============================================================================
+# neurons_all = [115, 194, 225, 78, 268, 221, 289, 104, 185, 285, 287, 21, 58, 55, 229, \
+#                222, 145, 239, 123, 173, 295, 179, 240, 134, 280, 42, 228, 178, 208, 244,\
+#                294, 130, 45, 4, 217, 143, 87, 226, 148, 233, 190, 223, 255, 138, 29, 192,\
+#                290, 12, 142, 129, 150, 48, 69, 271, 174, 17, 167, 168, 273, 68, 35, 95,\
+#                163, 207, 128, 172, 231, 258, 99, 30, 100]
+# 
+#==============================================================================
+
+
+#==============================================================================
+# #gabaMaturation 280317 huxley (skip three layers)
+# #neurons_all = [134, 84, 38, 72, 267,\
+# #               34, 137, 77, 20, 188, 200, 136, 173, 13, 206, 5, 118]
+# 
+# 
+# neurons_all = [20, 188, 200, 136, 173, 13, 206, 5, 118]
+#==============================================================================
+
+#==============================================================================
+# # gabaMaturation040417 huxley (skip three layers)
+# neurons_all = [64, 140, 174, 210, 236, \
+#                 77, 129, 15, 39, 298, 168, 216, 142, 295, 204, 13, 23, 34, 280, 186, 299, 121, 54, \
+#                 269, 292, 105, 9, 35, 57, 251, 100, 69, 260, 182, 136, 237, 134, 26, 66, 157, 286, \
+#                 135, 193, 45, 219, 80, 20, 126, 196, 211, 6, 190, 257, 81, 104, 36, 253, 25, 90, 115,\
+#                 30, 183, 63, 109, 266, 202, 94, 113, 222, 187, 246, 86, 206, 232, 160, 125, 240, 117, 282,\
+#                 152, 19, 259, 198, 128]
+#==============================================================================
+
+#gabaMaturation130417 huxley 
+neurons_all = [51, 48, 146, 172, 132, 277, 203, 175, 275, 28, 31, 37, 140, 235, 67, 245, 21, 50, 138, 93,\
+                 76, 228, 46, 225, 187, 231, 156, 210, 246, 148, 7, 49, 195, 74, 124, 255, 169, 152, 269, 206, \
+                 260, 94, 83, 259, 57, 171, 114, 23, 222, 248, 113, 165, 20, 104, 116, 59, 257, 25, 26, 89, 252,\
+                 151, 229, 253, 106, 176, 115, 183, 283, 30, 112, 226, 267, 139, 238, 158, 167, 95, 84, 268, 162,\
+                 111, 164, 163]
 
 #neurons_all = range(4, 4+4*20)
 
@@ -350,72 +391,70 @@ neurons_all = [199, 174, 285, 298, 144, 20, 161, 165, 205, 89, 17]
 # find chain layers
 
 
-#==============================================================================
-# # calculate inhibitory conductance of chain neurons
-# 
-# neuron_1 = 179
-# neuron_2 = 17
-# #t_input, average_exc_input, average_inh_input = calculate_average_input_conductance_for_neuron(neuron_id, num_trials, dataDir)
-# t_input, average_exc_input, average_inh_input = calculate_average_input_conductance_for_neurons(neurons_all, num_trials, dataDir)
-# _, average_exc_input_1, average_inh_input_1 = calculate_average_input_conductance_for_neuron(neuron_1, num_trials, dataDir)
-# _, average_exc_input_2, average_inh_input_2 = calculate_average_input_conductance_for_neuron(neuron_2, num_trials, dataDir)
-# 
-# 
-# f = plt.figure()
-# 
-# ax1 = f.add_subplot(211)
-# ax1.set_title("Average conductances of {0} neurons from gabaMaturation270317 huxley".format(len(neurons_all)))
-# 
-# #ax1.set_title("Conductances for neuron {0}".format(neuron_id))
-# ax1.plot(t_input, average_exc_input)
-# ax1.set_ylabel("$G_{exc, d}$")
-# _, ymax = ax1.get_ylim()
-# ax1.set_ylim([0, ymax])
-# 
-# ax2 = f.add_subplot(212)
-# 
-# ax2.plot(t_input, average_inh_input)
-# ax2.set_xlabel("time (ms)")
-# ax2.set_ylabel("$G_{inh, d}$")
-# _, ymax = ax2.get_ylim()
-# ax2.set_ylim([0, ymax])
-# 
-# f = plt.figure()
-# ax1 = f.add_subplot(221)
-# 
-# ax1.set_title("Conductances for neuron {0}".format(neuron_1))
-# ax1.plot(t_input, average_exc_input_1)
-# ax1.set_ylabel("$G_{exc, d}$")
-# _, ymax = ax1.get_ylim()
-# ax1.set_ylim([0, ymax])
-# 
-# ax2 = f.add_subplot(223)
-# 
-# ax2.plot(t_input, average_inh_input_1)
-# ax2.set_xlabel("time (ms)")
-# ax2.set_ylabel("$G_{inh, d}$")
-# _, ymax = ax2.get_ylim()
-# ax2.set_ylim([0, ymax])
-# 
-# ax1 = f.add_subplot(222)
-# 
-# ax1.set_title("Conductances for neuron {0}".format(neuron_2))
-# ax1.plot(t_input, average_exc_input_2)
-# ax1.set_ylabel("$G_{exc, d}$")
-# _, ymax = ax1.get_ylim()
-# ax1.set_ylim([0, ymax])
-# 
-# ax2 = f.add_subplot(224)
-# 
-# ax2.plot(t_input, average_inh_input_2)
-# ax2.set_xlabel("time (ms)")
-# ax2.set_ylabel("$G_{inh, d}$")
-# _, ymax = ax2.get_ylim()
-# ax2.set_ylim([0, ymax])
-# 
-# 
-# plt.show()
-# 
-#==============================================================================
+# calculate inhibitory conductance of chain neurons
+
+neuron_1 = 51
+neuron_2 = 163
+#t_input, average_exc_input, average_inh_input = calculate_average_input_conductance_for_neuron(neuron_id, num_trials, dataDir)
+t_input, average_exc_input, average_inh_input = calculate_average_input_conductance_for_neurons(neurons_all, num_trials, dataDir)
+_, average_exc_input_1, average_inh_input_1 = calculate_average_input_conductance_for_neuron(neuron_1, num_trials, dataDir)
+_, average_exc_input_2, average_inh_input_2 = calculate_average_input_conductance_for_neuron(neuron_2, num_trials, dataDir)
+
+
+f = plt.figure()
+
+ax1 = f.add_subplot(211)
+ax1.set_title("Average conductances of {0} neurons from gabaMaturation130417 huxley".format(len(neurons_all)))
+
+#ax1.set_title("Conductances for neuron {0}".format(neuron_id))
+ax1.plot(t_input, average_exc_input)
+ax1.set_ylabel("$G_{exc, d}$")
+_, ymax = ax1.get_ylim()
+ax1.set_ylim([0, ymax])
+
+ax2 = f.add_subplot(212)
+
+ax2.plot(t_input, average_inh_input)
+ax2.set_xlabel("time (ms)")
+ax2.set_ylabel("$G_{inh, d}$")
+_, ymax = ax2.get_ylim()
+ax2.set_ylim([0, ymax])
+
+f = plt.figure()
+ax1 = f.add_subplot(221)
+
+ax1.set_title("Conductances for neuron {0}".format(neuron_1))
+ax1.plot(t_input, average_exc_input_1)
+ax1.set_ylabel("$G_{exc, d}$")
+_, ymax = ax1.get_ylim()
+ax1.set_ylim([0, ymax])
+
+ax2 = f.add_subplot(223)
+
+ax2.plot(t_input, average_inh_input_1)
+ax2.set_xlabel("time (ms)")
+ax2.set_ylabel("$G_{inh, d}$")
+_, ymax = ax2.get_ylim()
+ax2.set_ylim([0, ymax])
+
+ax1 = f.add_subplot(222)
+
+ax1.set_title("Conductances for neuron {0}".format(neuron_2))
+ax1.plot(t_input, average_exc_input_2)
+ax1.set_ylabel("$G_{exc, d}$")
+_, ymax = ax1.get_ylim()
+ax1.set_ylim([0, ymax])
+
+ax2 = f.add_subplot(224)
+
+ax2.plot(t_input, average_inh_input_2)
+ax2.set_xlabel("time (ms)")
+ax2.set_ylabel("$G_{inh, d}$")
+_, ymax = ax2.get_ylim()
+ax2.set_ylim([0, ymax])
+
+
+plt.show()
+
 
 

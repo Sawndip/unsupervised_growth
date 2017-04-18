@@ -117,7 +117,10 @@ def calculate_effective_inhibition(num_convergent_inputs_to_interneurons, Gie):
         if len(inhibitory_inputs) > 0:
             total_inhibitory_input = 0.0            
             for inhibitory_input in inhibitory_inputs:
-                total_inhibitory_input += convergent_inputs_map[inhibitory_input] * Gie
+                if inhibitory_input not in convergent_inputs_map:
+                    print "Number of convergent inputs {0} do not have a map in the dictionary!".format(inhibitory_input)
+                else:
+                    total_inhibitory_input += convergent_inputs_map[inhibitory_input] * Gie
                 
         else:
             total_inhibitory_input = 0.0
@@ -475,11 +478,11 @@ def autolabel(rects, name):
            
 if __name__ == "__main__":
     
-    RA2I = "/home/eugene/Output/networks/gabaMaturation280317/RA_I_connections.bin"
-    I2RA = "/home/eugene/Output/networks/gabaMaturation280317/I_RA_connections.bin"
-    RA2RA = "/home/eugene/Output/networks/gabaMaturation280317/RA_RA_super_connections.bin"
-    fileMature = "/home/eugene/Output/networks/gabaMaturation280317/mature.bin"
-    fileBursts = "/home/eugene/Output/networks/gabaMaturation280317/spike_times_dend.bin"
+    RA2I = "/home/eugene/Output/networks/gabaMaturation130417/RA_I_connections.bin"
+    I2RA = "/home/eugene/Output/networks/gabaMaturation130417/I_RA_connections.bin"
+    RA2RA = "/home/eugene/Output/networks/gabaMaturation130417/RA_RA_super_connections.bin"
+    fileMature = "/home/eugene/Output/networks/gabaMaturation130417/mature.bin"
+    fileBursts = "/home/eugene/Output/networks/gabaMaturation130417/spike_times_dend.bin"
     
     (N_RA, RA2I_targets, RA2I_targets_G) = reading.read_connections(RA2I)
     (N_RA, RA2RA_targets, RA2RA_targets_G) = reading.read_connections(RA2RA)
@@ -513,7 +516,7 @@ if __name__ == "__main__":
     
     
     chain = find_chain_layers(RA2RA_targets)    
-    print chain
+    print [i for chain_layer in chain for i in chain_layer]
     
     starting_layer = 2 
     num_mechanisms = 6
@@ -528,7 +531,7 @@ if __name__ == "__main__":
     bar_width = 0.5 
     rects = plt.bar(index, freq, bar_width)
     plt.xlim([0, num_mechanisms + 1])
-    plt.ylim([0, max(freq)+1])
+    plt.ylim([0, 1.05*max(freq)])
     plt.ylabel("number of recruited neurons")
    
     plt.title("Number of neurons recruited by different mechanisms")

@@ -11,9 +11,10 @@ import reading
 import numpy as np
 from matplotlib import cm
 import matplotlib as mpl
+from matplotlib import ticker
 
-file_chain_test = "/home/eugene/Output/matureTest/gabaMaturation270317/mature_chain_test.bin"
-file_RA_super = "/home/eugene/Output/networks/gabaMaturation270317/RA_RA_super_connections.bin"
+file_chain_test = "/home/eugene/Output/matureTest/gabaMaturation130417/mature_chain_test.bin"
+file_RA_super = "/home/eugene/Output/networks/gabaMaturation130417/RA_RA_super_connections.bin"
 
 CURRENT_INJECTION_TIME = 100
 ROBUST_FIRING_THRESHOLD = 0.25
@@ -72,7 +73,7 @@ f1 = plt.figure()
 ax1 = f1.add_subplot(111)
 
 # normalize colors so that min firing rate is at the bottom and 1.0 is on top
-norm = mpl.colors.Normalize(vmin=min(firing_robustness_stronglyConnected), vmax=1.0)
+norm = mpl.colors.Normalize(vmin=ROBUST_FIRING_THRESHOLD, vmax=1.0)
 cmap = cm.coolwarm
 
 m = cm.ScalarMappable(norm=norm, cmap=cmap)
@@ -80,8 +81,16 @@ m = cm.ScalarMappable(norm=norm, cmap=cmap)
 colors = m.to_rgba(np.array(firing_robustness_stronglyConnected))
 # plot fake scatterplot to conveniently attach colorbar
 plot = ax1.scatter(firing_robustness_stronglyConnected, firing_robustness_stronglyConnected, c=firing_robustness_stronglyConnected, cmap = 'coolwarm')
-f1.colorbar(plot)
+cb = f1.colorbar(plot)
+plot.set_clim(vmin=ROBUST_FIRING_THRESHOLD, vmax=1.0)
 ax1.clear()
+
+
+
+# (generate plot here)
+tick_locator = ticker.MaxNLocator(nbins=5)
+cb.locator = tick_locator
+cb.update_ticks()
 
 for i in range(len(mean_burst_time_stronglyConnected)):
     sigma = std_burst_time_stronglyConnected[i]
@@ -98,7 +107,7 @@ ax1.set_xlim([-5, mean_burst_time_stronglyConnected[-1] + max(std_burst_time_str
 ax1.set_ylabel("neuron")
 ax1.set_xlabel("spike time(ms)")
 ax1.set_title("Statistics of spike times for strongly connected neurons")
-ax1.grid(True)
+#ax1.grid(True)
 
 # plot jitter for strongly connected neurons
 f2 = plt.figure()

@@ -9,10 +9,10 @@ of HVC(RA) neurons and synapses betweeen them
 """
 import reading
 
-file_xy = "/home/eugene/Output/networks/gabaMaturation270317/RA_xy.bin"
-file_super = "/home/eugene/Output/networks/gabaMaturation270317/RA_RA_super_connections.bin"
+file_xy = "/home/eugene/Output/networks/gabaMaturation130417/RA_xy.bin"
+file_super = "/home/eugene/Output/networks/gabaMaturation130417/RA_RA_super_connections.bin"
 
-file_pajek = "/home/eugene/Output/networks/gabaMaturation270317/super.net"
+file_pajek = "/home/eugene/Output/networks/gabaMaturation130417/super.net"
 
 SIDE = 100.0 # side of square modeling HVC
 N_TR = 4 # number of training neurons

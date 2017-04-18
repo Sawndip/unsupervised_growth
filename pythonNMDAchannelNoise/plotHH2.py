@@ -17,7 +17,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import reading
 
-simFileAbs = "/home/eugene/Output/networks/IdealChainTest220217/RA/RA33_trial1.bin"	#	datafile name
+simFileAbs = "/home/eugene/Output/matureTest/gabaMaturation040417/RA/RA198_trial1.bin"	#	datafile name
 #simFileAbs = "/home/eugene/Output/RA.bin"	#	datafile name
 
 #testFileRel = "1.bin"

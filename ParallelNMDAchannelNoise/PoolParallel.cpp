@@ -1060,6 +1060,15 @@ void PoolParallel::send_connections()
     }
 }
 
+void PoolParallel::disable_RA2I_connections()
+{
+	for (int i = 0; i < N_RA_local; i++)
+	{
+		weights_RA_I_local[i].clear();
+		syn_ID_RA_I_local[i].clear();
+	}
+}
+
 void PoolParallel::initialize_ideal_chain_connections(int num_layers)
 {
     if (MPI_rank == 0)
@@ -1607,9 +1616,41 @@ void PoolParallel::test_mature_chain(int num_trials)
                                   37, 167, 168, 169, 199, 172, 51, 182, 60, 68, 69, 256, 201, 207, 208, 209, 82, 85, 
                                   87, 90, 92, 122, 144, 226, 227, 131, 101, 81, 259, 231, 110, 114, 243, 117, 120, 250, 123, 124, 213};
     */
-
+	/*
     // neurons for gabaMaturation270317 huxley
     std::vector<int> RAtoWrite = {179, 66, 11, 123, 173, 129, 148, 287, 199, 174, 285, 298, 144, 20, 161, 165, 205, 89, 17}; 
+    */
+    // neurons for gabaMaturation270317 huxley
+    //std::vector<int> RAtoWrite = {179, 66, 11, 123, 173, 129, 148, 287, 199, 174, 285, 298, 144, 20, 161, 165, 205, 89, 17}; 
+    //std::vector<int> ItoWrite;
+
+	/*
+    // neurons for gabaMaturation010417 hodgkin
+    std::vector<int> RAtoWrite = {281, 156, 84, 52, 16, 92, 238, 75, 47, 10, 283, 171, 115, 194, 225, 78, 268, 221, 289, 104,
+                                  185, 285, 287, 21, 58, 55, 229, 222, 145, 239, 123, 173, 295, 179, 240, 134, 280, 42, 228, 178, 
+                                  208, 244, 294, 130, 45, 4, 217, 143, 87, 226, 148, 233, 190, 223, 255, 138, 29, 192, 290, 12, 
+                                  142, 129, 150, 48, 69, 271, 174, 17, 167, 168, 273, 68, 35, 95, 163, 207, 128, 172, 231, 258, 
+                                  99, 30, 100}; 
+    */
+    /*
+    // neurons for gabaMaturation280317 huxley
+    std::vector<int> RAtoWrite = {111, 253, 62, 265, 260, 8, 291, 160, 143, 64, 271, 128, 134, 84, 38, 72, 267, 34, 137, 77, 
+                                  20, 188, 200, 136, 173, 13, 206, 5, 118};
+    */
+    /*
+    // neurons for gabaMaturation040417 huxley
+    std::vector<int> RAtoWrite = {85, 197, 201, 44, 262, 247, 228, 249, 185, 46, 199, 212, 64, 140, 174, 210, 236, 77, 129, 
+								  15, 39, 298, 168, 216, 142, 295, 204, 13, 23, 34, 280, 186, 299, 121, 54, 269, 292, 105, 9, 
+								  35, 57, 251, 100, 69, 260, 182, 136, 237, 134, 26, 66, 157, 286, 135, 193, 45, 219, 80, 20, 
+								  126, 196, 211, 6, 190, 257, 81, 104, 36, 253, 25, 90, 115, 30, 183, 63, 109, 266, 202, 94, 113, 
+								  222, 187, 246, 86, 206, 232, 160, 125, 240, 117, 282, 152, 19, 259, 198, 128};
+    */
+    // neurons for gabaMaturation130417 huxley
+    std::vector<int> RAtoWrite = {51, 48, 146, 172, 132, 277, 203, 175, 275, 28, 31, 37, 140, 235, 67, 245, 21, 50, 138, 93, 76,
+									228, 46, 225, 187, 231, 156, 210, 246, 148, 7, 49, 195, 74, 124, 255, 169, 152, 269, 206, 260, 
+									94, 83, 259, 57, 171, 114, 23, 222, 248, 113, 165, 20, 104, 116, 59, 257, 25, 26, 89, 252, 151, 
+									229, 253, 106, 176, 115, 183, 283, 30, 112, 226, 267, 139, 238, 158, 167, 95, 84, 268, 162, 111, 164, 163};
+    
     std::vector<int> ItoWrite;
 
     for (int i = 0; i < N_I; i++)
@@ -1961,6 +2002,21 @@ void PoolParallel::run_trials_with_save(int num_trials)
 
 }
 
+void PoolParallel::chain_growth_with_no_RA2I_connections(int save_freq_short, int save_freq_long)
+{
+	bool training = true; // excite training neurons
+	
+	// initialize coordinates with clustered training neurons and connections
+    this->initialize_coordinates_for_clustered_training();
+    this->write_all_coordinates();
+    this->initialize_connections();
+    
+    this->disable_RA2I_connections();
+	
+    // run chain growth
+    this->chain_growth_manual(training, save_freq_short, save_freq_long);
+}
+
 void PoolParallel::chain_growth_with_clustered_training(bool training, int save_freq_short, int save_freq_long)
 {
     // initialize coordinates with clustered training neurons and connections
@@ -2016,8 +2072,8 @@ void PoolParallel::chain_growth_manual(bool training, int save_freq_short, int s
     std::vector<int> source{0, 1, 2, 3};
     std::vector<int> target{};
 
-    //for (int i = 0; i < N_RA; i++)
-    //    target.push_back(i);
+    for (int i = 0; i < N_RA; i++)
+        target.push_back(i);
 
     // make all neurons able to make output connections
     //this->set_all_mature();
@@ -2053,6 +2109,7 @@ void PoolParallel::chain_growth_manual(bool training, int save_freq_short, int s
            	this->write_num_synapses(fileNumSynapses.c_str());
 		    this->write_soma_spike_times(fileTimeSoma.c_str());
             this->write_dend_spike_times(fileTimeDend.c_str());
+            //this->write_dend_spike_times((outputDirectory + "spike_times_dend_" + std::to_string(trial_number) + ".bin").c_str());
             this->write_interneuron_spike_times(fileTimeInterneuron.c_str());
            
 	    	this->write_supersynapses(fileSuperGraph.c_str());

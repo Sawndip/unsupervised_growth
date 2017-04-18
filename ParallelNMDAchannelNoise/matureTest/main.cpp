@@ -9,8 +9,8 @@ int main(int argc, char** argv)
 {
     
     
-    std::string dataDir = "/home/eugene/Output/networks/gabaMaturation270317/"; // directory with data 
-    std::string outputDir = "/home/eugene/Output/matureTest/gabaMaturation270317/"; // directory with data 
+    std::string dataDir = "/home/eugene/Output/networks/gabaMaturation130417/"; // directory with data 
+    std::string outputDir = "/home/eugene/Output/matureTest/gabaMaturation130417/"; // directory with data 
     
     std::string configurationFile = dataDir + "parameters.cfg"; // configuration file
     

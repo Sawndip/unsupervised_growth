@@ -13,11 +13,11 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib import cm
 
-filename = "/home/eugene/Output/networks/gabaMaturation100217/mature.bin"
+filename = "/home/eugene/Output/networks/gabaMaturation170417/mature.bin"
 
 trial_number, gaba_potential, firing_rate, remodeled, mature = reading.read_maturation_info(filename)
 
-print firing_rate
+print gaba_potential
 #colors = [str(x) for x in firing_rate]
 plt.figure()
 

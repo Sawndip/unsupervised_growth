@@ -34,6 +34,9 @@ public:
                                                                                     // neurons. Strength if inhibitory connection increases by Gie_mean in each
                                                                                     // next group of RA neurons
 	
+	void chain_growth_with_no_RA2I_connections(int save_freq_short, int save_freq_long); // run chain growth with disable connections from HVC(RA) to HVC(I)
+																						 // neurons. It tests if noisy interneurons can result in neuron recruitment
+	
     void chain_growth_default(bool training, int save_freq_short, int save_freq_long); // run chain growth algorithm with default connections and coordinates initialization;
                                                                         // save data for graph update every save_freq_short trials; 
                                                                         // data for analysis every save_freq_long trials
@@ -262,6 +265,9 @@ protected:
         void replace_neurons(); // replace all neurons specified by replace arrays
         void kill_neuron(int local_id, int global_id, int process_rank); // erase all outgoing and incoming connections from HVC(RA) 
                                                                          // neurons for replaced neuron. Clean indicator arrays, active and super synapses
+	    // coordinates and connections
+	    void disable_RA2I_connections(); // disable all connections from HVC(RA) to HVC(I) neurons
+	    
 	    void initialize_coordinates(); // initialize coordinates of neurons
         
         void initialize_coordinates_for_clustered_training(); // initialize coordinates so that first N_TR neurons are clustered
