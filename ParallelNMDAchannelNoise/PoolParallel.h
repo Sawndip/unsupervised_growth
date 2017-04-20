@@ -25,7 +25,7 @@ public:
     void run_trials_no_save(int num_trials); // run num_trials trials without saving data to files
     void run_trials_with_save(int num_trials); // run num_trials trials with saving sata to files
     
-    void read_network_state(std::string dirname); // read network state from files in the directory dirname
+    void read_network_state(std::string dirname, int starting_trial = -1); // read network state from files in the directory dirname
 
 
 
@@ -49,11 +49,12 @@ public:
     void chain_growth_manual(bool training, int save_freq_short, int save_freq_long); // run chain growth with manually specified coordinates and connections. 
                                                                        // NOTE: coordinates and connections MUST be initialized before using chain_growth_manual
 
-	void continue_growth(std::string dataDir, int save_freq_short, int save_freq_long); // continue chain growth using network state defined by files in 
-																						// directory dataDir
+	void continue_growth(std::string dataDir, int starting_trial, int save_freq_short, int save_freq_long); // continue chain growth using network state defined by files in 
+																						// directory dataDir from trial starting_trial
 
-    void test_grown_chain(int num_trials, std::string dataDir, std::string outputDir); // test grown synfire chain. All data files should 
-                                                                            // be located in directory dataDir; output goes to directory outputDir
+    void test_grown_chain(int num_trials, std::string dataDir, int starting_trial, std::string outputDir); // test grown synfire chain. All data files should 
+                                                                            // be located in directory dataDir; network state is taken from trials starting_trial
+                                                                            // output goes to directory outputDir
 
     void test_random_chain(int num_layers, int num_trials); // test chain with ideal synfire chain connections. Neurons in the chain are wired ignoring
                                                             // any inhibibory structure

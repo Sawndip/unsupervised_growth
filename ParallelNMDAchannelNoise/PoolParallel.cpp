@@ -509,25 +509,33 @@ void PoolParallel::print_simulation_parameters()
 	}
 }
 
-void PoolParallel::read_network_state(std::string dirname)
+void PoolParallel::read_network_state(std::string dirname, int starting_trial)
 {
+	std::string trial_extension; // extension for file name, which takes into account trial number
+	
+	if (starting_trial > 0)
+		trial_extension = "_" + std::to_string(starting_trial) + "_";
+	else
+		trial_extension = "";
+		
+	
     std::string fileRA2I = dirname + "RA_I_connections.bin";
     std::string fileI2RA = dirname + "I_RA_connections.bin";
    
     std::string fileRA2INew = outputDirectory + "RA_I_connections_NEW.bin";
     std::string fileI2RANew = outputDirectory + "I_RA_connections_NEW.bin";
 
-    std::string fileActiveGraph = dirname + "RA_RA_active_connections.bin";
-    std::string fileActiveGraphNew = outputDirectory + "RA_RA_active_connections_NEW.bin";
+    std::string fileActiveGraph = dirname + "RA_RA_active_connections" + trial_extension + ".bin";
+    std::string fileActiveGraphNew = outputDirectory + "RA_RA_active_connections" + trial_extension + "NEW.bin";
     
-    std::string fileSuperGraph = dirname + "RA_RA_super_connections.bin";
-    std::string fileSuperGraphNew = outputDirectory + "RA_RA_super_connections_NEW.bin";
+    std::string fileSuperGraph = dirname + "RA_RA_super_connections" + trial_extension + ".bin";
+    std::string fileSuperGraphNew = outputDirectory + "RA_RA_super_connections" + trial_extension + "NEW.bin";
     
-    std::string fileMaturationGraph = dirname + "mature.bin";
-    std::string fileMaturationGraphNew = outputDirectory + "mature_NEW.bin";
+    std::string fileMaturationGraph = dirname + "mature" + trial_extension + ".bin";
+    std::string fileMaturationGraphNew = outputDirectory + "mature" + trial_extension + "NEW.bin";
 
-    std::string fileWeightsGraph = dirname + "weights.bin";
-    std::string fileWeightsGraphNew = outputDirectory + "weights_NEW.bin";
+    std::string fileWeightsGraph = dirname + "weights"  + trial_extension + ".bin";
+    std::string fileWeightsGraphNew = outputDirectory + "weights"  + trial_extension + "NEW.bin";
 
     std::string fileGlobalIndexArray = outputDirectory + "global_index_array.bin";
 
@@ -1556,9 +1564,9 @@ void PoolParallel::test_ideal_chain(int num_layers, int num_trials)
     }   
 }
 
-void PoolParallel::continue_growth(std::string dataDir, int save_freq_short, int save_freq_long)
+void PoolParallel::continue_growth(std::string dataDir, int starting_trial, int save_freq_short, int save_freq_long)
 {
-	this->read_network_state(dataDir); // read data from file
+	this->read_network_state(dataDir, starting_trial); // read data from file
     
     outputDirectory = dataDir;
     
@@ -1570,9 +1578,9 @@ void PoolParallel::continue_growth(std::string dataDir, int save_freq_short, int
     
 }
 
-void PoolParallel::test_grown_chain(int num_trials, std::string dataDir, std::string outputDir)
+void PoolParallel::test_grown_chain(int num_trials, std::string dataDir, int starting_trial, std::string outputDir)
 {
-    this->read_network_state(dataDir); // read data from file
+    this->read_network_state(dataDir, starting_trial); // read data from file
     outputDirectory = outputDir;
     this->test_mature_chain(num_trials); // test network
 }

@@ -12,6 +12,8 @@ int main(int argc, char** argv)
     std::string dataDir = "/home/eugene/Output/networks/gabaMaturation130417/"; // directory with data 
     std::string outputDir = "/home/eugene/Output/matureTest/gabaMaturation130417/"; // directory with data 
     
+    int starting_trial = 5000; // trial number defining network state
+    
     std::string configurationFile = dataDir + "parameters.cfg"; // configuration file
     
     int rank; // MPI process rank
@@ -33,7 +35,7 @@ int main(int argc, char** argv)
     
     int num_trials = 20; // number to trials to perform
 
-    pool.test_grown_chain(num_trials, dataDir, outputDir);
+    pool.test_grown_chain(num_trials, dataDir, starting_trial, outputDir);
 	
     double end_time = MPI_Wtime();
 

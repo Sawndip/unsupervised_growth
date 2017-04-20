@@ -40,7 +40,7 @@ print targets_G_old == targets_G_new
 ###################################
 
 filename_old = "/home/eugene/Output/networks/gabaMaturation160417/RA_RA_active_connections_4600_.bin"
-filename_new = "/home/eugene/Output/networks/gabaMaturation160417/RA_RA_active_connections_NEW.bin"
+filename_new = "/home/eugene/Output/networks/gabaMaturation160417/RA_RA_active_connections_4600_NEW.bin"
 
 (N_RA, targets_ID_old, targets_G_old) = reading.read_connections(filename_old)
 
@@ -72,8 +72,8 @@ print targets_G_old == targets_G_new
 # check super connections
 ###################################
 
-filename_old = "/home/eugene/Output/networks/gabaMaturation160417/RA_RA_super_connections.bin"
-filename_new = "/home/eugene/Output/networks/gabaMaturation160417/RA_RA_super_connections_NEW.bin"
+filename_old = "/home/eugene/Output/networks/gabaMaturation160417/RA_RA_super_connections_4600_.bin"
+filename_new = "/home/eugene/Output/networks/gabaMaturation160417/RA_RA_super_connections_4600_NEW.bin"
 
 (N_RA, targets_ID_old, targets_G_old) = reading.read_connections(filename_old)
 
@@ -104,8 +104,8 @@ print targets_G_old == targets_G_new
 # check weights
 ###################################
 
-filename_old = "/home/eugene/Output/networks/gabaMaturation160417/weights.bin"
-filename_new = "/home/eugene/Output/networks/gabaMaturation160417/weights_NEW.bin"
+filename_old = "/home/eugene/Output/networks/gabaMaturation160417/weights_4600_.bin"
+filename_new = "/home/eugene/Output/networks/gabaMaturation160417/weights_4600_NEW.bin"
 
 (N_RA, trial_number, weights_old) = reading.read_weights(filename_old)
 (N_RA, trial_number, weights_new) = reading.read_weights(filename_new)
@@ -124,8 +124,8 @@ print np.logical_and.reduce(weights_old == weights_new)
 # check maturation states
 ###################################
 
-filename_old = "/home/eugene/Output/networks/gabaMaturation160417/mature.bin"
-filename_new = "/home/eugene/Output/networks/gabaMaturation160417/mature_NEW.bin"
+filename_old = "/home/eugene/Output/networks/gabaMaturation160417/mature_4600_.bin"
+filename_new = "/home/eugene/Output/networks/gabaMaturation160417/mature_4600_NEW.bin"
 
 trial_number, gaba_potential_old, firing_rate_old, remodeled_old, mature_old = reading.read_maturation_info(filename_old)
 trial_number, gaba_potential_new, firing_rate_new, remodeled_new, mature_new = reading.read_maturation_info(filename_new)

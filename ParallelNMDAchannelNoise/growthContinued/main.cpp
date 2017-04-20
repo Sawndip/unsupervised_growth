@@ -8,14 +8,18 @@ using namespace std;
 int main(int argc, char** argv)
 {
     std::string dataDir; // directory with data
+    int starting_trial; // trial id from which to start growth
 
-    if (argc > 1)
+    if (argc > 2)
     {
         dataDir = argv[1]; // 
+        starting_trial = atoi(argv[2]); // 
+        
         std::cout << "Data directory: " << dataDir << std::endl;
+        std::cout << "Starting trial: " << starting_trial << std::endl;
     }
     else
-        std::cerr << "Data directory was not provided!" << std::endl;
+        std::cerr << "Not enough command line arguments were not provided!" << std::endl;
     
     
     std::string configurationFile = dataDir + "parameters.cfg"; // configuration file
@@ -37,7 +41,7 @@ int main(int argc, char** argv)
 	int save_freq_long = 100; // save frequency for network state update
 
 	pool.print_simulation_parameters(); 
-    pool.continue_growth(dataDir, save_freq_short, save_freq_long);
+    pool.continue_growth(dataDir, starting_trial, save_freq_short, save_freq_long);
 	
 	MPI_Finalize();
 
