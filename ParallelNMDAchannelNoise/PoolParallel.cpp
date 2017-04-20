@@ -538,17 +538,19 @@ void PoolParallel::read_network_state(std::string dirname)
     this->read_maturation_info(fileMaturationGraph.c_str());
     this->read_invariable_synapses(fileRA2I.c_str(), fileI2RA.c_str());
     //this->print_super();
-    
+   
+    trial_number++;
+
     this->send_connections();
     
-    /*this->gather_data();
+    this->gather_data();
     
     this->write_supersynapses(fileSuperGraphNew.c_str());
     this->write_active_synapses(fileActiveGraphNew.c_str());
     this->write_weights(fileWeightsGraphNew.c_str());
     this->write_maturation_info(fileMaturationGraphNew.c_str());
     this->write_invariable_synapses(fileRA2INew.c_str(), fileI2RANew.c_str());
-    */
+    
 }
 
 void PoolParallel::read_invariable_synapses(const char* RA_I, const char* I_RA)
@@ -1552,6 +1554,20 @@ void PoolParallel::test_ideal_chain(int num_layers, int num_trials)
         
         this->randomize_after_trial();
     }   
+}
+
+void PoolParallel::continue_growth(std::string dataDir, int save_freq_short, int save_freq_long)
+{
+	this->read_network_state(dataDir); // read data from file
+    
+    outputDirectory = dataDir;
+    
+    std::cout << "Trial number : " << trial_number << std::endl;
+    
+    bool training = true;
+    
+    chain_growth_manual(training, save_freq_short, save_freq_long);
+    
 }
 
 void PoolParallel::test_grown_chain(int num_trials, std::string dataDir, std::string outputDir)

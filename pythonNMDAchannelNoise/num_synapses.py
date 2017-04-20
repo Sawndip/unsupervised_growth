@@ -10,7 +10,7 @@ Script checks number of active and supersynapses
 import matplotlib.pyplot as plt
 import reading
 
-filename = "/home/eugene/Output/networks/gabaMaturation100217/num_synapses.bin"
+filename = "/mnt/hodgkin_home/eugene/lionX/gabaMaturation180417_3/num_synapses.bin"
 
 trial_number, num_active_synapses, num_supersynapses = reading.read_num_synapses(filename)
         

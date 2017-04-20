@@ -49,6 +49,9 @@ public:
     void chain_growth_manual(bool training, int save_freq_short, int save_freq_long); // run chain growth with manually specified coordinates and connections. 
                                                                        // NOTE: coordinates and connections MUST be initialized before using chain_growth_manual
 
+	void continue_growth(std::string dataDir, int save_freq_short, int save_freq_long); // continue chain growth using network state defined by files in 
+																						// directory dataDir
+
     void test_grown_chain(int num_trials, std::string dataDir, std::string outputDir); // test grown synfire chain. All data files should 
                                                                             // be located in directory dataDir; output goes to directory outputDir
 

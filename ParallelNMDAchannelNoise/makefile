@@ -1,7 +1,8 @@
 CC = mpic++
 CFLAGS = -std=c++0x -g -Wall
-#LDFLAGS = -lconfig++
-LDFLAGS = -L /usr/local/lib -l config++ -Bstatic
+LDFLAGS = -lconfig++
+#LDFLAGS = -static-libgcc -Wl,-Bstatic -lconfig++ -Wl,-Bstatic -lc -Wl,-Bdynamic
+#LDFLAGS = -L /usr/local/lib -l config++ -Bstatic
 objects = Configuration.o HH2_final.o HHI_final.o poisson_noise.o PoolParallel.o PoolParallel_test.o
 
 all: $(objects)
