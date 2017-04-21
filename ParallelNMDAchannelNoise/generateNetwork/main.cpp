@@ -10,14 +10,19 @@ int main(int argc, char** argv)
 {
 
     std::string configurationFile; // configuration file
+    std::string networkDir; // directory which contains network with fixed connections
 
-    if (argc > 1)
+    if (argc > 2)
     {
         configurationFile = argv[1]; // configuration file
+        networkDir = argv[2]; 
+        
         std::cout << "Path to configuration file: " << configurationFile << std::endl;
+        std::cout << "Directory with fixed network: " << networkDir << std::endl;
+        
     }
     else
-        std::cerr << "Path to file with configuration was not provided!" << std::endl;
+        std::cerr << "Not enough command line arguments were not provided!" << std::endl;
     
     int rank; // MPI process rank
     bool training = true; // indicator if training neurons are innervated
@@ -33,10 +38,9 @@ int main(int argc, char** argv)
 
 	pool.print_simulation_parameters();
     
-   	int save_freq_short = 40;
-	int save_freq_long = 100;
-
-    pool.chain_growth_default(training, save_freq_short, save_freq_long);
+    //pool.generate_network_with_clustered_training(networkDir); // generate network and write to to directory networkDir
+    pool.generate_network_with_dispersed_training(networkDir); // generate network and write to to directory networkDir
+    
 	
 	MPI_Finalize();
 

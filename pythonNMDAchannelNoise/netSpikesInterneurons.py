@@ -17,7 +17,7 @@ import math
 N = 100 # number of neurons
 TRIAL_DURATION = 1000
 
-fileInterneuron = "/mnt/hodgkin_home/eugene/lionX/gabaMaturation180417_3/spike_times_interneuron.bin"
+fileInterneuron = "/mnt/hodgkin_home/eugene/lionX/gabaMaturation180417_8/spike_times_interneuron.bin"
 
 (trial_number, simulation_time, spike_times_interneuron, neuron_fired) = reading.read_time_info(fileInterneuron)
 

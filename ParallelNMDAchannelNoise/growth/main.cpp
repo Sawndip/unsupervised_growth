@@ -1,6 +1,6 @@
-#include "PoolParallel.h"
+#include "../PoolParallel.h"
 #include <mpi.h>
-#include "Configuration.h"
+#include "../Configuration.h"
 #include <string>
 #include <iostream>
 
@@ -10,14 +10,19 @@ int main(int argc, char** argv)
 {
 
     std::string configurationFile; // configuration file
+    std::string networkDir; // directory which contains network with fixed connections
 
-    if (argc > 1)
+    if (argc > 2)
     {
         configurationFile = argv[1]; // configuration file
+        networkDir = argv[2]; 
+        
         std::cout << "Path to configuration file: " << configurationFile << std::endl;
+        std::cout << "Directory with fixed network: " << networkDir << std::endl;
+        
     }
     else
-        std::cerr << "Path to file with configuration was not provided!" << std::endl;
+        std::cerr << "Not enough command line arguments were not provided!" << std::endl;
     
     int rank; // MPI process rank
     bool training = true; // indicator if training neurons are innervated
@@ -29,32 +34,17 @@ int main(int argc, char** argv)
     
     cfg.read_configuration(configurationFile.c_str());
 
-    //if (rank == 0)
-    //    cfg.print_configuration();
-
 	PoolParallel pool(cfg);
 
-    //pool.initialize_coordinates();
-	//pool.initialize_connections();
-
-    //pool.print_invariable_connections();
-
 	pool.print_simulation_parameters();
+    
+    pool.read_fixed_network(networkDir); // read network from files
     
    	int save_freq_short = 40;
 	int save_freq_long = 100;
 
-    double start_time = MPI_Wtime();
-
-    //pool.chain_growth_default(save_freq_short, save_freq_long);
-    pool.chain_growth_with_clustered_training(training, save_freq_short, save_freq_long);
-    //pool.chain_growth_with_no_RA2I_connections(save_freq_short, save_freq_long);
+    pool.chain_growth(training, save_freq_short, save_freq_long);
 	
-    double end_time = MPI_Wtime();
-
-    if (rank == 0)
-        printf("Execution time = %f\n", end_time - start_time);
-
 	MPI_Finalize();
 
 

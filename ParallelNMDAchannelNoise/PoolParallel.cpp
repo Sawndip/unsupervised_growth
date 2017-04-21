@@ -98,6 +98,7 @@ PoolParallel::PoolParallel(const Configuration& cfg)
 
     // prepare global array with ids of all HVC(RA) neurons
     Id_RA_global.resize(N_RA); 
+    
 
     for (int i = 0; i < N_RA; i++)
         Id_RA_global[i] = i;
@@ -309,6 +310,89 @@ void PoolParallel::initialize_coordinates_for_added_neurons(int n_total_old)
 
 }
 
+void PoolParallel::initialize_coordinates_for_dispersed_training()
+{
+	if (MPI_rank == 0)
+	{
+		this->initialize_coordinates();
+		
+		// fix training neuron 0 and move other training neurons if necessary
+		int neuron_id_to_check = 1; // id of the next neuron to check
+        bool found_next_distant_neuron;
+
+		for (int i = 1; i < N_TR; i++)
+		{
+			
+			// calculate distances from next_neuron_to_check to previously confirmed distant training neurons
+			do 
+			{
+			    found_next_distant_neuron = true;
+				
+                for (int j = 0; j < i; j++)
+					if (distance(xx_RA[j], yy_RA[j], xx_RA[neuron_id_to_check], yy_RA[neuron_id_to_check]) < 5 * SIDE / (sqrt(N_I)+1))
+					{
+                        
+                        std::cout << "Neuron " << neuron_id_to_check << std::endl;
+                            
+                        std::cout << "Distance to neuron " << j << " = " << distance(xx_RA[j], yy_RA[j], xx_RA[neuron_id_to_check], yy_RA[neuron_id_to_check]) 
+                                << " is smaller than " << 5 * SIDE / (sqrt(N_I) + 1) << std::endl;
+
+						neuron_id_to_check++;
+						found_next_distant_neuron = false;
+						break;
+					}
+			} while(!found_next_distant_neuron);
+			
+			double tempx = xx_RA[i];
+			double tempy = yy_RA[i];
+			
+            std::cout << "Found neuron " << neuron_id_to_check << std::endl;
+
+			xx_RA[i] = xx_RA[neuron_id_to_check];
+			yy_RA[i] = yy_RA[neuron_id_to_check];
+			
+			xx_RA[neuron_id_to_check] = tempx;
+			yy_RA[neuron_id_to_check] = tempy;
+			
+			neuron_id_to_check++;
+			
+		}
+	}
+}
+
+void PoolParallel::generate_default_network(std::string networkDir)
+{
+	outputNetworkDir = networkDir;
+	
+    this->initialize_coordinates();
+    this->write_all_coordinates();
+    this->initialize_connections();    
+    
+    this->write_global_index_array((networkDir + "global_index_array.bin").c_str());
+}
+
+void PoolParallel::generate_network_with_clustered_training(std::string networkDir)
+{
+	outputNetworkDir = networkDir;
+	
+	// initialize coordinates with clustered training neurons and connections
+    this->initialize_coordinates_for_clustered_training();
+    this->write_all_coordinates();
+    this->initialize_connections(); 
+    this->write_global_index_array((networkDir + "global_index_array.bin").c_str());
+}
+
+void PoolParallel::generate_network_with_dispersed_training(std::string networkDir)
+{
+	outputNetworkDir = networkDir;
+	
+	// initialize coordinates with dispersed training neurons and connections
+    this->initialize_coordinates_for_dispersed_training();
+    this->write_all_coordinates();
+    this->initialize_connections(); 
+    this->write_global_index_array((networkDir + "global_index_array.bin").c_str());
+}
+
 void PoolParallel::initialize_coordinates_for_clustered_training()
 {
     if (MPI_rank == 0)
@@ -427,7 +511,8 @@ void PoolParallel::initialize_coordinates()
             xx_RA.push_back(xx);
             yy_RA.push_back(yy);
 		}
-        
+		
+		
     }
 }
 
@@ -507,6 +592,21 @@ void PoolParallel::print_simulation_parameters()
         printf("\nRATE_WINDOW_SHORT = %d\n", RATE_WINDOW_SHORT);
         printf("RATE_WINDOW_LONG = %d\n", RATE_WINDOW_LONG);
 	}
+}
+
+void PoolParallel::read_fixed_network(std::string networkDir)
+{
+	std::string fileRA2I = networkDir + "RA_I_connections.bin";
+    std::string fileI2RA = networkDir + "I_RA_connections.bin";
+   
+    std::string fileGlobalIndexArray = networkDir + "global_index_array.bin";
+
+    this->read_global_index_array(fileGlobalIndexArray.c_str());
+    this->read_invariable_synapses(fileRA2I.c_str(), fileI2RA.c_str());
+   
+    this->send_connections();
+    
+    
 }
 
 void PoolParallel::read_network_state(std::string dirname, int starting_trial)
@@ -1405,9 +1505,9 @@ void PoolParallel::initialize_connections()
 
     this->send_connections();
 
-    std::string fileRA2I = outputDirectory + "RA_I_connections.bin";
-    std::string fileI2RA = outputDirectory + "I_RA_connections.bin";
-    std::string filePajekFixed = outputDirectory + "fixed.net";
+    std::string fileRA2I = outputNetworkDir + "RA_I_connections.bin";
+    std::string fileI2RA = outputNetworkDir + "I_RA_connections.bin";
+    std::string filePajekFixed = outputNetworkDir + "fixed.net";
 
     this->write_invariable_synapses(fileRA2I.c_str(), fileI2RA.c_str());
     this->write_pajek_fixed(filePajekFixed.c_str());
@@ -1574,7 +1674,7 @@ void PoolParallel::continue_growth(std::string dataDir, int starting_trial, int 
     
     bool training = true;
     
-    chain_growth_manual(training, save_freq_short, save_freq_long);
+    this->chain_growth(training, save_freq_short, save_freq_long);
     
 }
 
@@ -1582,7 +1682,7 @@ void PoolParallel::test_grown_chain(int num_trials, std::string dataDir, int sta
 {
     this->read_network_state(dataDir, starting_trial); // read data from file
     outputDirectory = outputDir;
-    this->test_mature_chain(num_trials); // test network
+    this->test_mature_chain(num_trials); // test networkc
 }
 
 void PoolParallel::test_random_chain(int num_layers, int num_trials)
@@ -2026,46 +2126,8 @@ void PoolParallel::run_trials_with_save(int num_trials)
 
 }
 
-void PoolParallel::chain_growth_with_no_RA2I_connections(int save_freq_short, int save_freq_long)
+void PoolParallel::chain_growth(bool training, int save_freq_short, int save_freq_long)
 {
-	bool training = true; // excite training neurons
-	
-	// initialize coordinates with clustered training neurons and connections
-    this->initialize_coordinates_for_clustered_training();
-    this->write_all_coordinates();
-    this->initialize_connections();
-    
-    this->disable_RA2I_connections();
-	
-    // run chain growth
-    this->chain_growth_manual(training, save_freq_short, save_freq_long);
-}
-
-void PoolParallel::chain_growth_with_clustered_training(bool training, int save_freq_short, int save_freq_long)
-{
-    // initialize coordinates with clustered training neurons and connections
-    this->initialize_coordinates_for_clustered_training();
-    this->write_all_coordinates();
-    this->initialize_connections();
-    
-    // run chain growth
-    this->chain_growth_manual(training, save_freq_short, save_freq_long);
-}
-
-void PoolParallel::chain_growth_default(bool training, int save_freq_short, int save_freq_long)
-{
-    // initialize default coordinates and connections
-    this->initialize_coordinates();
-    this->write_all_coordinates();
-    this->initialize_connections();
-    
-    // run chain growth
-    this->chain_growth_manual(training, save_freq_short, save_freq_long);
-}
-
-void PoolParallel::chain_growth_manual(bool training, int save_freq_short, int save_freq_long)
-{
-
     std::string fileRA = outputDirectory + "RA.bin";
     std::string fileI = outputDirectory + "I.bin";
     
@@ -4785,8 +4847,8 @@ void PoolParallel::write_all_coordinates()
 {
     if (MPI_rank == 0)
     {
-        std::string fileRAxy = outputDirectory + "RA_xy.bin";
-        std::string fileIxy = outputDirectory + "I_xy.bin";
+        std::string fileRAxy = outputNetworkDir + "RA_xy.bin";
+        std::string fileIxy = outputNetworkDir + "I_xy.bin";
 
         this->write_coordinates_RA(fileRAxy.c_str());
         this->write_coordinates_I(fileIxy.c_str());

@@ -34,20 +34,31 @@ public:
                                                                                     // neurons. Strength if inhibitory connection increases by Gie_mean in each
                                                                                     // next group of RA neurons
 	
-	void chain_growth_with_no_RA2I_connections(int save_freq_short, int save_freq_long); // run chain growth with disable connections from HVC(RA) to HVC(I)
-																						 // neurons. It tests if noisy interneurons can result in neuron recruitment
+	void generate_default_network(std::string networkDir); // generate network by initializing coordinates of HVC(RA) and HVC(I) neurons. 
+									 // training neurons are chosen randomly from pool neurons
+									 // connections between HVC(RA) and HVC(I) neurons are also initialized
+									 // write network to directory networkDir
+									 
+	void generate_network_with_clustered_training(std::string networkDir); // generate network by initializing coordinates of HVC(RA) and HVC(I) neurons. 
+									 // training neurons are chosen so that they form spatial cluster
+									 // connections between HVC(RA) and HVC(I) neurons are also initialized
+									 // write network to directory networkDir
+									 
+	void generate_network_with_dispersed_training(std::string networkDir); // generate network by initializing coordinates of HVC(RA) and HVC(I) neurons. 
+									 // training neurons are chosen so that they are far apart in space
+									 // connections between HVC(RA) and HVC(I) neurons are also initialized
+									 // write network to directory networkDir
 	
-    void chain_growth_default(bool training, int save_freq_short, int save_freq_long); // run chain growth algorithm with default connections and coordinates initialization;
-                                                                        // save data for graph update every save_freq_short trials; 
-                                                                        // data for analysis every save_freq_long trials
-
-    void chain_growth_with_clustered_training(bool training, int save_freq_short, int save_freq_long); // run chain growth algorithm with default connections and coordinates 
-                                                                        // for clustered training neurons;
-                                                                        // save data for graph update every save_freq_short trials; 
-                                                                        // data for analysis every save_freq_long trials
-    
-    void chain_growth_manual(bool training, int save_freq_short, int save_freq_long); // run chain growth with manually specified coordinates and connections. 
-                                                                       // NOTE: coordinates and connections MUST be initialized before using chain_growth_manual
+	void read_fixed_network(std::string networkDir); // read network of fixed connections between HVC(RA) and HVC(I) neurons
+													 // networkDir direcotyr should contain RA_I_connections.bin, I_RA_connections.bin
+													 // and global_index_array.bin files
+	
+	
+	void disable_RA2I_connections(); // disable all connections from HVC(RA) to HVC(I) neurons
+	    
+	
+    void chain_growth(bool training, int save_freq_short, int save_freq_long); // run chain growth  
+                                                                       // NOTE: coordinates and connections MUST be initialized before using chain_growth
 
 	void continue_growth(std::string dataDir, int starting_trial, int save_freq_short, int save_freq_long); // continue chain growth using network state defined by files in 
 																						// directory dataDir from trial starting_trial
@@ -68,6 +79,7 @@ public:
 	void print_simulation_parameters(); // print simulation parameters
 protected:
         std::string outputDirectory; // directory to which write output
+		std::string outputNetworkDir; // directory to which write fixed network
 		
         // number of neurons
 		int N_TR; // number of training HVC(RA) neurons
@@ -79,6 +91,8 @@ protected:
 
 		vector<HH2_final> HVCRA_local; // array of HVC(RA) neurons
 		vector<HHI_final> HVCI_local; // array of HVC(I) neurons
+
+		vector<int> training_neurons; // array with ids of training HVC(RA) neurons 
 
 		// coordinates info
 		vector <double> xx_RA; // x-coordinates of RA neurons
@@ -270,11 +284,11 @@ protected:
         void kill_neuron(int local_id, int global_id, int process_rank); // erase all outgoing and incoming connections from HVC(RA) 
                                                                          // neurons for replaced neuron. Clean indicator arrays, active and super synapses
 	    // coordinates and connections
-	    void disable_RA2I_connections(); // disable all connections from HVC(RA) to HVC(I) neurons
 	    
 	    void initialize_coordinates(); // initialize coordinates of neurons
         
         void initialize_coordinates_for_clustered_training(); // initialize coordinates so that first N_TR neurons are clustered
+		void initialize_coordinates_for_dispersed_training(); // initialize coordinates so that first N_TR neurons are dispersed
 
         void initialize_coordinates_for_replaced_neuron(int global_id); // change coordinates of replaced neuron to new coordinates
         void initialize_connections_for_replaced_neuron(int global_id); // erase all previous connections from and onto the replaced neuron. Create new connections.

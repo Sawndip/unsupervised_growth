@@ -5,7 +5,7 @@ LDFLAGS = -lconfig++
 objects = Configuration.o HH2_final.o HHI_final.o poisson_noise.o PoolParallel.o main.o
 
 all: $(objects)
-	$(CC) $(CFLAGS) $^ $(LDFLAGS) -o clustered
+	$(CC) $(CFLAGS) $^ $(LDFLAGS) -o generateNetwork
 
 main.o: main.cpp
 	$(CC) $(CFLAGS) -c $^ -o $@
