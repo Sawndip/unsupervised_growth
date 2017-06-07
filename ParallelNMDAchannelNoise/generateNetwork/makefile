@@ -2,7 +2,7 @@ CC = mpic++
 VPATH = ../
 CFLAGS = -std=c++0x -g -w
 LDFLAGS = -lconfig++
-objects = Configuration.o HH2_final.o HHI_final.o poisson_noise.o PoolParallel.o main.o
+objects = ConfigurationNetworkGenerator.o poisson_noise.o NetworkGenerator.o main.o
 
 all: $(objects)
 	$(CC) $(CFLAGS) $^ $(LDFLAGS) -o generateNetwork
@@ -10,16 +10,10 @@ all: $(objects)
 main.o: main.cpp
 	$(CC) $(CFLAGS) -c $^ -o $@
 
-PoolParallel.o: PoolParallel.cpp
+NetworkGenerator.o: NetworkGenerator.cpp
 	$(CC) $(CFLAGS) -c $^ -o $@
 
-HH2_final.o: HH2_final.cpp
-	$(CC) $(CFLAGS) -c $^ -o $@
-
-HHI_final.o: HHI_final.cpp
-	$(CC) $(CFLAGS) -c $^ -o $@
-
-Configuration.o: Configuration.cpp
+ConfigurationNetworkGenerator.o: ConfigurationNetworkGenerator.cpp
 	$(CC) $(CFLAGS) -c $^ -o $@
 
 poisson_noise.o: poisson_noise.cpp

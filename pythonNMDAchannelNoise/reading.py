@@ -342,24 +342,6 @@ def read_time_info(filename):
             neuron_fired.append(single_neuron_fired)
     #spike_times = struct.unpack("<{0}d".format(N_RA), data[(2*SIZE_OF_INT+SIZE_OF_DOUBLE):])
     return (trial_number, simulation_time, spike_times, neuron_fired)
-
-def read_replaced_neurons(filename):
-    """
-    Reads which neurons were replaced from file
-    """
-    with open(filename, "rb") as file:
-        data = file.read()
-        file.close()
-    
-    num_replaced = struct.unpack("<i", data[:SIZE_OF_INT])[0] # number of replaced neurons
-
-    replaced_neurons = [] # id of replaced neurons
-    
-    for i in range(num_replaced):
-        replaced = struct.unpack("<i", data[(SIZE_OF_INT + i*SIZE_OF_INT):(SIZE_OF_INT + (i+1)*SIZE_OF_INT)])[0]
-        replaced_neurons.append(replaced)
-        
-    return replaced_neurons
     
 def read_maturation_time_sequence(filename):
     """
@@ -518,7 +500,7 @@ def read_sim_info(filename):
     weights_trials_update = struct.unpack("<i", data[(SIZE_OF_DOUBLE+SIZE_OF_INT):(SIZE_OF_DOUBLE+2*SIZE_OF_INT)])[0] 
    
     return (trial_duration, synapses_trials_update, weights_trials_update)
-    
+   
 def read_synaptic_info(filename):
     with open(filename, "rb") as file:
         data = file.read()
@@ -549,22 +531,23 @@ def read_maturation_info(filename):
     trial_number = struct.unpack("<i", data[SIZE_OF_INT:2*SIZE_OF_INT])[0]
     
     gaba_potential = []    
-    firing_rate = []
-    mature = []
+    firing_rate_short = []
+    firing_rate_long = []
+  
     remodeled = []    
     
     ind = 2*SIZE_OF_INT
     
     for i in xrange(N_RA):
         gaba_potential.append(struct.unpack("<d", data[ind:(ind + SIZE_OF_DOUBLE)])[0])
-        firing_rate.append(struct.unpack("<d", data[(ind + SIZE_OF_DOUBLE):(ind + 2*SIZE_OF_DOUBLE)])[0])
+        firing_rate_short.append(struct.unpack("<d", data[(ind + SIZE_OF_DOUBLE):(ind + 2*SIZE_OF_DOUBLE)])[0])
+        firing_rate_long.append(struct.unpack("<d", data[(ind + 2*SIZE_OF_DOUBLE):(ind + 3*SIZE_OF_DOUBLE)])[0])
 
-        remodeled.append(struct.unpack("<i", data[(ind + 2*SIZE_OF_DOUBLE):(ind + 2*SIZE_OF_DOUBLE + SIZE_OF_INT)])[0])
-        mature.append(struct.unpack("<i", data[(ind + 2*SIZE_OF_DOUBLE + SIZE_OF_INT):(ind + 2*SIZE_OF_DOUBLE + 2*SIZE_OF_INT)])[0])
-        
-        ind += 2*SIZE_OF_DOUBLE + 2*SIZE_OF_INT
+        remodeled.append(struct.unpack("<i", data[(ind + 3*SIZE_OF_DOUBLE):(ind + 3*SIZE_OF_DOUBLE + SIZE_OF_INT)])[0])
+       
+        ind += 3*SIZE_OF_DOUBLE + SIZE_OF_INT
     
-    return trial_number, gaba_potential, firing_rate, remodeled, mature
+    return trial_number, gaba_potential, firing_rate_short, firing_rate_long, remodeled
 
 def read_simTime_info(filename):
     with open(filename, "rb") as file:
@@ -653,3 +636,71 @@ def read_chain_test(filename):
         ind = ind + 5*SIZE_OF_DOUBLE
     return N_RA, num_trials, firing_robustness, average_num_dend_spikes_in_trial, average_num_soma_spikes_in_trial,mean_burst_time, std_burst_time
     
+def read_num_bursts_in_recent_trials(filename):
+    """
+    Read number of bursts produced by each HVC(RA) neuron during last 
+    RATE_WINDOW_LONG trials
+    """
+    with open(filename, "rb") as file:
+        data = file.read()
+        file.close()
+    
+    N_RA = struct.unpack("<i", data[:SIZE_OF_INT])[0]  
+    rate_window = struct.unpack("<i", data[SIZE_OF_INT:2*SIZE_OF_INT])[0]  
+    trial_number = struct.unpack("<i", data[2*SIZE_OF_INT:3*SIZE_OF_INT])[0]  
+
+    num_bursts_in_recent_trials = np.empty(shape=(N_RA,rate_window), dtype=np.int32)
+    
+    for i in range(N_RA):
+        for j in range(rate_window):
+            num_bursts_in_recent_trials[i][j] = struct.unpack("<i", data[(3+j+i*rate_window)*SIZE_OF_INT:(4+j+i*rate_window)*SIZE_OF_INT])[0]
+            
+    return num_bursts_in_recent_trials
+
+def read_replacement_history(filename):
+    """
+    Read the time of the previous replacement for each HVC(RA) neuron in the network
+    """
+    with open(filename, "rb") as file:
+        data = file.read()
+        file.close()
+
+    N_RA = struct.unpack("<i", data[:SIZE_OF_INT])[0]
+        
+    time_from_previous_replacement = np.empty(N_RA, np.int32)
+    
+    for i in range(N_RA):
+        time_from_previous_replacement[i] = struct.unpack("<i", data[(i+1)*SIZE_OF_INT:(i+2)*SIZE_OF_INT])[0]
+
+    return time_from_previous_replacement
+    
+def read_replaced_neurons(filename):
+    """
+    Read ids of all replaced neurons and times of their replacement
+    """
+    with open(filename, "rb") as file:
+        data = file.read()
+        file.close()
+
+    replacement_time = [] # trial number of neuron replacement
+    replaced_neurons = [] # neurons replaced at all trial numbers
+    
+    ind = 0
+
+   
+    while ind < len(data):
+        replaced_at_t = [] # neurons replaced at current trial
+    
+        t = struct.unpack("<i", data[ind:(ind+SIZE_OF_INT)])[0]
+        num_replaced = struct.unpack("<i", data[(ind+SIZE_OF_INT):(ind+2*SIZE_OF_INT)])[0]
+        
+        for i in range(num_replaced):
+            replaced_id = struct.unpack("<i", data[(ind+(2+i)*SIZE_OF_INT):(ind+(3+i)*SIZE_OF_INT)])[0]
+            replaced_at_t.append(replaced_id)
+
+        replacement_time.append(t)
+        replaced_neurons.append(replaced_at_t)
+        
+        ind += (2+num_replaced)*SIZE_OF_INT
+        
+    return replacement_time, replaced_neurons

@@ -11,32 +11,34 @@ import reading
 import matplotlib.pyplot as plt
 import numpy as np
 
-num_file = 99 # file number
-neuron_id = 4 # id of some replaced neuron
+num_file = 9 # file number
+neuron_id = 7 # id of some replaced neuron
 
 
 
-filename_RAI_before = "/home/eugene/Output/networks/gabaMaturation010317/RA_I_connections.bin"
-filename_RAI_after = "/home/eugene/Output/networks/gabaMaturation010317/RA_I_connections_after_replacement_trial" + str(num_file) + ".bin"
+filename_RAI_before = "/home/eugene/Output/networks/networkTest/RA_I_connections.bin"
+filename_RAI_after = "/home/eugene/Output/networks/networkTest/RA_I_connections_after_replacement_trial_" + str(num_file) + "_.bin"
 
-filename_IRA_before = "/home/eugene/Output/networks/gabaMaturation010317/I_RA_connections.bin"
-filename_IRA_after = "/home/eugene/Output/networks/gabaMaturation010317/I_RA_connections_after_replacement_trial" + str(num_file) + ".bin"
+filename_IRA_before = "/home/eugene/Output/networks/networkTest/I_RA_connections.bin"
+filename_IRA_after = "/home/eugene/Output/networks/networkTest/I_RA_connections_after_replacement_trial_" + str(num_file) + "_.bin"
 
-filename_active_before = "/home/eugene/Output/networks/gabaMaturation010317/RA_RA_active_connections_before_replacement_trial" + str(num_file) + ".bin"
-filename_active_after = "/home/eugene/Output/networks/gabaMaturation010317/RA_RA_active_connections_after_replacement_trial" + str(num_file) + ".bin"
+filename_active_before = "/home/eugene/Output/networks/networkTest/RA_RA_active_connections_before_replacement_trial_" + str(num_file) + "_.bin"
+filename_active_after = "/home/eugene/Output/networks/networkTest/RA_RA_active_connections_after_replacement_trial_" + str(num_file) + "_.bin"
 
-filename_maturation_before = "/home/eugene/Output/networks/gabaMaturation010317/mature_before_replacement_trial" + str(num_file) + ".bin"
-filename_maturation_after = "/home/eugene/Output/networks/gabaMaturation010317/mature_after_replacement_trial" + str(num_file) + ".bin"
+filename_maturation_before = "/home/eugene/Output/networks/networkTest/mature_before_replacement_trial_" + str(num_file) + "_.bin"
+filename_maturation_after = "/home/eugene/Output/networks/networkTest/mature_after_replacement_trial_" + str(num_file) + "_.bin"
 
-filename_weights_before = "/home/eugene/Output/networks/gabaMaturation010317/weights_before_replacement_trial" + str(num_file) + ".bin"
-filename_weights_after = "/home/eugene/Output/networks/gabaMaturation010317/weights_after_replacement_trial" + str(num_file) + ".bin"
+filename_weights_before = "/home/eugene/Output/networks/networkTest/weights_before_replacement_trial_" + str(num_file) + "_.bin"
+filename_weights_after = "/home/eugene/Output/networks/networkTest/weights_after_replacement_trial_" + str(num_file) + "_.bin"
 
 
-filename_replaced = "/home/eugene/Output/networks/gabaMaturation010317/replaced_neurons_trial" + str(num_file) + ".bin"
+filename_replaced = "/home/eugene/Output/networks/networkTest/replaced_neurons.bin"
 
-replaced_neurons = reading.read_replaced_neurons(filename_replaced)
+replacement_time, replaced_neurons = reading.read_replaced_neurons(filename_replaced)
 
-print("Replaced neurons: ",replaced_neurons)
+print replacement_time
+print "Replaced neurons: ",replaced_neurons[num_file-1]
+print "Replacement time: ", replacement_time[num_file-1]
 
 def change_in_fixed_connections(targets_before, targets_after, replaced):
     neurons_with_changed_targets = np.where(np.array(targets_before) != np.array(targets_after))
@@ -79,6 +81,8 @@ _, _, weights_after = reading.read_weights(filename_weights_after)
 
 source = 0
 
+print [i for i, w in enumerate(weights_before[source]) if w > 0]
+
 print weights_before[source][neuron_id]
 print weights_after[source][neuron_id]
 
@@ -88,36 +92,42 @@ print weights_before[neuron_id] == weights_after[neuron_id]
 
 
 
-_, gaba_potential_before, firing_rate_before, remodeled_before, mature_before = reading.read_maturation_info(filename_maturation_before)
-_, gaba_potential_after, firing_rate_after, remodeled_after, mature_after = reading.read_maturation_info(filename_maturation_after)
+_, gaba_potential_before, firing_rate_short_before, firing_rate_long_before, remodeled_before = reading.read_maturation_info(filename_maturation_before)
+_, gaba_potential_after, firing_rate_short_after, firing_rate_long_after, remodeled_after = reading.read_maturation_info(filename_maturation_after)
 
 
-print firing_rate_before[neuron_id]
 
-filenameStates = "/home/eugene/Output/networks/gabaMaturation010317/maturation_time_sequence.bin"
+print firing_rate_short_before[neuron_id]
+print firing_rate_short_after[neuron_id]
 
-(target, t, remodeled, mature, gaba_potential, firing_rate) = reading.read_maturation_time_sequence(filenameStates)
-
-
-# plot firing rate and gaba potential
-xmax = 7000 # max trial to show
-
-f = plt.figure()
-
-ax1 = f.add_subplot(211)
-
-ax1.set_title("Firing rate of neuron {0}".format(neuron_id))
-ax1.plot(t, firing_rate[neuron_id])
-ax1.set_ylabel("r")
-ax1.set_xlim([0, xmax])
-
-ax2 = f.add_subplot(212)
-
-ax2.set_title("GABA reverse potential of {0}".format(neuron_id))
-ax2.plot(t, gaba_potential[neuron_id])
-ax2.set_xlabel("t (# trial)")
-ax2.set_ylabel("$E_{GABA}$ mV")
-ax2.set_xlim([0, xmax])
-
-
-plt.show()   
+print firing_rate_long_before[neuron_id]
+print firing_rate_long_after[neuron_id]
+#==============================================================================
+# filenameStates = "/home/eugene/Output/networks/gabaMaturation010317/maturation_time_sequence.bin"
+# 
+# (target, t, remodeled, gaba_potential, firing_rate) = reading.read_maturation_time_sequence(filenameStates)
+# 
+# 
+# # plot firing rate and gaba potential
+# xmax = 7000 # max trial to show
+# 
+# f = plt.figure()
+# 
+# ax1 = f.add_subplot(211)
+# 
+# ax1.set_title("Firing rate of neuron {0}".format(neuron_id))
+# ax1.plot(t, firing_rate[neuron_id])
+# ax1.set_ylabel("r")
+# ax1.set_xlim([0, xmax])
+# 
+# ax2 = f.add_subplot(212)
+# 
+# ax2.set_title("GABA reverse potential of {0}".format(neuron_id))
+# ax2.plot(t, gaba_potential[neuron_id])
+# ax2.set_xlabel("t (# trial)")
+# ax2.set_ylabel("$E_{GABA}$ mV")
+# ax2.set_xlim([0, xmax])
+# 
+# 
+# plt.show()   
+#==============================================================================

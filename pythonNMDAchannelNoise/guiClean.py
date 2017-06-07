@@ -20,7 +20,7 @@ SIDE = 100
 FONT_SIZE = 5
 TRIAL_DURATION = 1000
 
-outdir = "/home/eugene/Output/networks/gabaMaturation170417/"
+outdir = "/home/eugene/Output/networks/networkTest/"
 
 filename_weights = os.path.join(outdir, "weights.bin")
 filename_weight_statistics = os.path.join(outdir, "weight_statistics.bin")

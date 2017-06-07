@@ -1,10 +1,10 @@
-#include "Configuration.h"
+#include "ConfigurationGrowth.h"
 #include <iostream>
 #include <fstream>
 #include <string>
 #include <iomanip>
 
-void Configuration::read_configuration(const char* filename)
+void ConfigurationGrowth::read_configuration(const char* filename)
 {
     
     Config cfg;
@@ -27,23 +27,6 @@ void Configuration::read_configuration(const char* filename)
 
     const Setting& root = cfg.getRoot();
     
-    // Get directory for data output
-    if (!root.lookupValue("outputDirectory", outputDirectory))
-        std::cerr << "No 'outputDirectory' setting in configuration file!" << std::endl;
-    
-    // Get the network parameters
-    try
-    {
-        const Setting& network_params_setting = root["networkParameters"];
-
-        network_params_setting.lookupValue("N_RA", network_params.N_RA);
-        network_params_setting.lookupValue("N_TR", network_params.N_TR);
-        network_params_setting.lookupValue("N_I", network_params.N_I);
-    }
-    catch(const SettingNotFoundException &nfex)
-    {
-        std::cerr << "Network parameter setting is not found in configuration file!" << std::endl;
-    }
     // Get the synaptic parameters
     try
     {
@@ -55,7 +38,7 @@ void Configuration::read_configuration(const char* filename)
           
         synaptic_params_setting.lookupValue("A_P", synaptic_params.A_P);
         synaptic_params_setting.lookupValue("A_D", synaptic_params.A_D);
-        synaptic_params_setting.lookupValue("F_0", synaptic_params.F_0);
+        synaptic_params_setting.lookupValue("T_0", synaptic_params.T_0);
         synaptic_params_setting.lookupValue("T_P", synaptic_params.T_P);
         synaptic_params_setting.lookupValue("T_D", synaptic_params.T_D);
         synaptic_params_setting.lookupValue("TAU_P", synaptic_params.TAU_P);
@@ -75,35 +58,6 @@ void Configuration::read_configuration(const char* filename)
         std::cerr << "Synaptic parameter setting is not found in configuration file!" << std::endl;
     }
 
-
-    // Get the spatial parameters
-    try
-    {
-        const Setting& spatial_params_setting = root["spatialParameters"];
-
-        // Only output the record if all of the expected fields are present.
-        spatial_params_setting.lookupValue("SIDE", spatial_params.SIDE);
-          
-        spatial_params_setting.lookupValue("MIN_INTERNEURON_DISTANCE", spatial_params.MIN_INTERNEURON_DISTANCE);
-        
-        
-        spatial_params_setting.lookupValue("A_RA2I", spatial_params.A_RA2I);
-        spatial_params_setting.lookupValue("SIGMA_RA2I", spatial_params.SIGMA_RA2I);
-        
-        spatial_params_setting.lookupValue("B_I2RA", spatial_params.B_I2RA);
-        spatial_params_setting.lookupValue("SIGMA_I2RA", spatial_params.SIGMA_I2RA);
-        
-        spatial_params_setting.lookupValue("Gei_mean", spatial_params.Gei_mean);
-        spatial_params_setting.lookupValue("Gei_std", spatial_params.Gei_std);
-        spatial_params_setting.lookupValue("Gie_mean", spatial_params.Gie_mean);
-        spatial_params_setting.lookupValue("Gie_std", spatial_params.Gie_std);
-        
-    }
-    catch(const SettingNotFoundException &nfex)
-    {
-        std::cerr << "Spatial parameter setting is not found in configuration file!" << std::endl;
-    }
-
     // Get the maturation parameters
     try
     {
@@ -113,7 +67,6 @@ void Configuration::read_configuration(const char* filename)
         gaba_params_setting.lookupValue("E_GABA_IMMATURE", gaba_params.E_GABA_IMMATURE);
         
         gaba_params_setting.lookupValue("GABA_RATE_THRESHOLD", gaba_params.GABA_RATE_THRESHOLD);
-        gaba_params_setting.lookupValue("MATURATION_RATE_THRESHOLD", gaba_params.MATURATION_RATE_THRESHOLD);
         gaba_params_setting.lookupValue("DEATH_RATE_THRESHOLD", gaba_params.DEATH_RATE_THRESHOLD);
         
         gaba_params_setting.lookupValue("RATE_WINDOW_SHORT", gaba_params.RATE_WINDOW_SHORT);
@@ -158,19 +111,24 @@ void Configuration::read_configuration(const char* filename)
     {
         std::cerr << "Noise parameter setting is not found in configuration file!" << std::endl;
     }
+    
+    // Get the inhibitory strength parameters
+    try
+    {
+        const Setting& inhibitory_params_setting = root["inhibitoryParameters"];
+
+        inhibitory_params_setting.lookupValue("Gie_mean", inhibitory_params.Gie_mean);
+        inhibitory_params_setting.lookupValue("Gie_std", inhibitory_params.Gie_std);
+        
+    }
+    catch(const SettingNotFoundException &nfex)
+    {
+        std::cerr << "Inhibitory parameter setting is not found in configuration file!" << std::endl;
+    }
 }
 
-void Configuration::print_configuration()
+void ConfigurationGrowth::print_configuration() const
 {
-    std::cout << std::endl << "Directory for data output = " << outputDirectory << std::endl; 
-
-    // display all network parameters read from file
-    std::cout << std::endl << "Network parameters read from configuration file: " << std::endl << std::endl;
-    
-    std::cout << "N_RA = " << network_params.N_RA << std::endl;
-    std::cout << "N_TR = " << network_params.N_TR << std::endl;
-    std::cout << "N_I = " << network_params.N_I << std::endl;
-    
     // display all synaptic parameters read from file
     std::cout << std::endl << "Synaptic parameters read from configuration file: " << std::endl << std::endl;
  
@@ -180,7 +138,7 @@ void Configuration::print_configuration()
     
     std::cout << "A_P = " << synaptic_params.A_P << std::endl;
     std::cout << "A_D = " << synaptic_params.A_D << std::endl;
-    std::cout << "F_0 = " << synaptic_params.F_0 << std::endl;
+    std::cout << "T_0 = " << synaptic_params.T_0 << std::endl;
     std::cout << "T_P = " << synaptic_params.T_P << std::endl;
     std::cout << "T_D = " << synaptic_params.T_D << std::endl;
     std::cout << "TAU_P = " << synaptic_params.TAU_P << std::endl;
@@ -195,22 +153,6 @@ void Configuration::print_configuration()
 
     std::cout << "STDP_WINDOW = " << synaptic_params.STDP_WINDOW << std::endl;
 
-    // display all spatial parameters read from file
-    std::cout << std::endl << "Spatial parameters read from configuration file: " << std::endl << std::endl;
-    
-    std::cout << "SIDE = " << spatial_params.SIDE << std::endl;
-    std::cout << "MIN_INTERNEURON_DISTANCE = " << spatial_params.MIN_INTERNEURON_DISTANCE << std::endl << std::endl;
-    
-    std::cout << "A_RA2I = " << spatial_params.A_RA2I << std::endl;
-    std::cout << "SIGMA_RA2I = " << spatial_params.SIGMA_RA2I << std::endl;
-    std::cout << "B_I2RA = " << spatial_params.B_I2RA << std::endl;
-    std::cout << "SIGMA_I2RA = " << spatial_params.SIGMA_I2RA << std::endl << std::endl;
-
-    std::cout << "Gei_mean = " << spatial_params.Gei_mean << std::endl;
-    std::cout << "Gei_std = " << spatial_params.Gei_std << std::endl;
-    std::cout << "Gie_mean = " << spatial_params.Gie_mean << std::endl;
-    std::cout << "Gie_std = " << spatial_params.Gie_std << std::endl;
-  
     // display all maturation parameters read from file
     std::cout << std::endl << "Maturation parameters read from configuration file: " << std::endl << std::endl;
     
@@ -218,7 +160,6 @@ void Configuration::print_configuration()
     std::cout << "E_GABA_IMMATURE = " << gaba_params.E_GABA_IMMATURE << std::endl << std::endl;
     
     std::cout << "GABA_RATE_THRESHOLD = " << gaba_params.GABA_RATE_THRESHOLD << std::endl;
-    std::cout << "MATURATION_RATE_THRESHOLD = " << gaba_params.MATURATION_RATE_THRESHOLD << std::endl;
     std::cout << "DEATH_RATE_THRESHOLD = " << gaba_params.DEATH_RATE_THRESHOLD << std::endl << std::endl;
 
     std::cout << "RATE_WINDOW_SHORT = " << gaba_params.RATE_WINDOW_SHORT << std::endl;
@@ -241,25 +182,20 @@ void Configuration::print_configuration()
     std::cout << "white_noise_std_soma = " << noise_params.white_noise_std_soma << std::endl;
     std::cout << "white_noise_mean_dend = " << noise_params.white_noise_mean_dend << std::endl;
     std::cout << "white_noise_std_dend = " << noise_params.white_noise_std_dend << std::endl;
-  
+    
+    // display inhibitory strength parameters read from file
+    std::cout << std::endl << "Inhibitory strength parameters read from configuration file: " << std::endl << std::endl;
+    
+    std::cout << "Gie_mean = " << inhibitory_params.Gie_mean << std::endl;
+    std::cout << "Gie_std = " << inhibitory_params.Gie_std << std::endl;
+   
 }
 
-void Configuration::write_configuration(const char* filename) const
+void ConfigurationGrowth::write_configuration(const char* filename) const
 {
     std::ofstream out;
 
     out.open(filename, std::ios::out);
-    
-    // write output directory
-    out << "outputDirectory = \"" << outputDirectory << "\";" << std::endl << std::endl;
-
-    // write network parameters
-    out << "networkParameters = " << std::endl;
-    out << "{" << std::endl;
-    out << "\tN_RA = " << network_params.N_RA << ";" << std::endl;
-    out << "\tN_TR = " << network_params.N_TR << ";" << std::endl;
-    out << "\tN_I = " << network_params.N_I << ";" << std::endl;
-    out << "};" << std::endl << std::endl;
     
     // write synaptic parameters
     out << "synapticParameters = " << std::endl;
@@ -270,7 +206,7 @@ void Configuration::write_configuration(const char* filename) const
 
     out << "\tA_P = " << synaptic_params.A_P << ";" << std::endl;
     out << "\tA_D = " << synaptic_params.A_D << ";" << std::endl;
-    out << "\tF_0 = " << synaptic_params.F_0 << ";" << std::endl;
+    out << "\tT_0 = " << synaptic_params.T_0 << ";" << std::endl;
     out << "\tT_P = " << synaptic_params.T_P << ";" << std::endl;
     out << "\tT_D = " << synaptic_params.T_D << ";" << std::endl;
     out << "\tTAU_P = " << synaptic_params.TAU_P << ";" << std::endl;
@@ -285,23 +221,6 @@ void Configuration::write_configuration(const char* filename) const
 
     out << "\tSTDP_WINDOW = " << synaptic_params.STDP_WINDOW << ";" << std::endl;
     out << "};" << std::endl << std::endl;
-
-    // write spatial parameters
-    out << "spatialParameters = " << std::endl;
-    out << "{" << std::endl;
-    out << "\tSIDE = " << spatial_params.SIDE << ";" << std::endl;
-    out << "\tMIN_INTERNEURON_DISTANCE = " << spatial_params.MIN_INTERNEURON_DISTANCE << ";" << std::endl << std::endl;
-    
-    out << "\tA_RA2I = " << spatial_params.A_RA2I << ";" << std::endl;
-    out << "\tSIGMA_RA2I = " << spatial_params.SIGMA_RA2I << ";" << std::endl;
-    out << "\tB_I2RA = " << spatial_params.B_I2RA << ";" << std::endl;
-    out << "\tSIGMA_I2RA = " << spatial_params.SIGMA_I2RA << ";" << std::endl << std::endl;
-    
-    out << "\tGei_mean = " << spatial_params.Gei_mean << ";" << std::endl;
-    out << "\tGei_std = " << spatial_params.Gei_std << ";" << std::endl;
-    out << "\tGie_mean = " << spatial_params.Gie_mean << ";" << std::endl;
-    out << "\tGie_std = " << spatial_params.Gie_std << ";" << std::endl << std::endl;
-    out << "};" << std::endl << std::endl;
     
     // write maturation parameters
     out << "gabaParameters = " << std::endl;
@@ -310,7 +229,6 @@ void Configuration::write_configuration(const char* filename) const
     out << "\tE_GABA_IMMATURE = " << gaba_params.E_GABA_IMMATURE << ";" << std::endl << std::endl;
     
     out << "\tGABA_RATE_THRESHOLD = " << gaba_params.GABA_RATE_THRESHOLD << ";" << std::endl;
-    out << "\tMATURATION_RATE_THRESHOLD = " << gaba_params.MATURATION_RATE_THRESHOLD << ";" << std::endl;
     out << "\tDEATH_RATE_THRESHOLD = " << gaba_params.DEATH_RATE_THRESHOLD << ";" << std::endl << std::endl;
     
     out << "\tRATE_WINDOW_SHORT = " << gaba_params.RATE_WINDOW_SHORT << ";" << std::endl;
@@ -335,6 +253,13 @@ void Configuration::write_configuration(const char* filename) const
     out << "\twhite_noise_std_soma = " << noise_params.white_noise_std_soma << ";" << std::endl;
     out << "\twhite_noise_mean_dend = " << noise_params.white_noise_mean_dend << ";" << std::endl;
     out << "\twhite_noise_std_dend = " << noise_params.white_noise_std_dend << ";" << std::endl;
+    out << "};" << std::endl << std::endl;
+    
+    // write inhibitory strength parameters
+    out << "inhibitoryParameters = " << std::endl;
+    out << "{" << std::endl;
+    out << "\tGie_mean = " << inhibitory_params.Gie_mean << ";" << std::endl;
+    out << "\tGie_std = " << inhibitory_params.Gie_std << ";" << std::endl;
     out << "};" << std::endl << std::endl;
 
     out.close();

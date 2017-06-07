@@ -7,11 +7,11 @@ Created on Wed May 11 12:41:50 2016
 
 filename = "/home/eugene/Output/super.net"
 
-RA_xy = "/mnt/hodgkin_home/eugene/lionX/gabaMaturation180417_8/RA_xy.bin"
-I_xy = "/mnt/hodgkin_home/eugene/lionX/gabaMaturation180417_8/I_xy.bin"
-RA2I = "/mnt/hodgkin_home/eugene/lionX/gabaMaturation180417_8/RA_I_connections.bin"
-I2RA = "/mnt/hodgkin_home/eugene/lionX/gabaMaturation180417_8/I_RA_connections.bin"
-RARA = "/mnt/hodgkin_home/eugene/lionX/gabaMaturation180417_8/RA_RA_super_connections.bin"
+RA_xy = "/mnt/hodgkin_home/eugene/lionX/gabaMaturation180417_5/RA_xy.bin"
+I_xy = "/mnt/hodgkin_home/eugene/lionX/gabaMaturation180417_5/I_xy.bin"
+RA2I = "/mnt/hodgkin_home/eugene/lionX/gabaMaturation180417_5/RA_I_connections.bin"
+I2RA = "/mnt/hodgkin_home/eugene/lionX/gabaMaturation180417_5/I_RA_connections.bin"
+RARA = "/mnt/hodgkin_home/eugene/lionX/gabaMaturation180417_5/RA_RA_super_connections.bin"
 
 
 import reading

@@ -1,6 +1,7 @@
 #include "../PoolParallel.h"
 #include <mpi.h>
-#include "../Configuration.h"
+#include "../ConfigurationNetworkGenerator.h"
+#include "../ConfigurationGrowth.h"
 #include <string>
 #include <iostream>
 
@@ -9,41 +10,49 @@ using namespace std;
 int main(int argc, char** argv)
 {
 
-    std::string configurationFile; // configuration file
-    std::string networkDir; // directory which contains network with fixed connections
-
-    if (argc > 2)
+    std::string growthConfigurationDir; // path to directory with growth configuration file
+    std::string networkConfigurationDir; // path to directory with network configuration file
+    std::string outputDir; // path to output directory
+    
+    if (argc > 1)
     {
-        configurationFile = argv[1]; // configuration file
-        networkDir = argv[2]; 
-        
-        std::cout << "Path to configuration file: " << configurationFile << std::endl;
-        std::cout << "Directory with fixed network: " << networkDir << std::endl;
-        
+       
+        networkConfigurationDir = argv[1];
+        growthConfigurationDir = argv[2];
+        outputDir = argv[3];
+  
+		std::cout << "Path to directory with network configuration file: " << networkConfigurationDir << std::endl;
+        std::cout << "Path to directory with growth configuration file: " << growthConfigurationDir << std::endl;
+        std::cout << "Path to output directory: " << outputDir << std::endl;
     }
     else
         std::cerr << "Not enough command line arguments were not provided!" << std::endl;
     
     int rank; // MPI process rank
     bool training = true; // indicator if training neurons are innervated
-
-    Configuration cfg;
-
+	int save_freq_short = 2; // saving frequency for the graph
+	int save_freq_long = 5; // saving frequency for the network state backup
+	
+	
+    ConfigurationGrowth growth_cfg;
+    ConfigurationNetworkGenerator network_cfg;
+    
     MPI_Init(&argc, &argv);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     
-    cfg.read_configuration(configurationFile.c_str());
+    network_cfg.read_configuration((networkConfigurationDir + "network_parameters.cfg").c_str());
+	growth_cfg.read_configuration((growthConfigurationDir + "growth_parameters.cfg").c_str());
 
-	PoolParallel pool(cfg);
+	//if (rank == 0)
+	//{
+	//	network_cfg.print_configuration();
+	//	growth_cfg.print_configuration();
+	//}
 
-	pool.print_simulation_parameters();
-    
-    pool.read_fixed_network(networkDir); // read network from files
-    
-   	int save_freq_short = 40;
-	int save_freq_long = 100;
+	PoolParallel pool(network_cfg, growth_cfg, outputDir);
 
-    pool.chain_growth(training, save_freq_short, save_freq_long);
+	
+    pool.new_chain_growth(networkConfigurationDir, training, save_freq_short, save_freq_long);
 	
 	MPI_Finalize();
 

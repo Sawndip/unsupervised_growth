@@ -4,13 +4,17 @@
 #include <vector>
 #include <cmath>
 #include <mpi.h>
+#include <string>
+
 #include "poisson_noise.h"
 #include <boost/circular_buffer.hpp>
 #include <boost/dynamic_bitset.hpp>
-#include "Configuration.h"
+#include "ConfigurationGrowth.h"
+#include "ConfigurationNetworkGenerator.h"
+
 #include "HHI_final.h"
 #include "HH2_final.h"
-
+#include "NetworkGenerator.h"
 
 using std::vector;
 
@@ -20,7 +24,7 @@ typedef boost::dynamic_bitset<> bitArray;
 class PoolParallel
 {
 public:
-	PoolParallel(const Configuration& cfg);
+	PoolParallel(ConfigurationNetworkGenerator& cfgNetwork, ConfigurationGrowth& cfgGrowth, std::string outDir);
 	
     void run_trials_no_save(int num_trials); // run num_trials trials without saving data to files
     void run_trials_with_save(int num_trials); // run num_trials trials with saving sata to files
@@ -34,21 +38,6 @@ public:
                                                                                     // neurons. Strength if inhibitory connection increases by Gie_mean in each
                                                                                     // next group of RA neurons
 	
-	void generate_default_network(std::string networkDir); // generate network by initializing coordinates of HVC(RA) and HVC(I) neurons. 
-									 // training neurons are chosen randomly from pool neurons
-									 // connections between HVC(RA) and HVC(I) neurons are also initialized
-									 // write network to directory networkDir
-									 
-	void generate_network_with_clustered_training(std::string networkDir); // generate network by initializing coordinates of HVC(RA) and HVC(I) neurons. 
-									 // training neurons are chosen so that they form spatial cluster
-									 // connections between HVC(RA) and HVC(I) neurons are also initialized
-									 // write network to directory networkDir
-									 
-	void generate_network_with_dispersed_training(std::string networkDir); // generate network by initializing coordinates of HVC(RA) and HVC(I) neurons. 
-									 // training neurons are chosen so that they are far apart in space
-									 // connections between HVC(RA) and HVC(I) neurons are also initialized
-									 // write network to directory networkDir
-	
 	void read_fixed_network(std::string networkDir); // read network of fixed connections between HVC(RA) and HVC(I) neurons
 													 // networkDir direcotyr should contain RA_I_connections.bin, I_RA_connections.bin
 													 // and global_index_array.bin files
@@ -60,8 +49,12 @@ public:
     void chain_growth(bool training, int save_freq_short, int save_freq_long); // run chain growth  
                                                                        // NOTE: coordinates and connections MUST be initialized before using chain_growth
 
-	void continue_growth(std::string dataDir, int starting_trial, int save_freq_short, int save_freq_long); // continue chain growth using network state defined by files in 
+	
+	void new_chain_growth(std::string networkDirectory, bool training, int save_freq_short, int save_freq_long);
+	
+	void continue_chain_growth(std::string dataDir, int starting_trial, bool training, int save_freq_short, int save_freq_long); // continue chain growth using network state defined by files in 
 																						// directory dataDir from trial starting_trial
+
 
     void test_grown_chain(int num_trials, std::string dataDir, int starting_trial, std::string outputDir); // test grown synfire chain. All data files should 
                                                                             // be located in directory dataDir; network state is taken from trials starting_trial
@@ -71,15 +64,17 @@ public:
                                                             // any inhibibory structure
     void test_ideal_chain(int num_layers, int num_trials); // run testing trial with ideal chain connections
 
-
+	void initialize_network();
 
     void print_invariable_connections(); // get number of connections for invariable synapses
     void print_received_invariable_connections(); // show received invariable connections
 
 	void print_simulation_parameters(); // print simulation parameters
 protected:
+		NetworkGenerator networkGen; // object to generate coordinates and connections between original and replaced neurons
+
         std::string outputDirectory; // directory to which write output
-		std::string outputNetworkDir; // directory to which write fixed network
+		std::string networkDirectory; // directory which contains network
 		
         // number of neurons
 		int N_TR; // number of training HVC(RA) neurons
@@ -91,8 +86,6 @@ protected:
 
 		vector<HH2_final> HVCRA_local; // array of HVC(RA) neurons
 		vector<HHI_final> HVCI_local; // array of HVC(I) neurons
-
-		vector<int> training_neurons; // array with ids of training HVC(RA) neurons 
 
 		// coordinates info
 		vector <double> xx_RA; // x-coordinates of RA neurons
@@ -148,7 +141,8 @@ protected:
 
 		vector<bitArray> active_indicators_local; // array of HVC(RA) neurons with active synapses
 		vector<bitArray> supersynapses_indicators_local; // indicator array for active supersynapses;
-		
+		vector<int> training_neurons; // vector with ids of training neurons
+		
 		vector<vector<int>> active_synapses_local; // array of vectors with IDs of active synapses
 		vector<vector<int>> supersynapses_local; // array of vectors with IDs of supersynapses
 		
@@ -168,18 +162,18 @@ protected:
 		vector<int> remodeled_local; // local indicators if neuron underwent axon remodelling
 		vector<int> remodeled_global; // global indicators if neuron underwent axon remodelling
 		
-		vector<int> mature_local; // indicator if neuron is mature due to supersynaptic acquisition (neuron matures forever after it acquires all supersynapses)
-		vector<int> mature_global; // global array of indicators if neuron is mature due to supersynaptic acquisition 
-		
 		vector<double> gaba_potential_local; // array with local values of GABA reverse potential
 		vector<double> gaba_potential_global; // array with global values of GABA reverse potential
 
-		vector<double> firing_rate_local; // array with local firing rates of HVC(RA) neurons
-		vector<double> firing_rate_global; // array with global firing rates of HVC(RA) neurons
+		vector<double> firing_rate_short_local; // array with local firing rates of HVC(RA) neurons in small window
+		vector<double> firing_rate_short_global; // array with global firing rates of HVC(RA) neurons in small window
+		vector<double> firing_rate_long_local; // array with local firing rates of HVC(RA) neurons in large window
+		vector<double> firing_rate_long_global; // array with global firing rates of HVC(RA) neurons in large window
     
         vector<int> gaba_reached_mature_local; // local indicators for neurons that GABA potential reached mature value
 
         vector<intBuffer> num_bursts_in_recent_trials; // array of circular buffer containing recent neuron rates
+		vector<vector<int>> num_bursts_in_recent_trials_global; // global array with the number of bursts occured in previoud RATE_WINDOW_LONG trials
 
 		vector<int> Id_RA_local; // local array with id of RA neurons in each process
 		vector<int> Id_RA_global; // global array with ids of RA neurons in all processes
@@ -205,6 +199,7 @@ protected:
 
         // neuron's internal time after previous replacement
         vector<int> num_trials_after_replacement_local;
+        vector<int> num_trials_after_replacement_global;
 
 		//const static double ACTIVATION; // activation threshold for synapses
 		double p_RA2I(int i, int j); // probability of connection from RA to I neuron
@@ -222,7 +217,6 @@ protected:
 		double E_GABA_MATURE; // mature reverse GABA potential
         
         double GABA_RATE_THRESHOLD; // rate threshold for GABA decrease
-        double MATURATION_RATE_THRESHOLD; // rate threshold for neuron maturation
         double DEATH_RATE_THRESHOLD; // rate threshold for neuron death
 
         int RATE_WINDOW_SHORT; // window in which rate for gaba decrease is calculated
@@ -245,11 +239,8 @@ protected:
 		double T_D; // time for the most efficient LTD
 		double TAU_D; // LTD decay
 
-		double R; // learning rate
-		double F_0; // constant to prevent connections within the same chain group
-
-        double T_P1; // end of silent LTP window
-        double T_P2; // time of the best LTP response
+		double R; // learning rate						
+		double T_0; // constant to prevent connections within the same chain group
 
         // current
         double WAITING_TIME; // time before training current is injected
@@ -308,12 +299,14 @@ protected:
         void initialize_random_chain_connections(int num_layers); // initialize connections like in a real synfire chain, but wire HVC(RA) neurons randomly, ignoring 
                                                                   // any inhibitory structure
 
+		void set_noise();
+		void set_dynamics();
+		void set_training();
+
         // setting simulation parameters
-        void set_network_parameters(const struct NetworkParameters& network_params); // set network parameters
         void set_noise_parameters(const struct NoiseParameters& noise_params); // set noise parameters
         void set_synaptic_parameters(const struct SynapticParameters& syn_params); // set synaptic parameters
         void set_gaba_parameters(const struct GabaParameters& gaba_params); // set GABA parameters of maturation
-        void set_spatial_parameters(const struct SpatialParameters& spatial_params); // set spatial parameters
         void set_time_parameters(const struct TimeParameters& time_params); // set time parameters
     
         // internal printing functions
@@ -321,17 +314,16 @@ protected:
         void print_super(); // print super indicators
 
         // reading data from files
-        void read_global_index_array(const char* filename); // read global array with HVC(RA) neuronal ids
-        void read_invariable_synapses(const char* fileRA2I, const char* fileI2RA); // read HVC(RA) -> HVC(I) and HVC(I) -> HVC(RA)
-                                                                                                     // connections from the file
+        
         void read_super_synapses(const char* filename); // read supersynapses from the file
         void read_active_synapses(const char* filename); // read active synapses from the file
         void read_maturation_info(const char* filename); // read maturation information from the file
         void read_weights(const char* filename); // read all synaptic weights from the file
-
+		void read_num_bursts_in_recent_trials(const char* filename); // read number of recent bursts produced by HVC(RA) neurons in RATE_WINDOW_LONG previous trials
+		void read_replacement_history(const char* filename); // read number of trials since previous neuron replacements
+		
         // internal write functions
 
-        void write_global_index_array(const char* filename); // write global array with HVC(RA) neuronal ids to file
         void write_weights_time_sequence_from_source_to_target(const std::vector<int>& source, const std::vector<int>&target, const char* filename); // write time
         void write_maturation_time_sequence(const std::vector<int>& neurons, const char* filename); // write maturation time sequence of neurons to a file
         void write_replaced_neurons(std::vector<int>& real_id, const char* filename); // write replaced neurons to a file
@@ -343,12 +335,9 @@ protected:
         void write_num_synapses(const char* fileSynapses); // write amount of active synapses and supersynapses
         void write_active_synapses(const char* RA_RA); // write RA to RA active connections
         void write_supersynapses(const char* RA_RA); // write RA to RA supersynapses
-        void write_invariable_synapses(const char* RA_I, const char* I_RA); // write RA to I and I to RA connections
-        void write_all_coordinates(); // write coordinates of HVC(RA) and HVC(I) neurons
-        void write_coordinates_RA(const char* filename); // write coordinates of HVC(RA) neurons
-        void write_coordinates_I(const char* filename); // write coordinates of HVC(I) neurons
         void write_RA(const char * filename, int n); // write dynamics of RA neuron to a file
         void write_I(const char * filename, int n); // write dynamics of I neuron to a file
+        void write_num_bursts_in_recent_trials(const char* filename); // write number of recent bursts produced by HVC(RA) neurons in RATE_WINDOW_LONG previous trials 
         void write_weights(const char * filename); // write weights of all synapses in network
         void write_weight_statistics(const char * filename); // write mean synaptic weight and synaptic weight standard deviation
         void write_soma_spike_times(const char* filename); // write somatic spike information to a file
@@ -356,9 +345,9 @@ protected:
         void write_interneuron_spike_times(const char* filename); // write interneuron spike information to a file
         void write_maturation_info(const char* filename); // write mature neurons
         void write_time_info(const char* filename); // write simulation time information
+        void write_replacement_history(const char* filename); // write when all neurons were replaced previous times 
 
-        void write_pajek_fixed(const char* filename); // write fixed synapses to a file for pajek
-
+        
         // MPI support
 		void resize_arrays_for_I(int n_local, int n_total); // resize data arrays for HVC(I) neurons
         void resize_arrays_for_RA(int n_local, int n_total); // resize data arrays for HVC(RA) neurons
@@ -383,14 +372,5 @@ protected:
 
 
 };
-
-static double distance(double x1, double y1, double x2, double y2)
-{
-	double d;
-	d = sqrt((x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2));
-	return d;
-}
-
-
 
 #endif // POOLPARALLEL_H_INCLUDED
