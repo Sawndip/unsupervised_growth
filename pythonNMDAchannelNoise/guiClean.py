@@ -20,7 +20,7 @@ SIDE = 100
 FONT_SIZE = 5
 TRIAL_DURATION = 1000
 
-outdir = "/home/eugene/Output/networks/networkTest/"
+outdir = "/mnt/hodgkin_home/eugene/Output/networks/networkTest/"
 
 filename_weights = os.path.join(outdir, "weights.bin")
 filename_weight_statistics = os.path.join(outdir, "weight_statistics.bin")
@@ -745,18 +745,22 @@ class Updator:
         """
         axes.clear()
         
-        for i in range(len(self.spike_times_soma)):
-            axes.vlines(self.spike_times_soma[i], self.fired_soma_id[i]-0.5, self.fired_soma_id[i]+0.5)
         
-        axes.set_ylabel("Neuron ID")
-        axes.set_xlabel("spike time soma (ms)")
-       
-        if len(self.fired_soma_id) > 1:
+        if len(self.spike_times_soma) > 0:
+            for i in range(len(self.spike_times_soma)):
+                axes.vlines(self.spike_times_soma[i], self.fired_soma_id[i]-0.5, self.fired_soma_id[i]+0.5)
+            
+            axes.set_ylabel("Neuron ID")
+            axes.set_xlabel("spike time soma (ms)")
+           
+            #xmin = float((int(min(self.spike_times_soma)) / int(TRIAL_DURATION))) * TRIAL_DURATION
+            #xmax = xmin + TRIAL_DURATION
+           
             axes.set_ylim(-0.5, max(self.fired_soma_id) + 0.5)
             axes.set_xlim(0, TRIAL_DURATION)
         
-        axes.set_title("Somatic spikes of HVC(RA) neurons")
-        
+            axes.set_title("Somatic spikes of HVC(RA) neurons")
+            
     
     def draw_raster_all_I(self, axes):
         """

@@ -37,6 +37,7 @@ public:
     
     // set functions
 	void set_Ei(double E); // set GABA reverse potential
+	void set_time(double t); // set initial time
 	
     void set_soma_current(DDfunction fs); // set current to somatic compartment
 	void set_dend_current(DDfunction fd); // set current to dendritic compartment
@@ -52,6 +53,8 @@ public:
 	// set dynamics
 	void set_dynamics(double interval, double tS); // set sizes of all arrays
 	void set_to_rest(); // set all variables to the rest state
+	void renew_neuron(); // renew neuron by setting all variables to steady state values and setting spike numbers to zero
+	void reset(); // reset neuron activity. Last values for all variables are assinged to the first elements 
 	
 	// calculate dynamics
 	void Euler_step(); // one Euler step

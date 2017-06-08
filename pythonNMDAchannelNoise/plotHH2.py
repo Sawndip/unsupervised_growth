@@ -17,22 +17,27 @@ import matplotlib.pyplot as plt
 import numpy as np
 import reading
 
-simFileAbs = "/home/eugene/Output/matureTest/gabaMaturation040417/RA/RA198_trial1.bin"	#	datafile name
+simFileAbs = "/mnt/hodgkin_home/eugene/Output/matureTest/test/RA/RA2_trial2.bin"	#	datafile name
 #simFileAbs = "/home/eugene/Output/RA.bin"	#	datafile name
 
 #testFileRel = "1.bin"
 SIZE_OF_DOUBLE = 8
 SIZE_OF_INT = 4
 
-def print_steady_params():
-    print "Steady state parameters:"
-    print "Vs = ",Vs[-1]
-    print "n = ",n[-1]
-    print "h = ",h[-1]
-    print "Vd = ",Vd[-1]
-    print "r = ",r[-1]
-    print "c = ",c[-1]
-    print "Ca = ",Ca[-1]
+def print_time_state(ind):
+    print "Variables at time:", ind
+    print "Vs = ",Vs[ind]
+    print "n = ",n[ind]
+    print "h = ",h[ind]
+    print "Vd = ",Vd[ind]
+    print "r = ",r[ind]
+    print "c = ",c[ind]
+    print "Ca = ",Ca[ind]
+    print "Gexc_s = ",Gexc_s[ind]
+    print "Ginh_s = ",Ginh_s[ind]
+    print "Gexc_d = ",Gexc_d[ind]
+    print "Ginh_d = ",Ginh_d[ind]
+    
 
     
 
@@ -65,9 +70,10 @@ print Nsoma
 #print "s_dend", s_d
 
 print "Ei = ", Ei[100]
-print_steady_params()
+print_time_state(0)
 
-
+print Vs
+print t
 #print(len(Vd))
 #print(n[0])
 #print(n[11999])

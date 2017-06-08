@@ -30,8 +30,8 @@ int main(int argc, char** argv)
     
     int rank; // MPI process rank
     bool training = true; // indicator if training neurons are innervated
-	int save_freq_short = 2; // saving frequency for the graph
-	int save_freq_long = 5; // saving frequency for the network state backup
+	int save_freq_short = 20; // saving frequency for the graph
+	int save_freq_long = 50; // saving frequency for the network state backup
 	
 	
     ConfigurationGrowth growth_cfg;

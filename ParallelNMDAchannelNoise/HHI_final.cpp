@@ -134,6 +134,11 @@ vector<int> HHI_final::get_activity()
 	return flag;
 }
 
+void HHI_final::set_time(double t)
+{
+	time[0] = t;
+}
+
 void HHI_final::set_injected_current(DDfunction f)
 {
 	I_injected = f;
@@ -252,6 +257,42 @@ void HHI_final::set_to_rest()
     {
 	    this->initialize_noise(noise_exc);
 	    this->initialize_noise(noise_inh);
+    }
+}
+
+void HHI_final::reset()
+{
+	itime = 0;
+
+	time[0] = time.back();
+	voltage[0] = voltage.back();
+	n[0] = n.back();
+	m[0] = m.back();
+	h[0] = h.back();
+	w[0] = w.back();
+	Gexc[0] = Gexc.back();
+	Ginh[0] = Ginh.back();
+	flag[0] = 0;
+	
+	I[0] = I_total(time[0]);
+
+	//	set up noise
+    if (poisson_noise)
+    {
+		noise_exc -= size - 1;
+		noise_inh -= size - 1;
+		
+	    if (noise_exc < 0)
+	    {
+			std::cerr << "Noise time is negative! noise_exc = " << noise_exc << std::endl;
+			this->initialize_noise(noise_exc);
+		}
+			
+		if (noise_inh < 0)
+		{
+			std::cerr << "Noise time is negative! noise_inh = " << noise_inh << std::endl;
+			this->initialize_noise(noise_inh);
+		}
     }
 }
 

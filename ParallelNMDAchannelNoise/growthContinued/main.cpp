@@ -46,7 +46,7 @@ int main(int argc, char** argv)
 	PoolParallel pool(network_cfg, growth_cfg, outputDir);
 
 
-	int save_freq_short = 40; // save frequency for graph update
+	int save_freq_short = 20; // save frequency for graph update
 	int save_freq_long = 100; // save frequency for network state update
 	bool training = true;
 	

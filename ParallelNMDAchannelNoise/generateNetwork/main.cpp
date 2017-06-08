@@ -7,8 +7,8 @@ using namespace std;
 
 int main(int argc, char** argv)
 {
-	int N_RA = 300; // number of HVC(RA) neurons
-	int N_I = 100; // number of HVC(I) neurons
+	int N_RA = 75; // number of HVC(RA) neurons
+	int N_I = 25; // number of HVC(I) neurons
 	int N_TR = 4; // number of training HVC(RA) neurons
 
     std::string configurationFile; // configuration file

@@ -9,8 +9,8 @@ Script checks that data was read correctly after chain growth was restarted
 import reading
 import numpy as np
 
-directory = "/home/eugene/Output/networks/networkTest/"
-start_number = 5 # starting point
+directory = "/mnt/hodgkin_home/eugene/Output/networks/networkTest/"
+start_number = 500 # starting point
 
 ###################################
 # check RA -> I connections
@@ -60,7 +60,8 @@ filename_new = directory + "RA_RA_active_connections_" + str(start_number) + "_N
 (N_RA, targets_ID_new, targets_G_new) = reading.read_connections(filename_new)
 
 print N_RA
-#print targets_ID_new
+
+#print targets_ID_new[0]
 #print targets_G_new
 
 print targets_ID_old == targets_ID_new
@@ -129,15 +130,21 @@ print np.logical_and.reduce(weights_old == weights_new)
 filename_old = directory + "mature_" + str(start_number) + "_.bin"
 filename_new = directory + "mature_" + str(start_number) + "_NEW.bin"
 
-trial_number, gaba_potential_old, firing_rate_old, remodeled_old, mature_old = reading.read_maturation_info(filename_old)
-trial_number, gaba_potential_new, firing_rate_new, remodeled_new, mature_new = reading.read_maturation_info(filename_new)
+trial_number, gaba_potential_old, firing_rate_short_old, firing_rate_long_old, remodeled_old = reading.read_maturation_info(filename_old)
+trial_number, gaba_potential_new, firing_rate_short_new, firing_rate_long_new, remodeled_new= reading.read_maturation_info(filename_new)
 
 #print gaba_potential_new
 
 print gaba_potential_old == gaba_potential_new
-print firing_rate_old == firing_rate_new
+print firing_rate_short_old == firing_rate_short_new
+print firing_rate_long_old == firing_rate_long_new
 print remodeled_old == remodeled_new
-print mature_old == mature_new
+
+print firing_rate_short_old
+print firing_rate_long_old
+
+print remodeled_new
+
 
 ###################################
 # check number of bursts in trials
@@ -149,7 +156,8 @@ filename_new = directory + "num_bursts_in_recent_trials_" + str(start_number) + 
 num_bursts_in_recent_trials_old = reading.read_num_bursts_in_recent_trials(filename_old)
 num_bursts_in_recent_trials_new = reading.read_num_bursts_in_recent_trials(filename_new)
 
-print num_bursts_in_recent_trials_old == num_bursts_in_recent_trials_new
+print num_bursts_in_recent_trials_old[0]
+print np.logical_and.reduce(np.logical_and.reduce(num_bursts_in_recent_trials_old == num_bursts_in_recent_trials_new))
 
 ###################################
 # check replacement history
@@ -161,5 +169,22 @@ filename_new = directory + "replacement_history_" + str(start_number) + "_NEW.bi
 time_from_previous_replacement_old = reading.read_replacement_history(filename_old)
 time_from_previous_replacement_new = reading.read_replacement_history(filename_new)
 
-print time_from_previous_replacement_old == time_from_previous_replacement_new
+print np.logical_and.reduce(time_from_previous_replacement_old == time_from_previous_replacement_new)
 
+
+
+
+###################################
+# check last dendritic spike times
+###################################
+
+filename_old = directory + "last_dendritic_spike_times_" + str(start_number) + "_.bin"
+filename_new = directory + "last_dendritic_spike_times_" + str(start_number) + "_NEW.bin"
+
+last_dend_spike_times_old = reading.read_last_dend_spike_times(filename_old)
+last_dend_spike_times_new = reading.read_last_dend_spike_times(filename_new)
+
+print np.logical_and.reduce(last_dend_spike_times_old == last_dend_spike_times_new)
+
+print "last burst times old :", last_dend_spike_times_old
+#print "last burst times new :", last_dend_spike_times_new

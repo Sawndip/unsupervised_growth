@@ -635,6 +635,25 @@ def read_chain_test(filename):
     
         ind = ind + 5*SIZE_OF_DOUBLE
     return N_RA, num_trials, firing_robustness, average_num_dend_spikes_in_trial, average_num_soma_spikes_in_trial,mean_burst_time, std_burst_time
+
+def read_last_dend_spike_times(filename):
+    """
+    Reads last dendritic spike times of each HVC(RA) neuron
+    """
+    with open(filename, "rb") as file:
+        data = file.read()
+        file.close()
+    
+    N_RA = struct.unpack("<i", data[:SIZE_OF_INT])[0]  
+    trial_number = struct.unpack("<i", data[SIZE_OF_INT:2*SIZE_OF_INT])[0]  
+
+    last_dend_spike_times = np.empty(N_RA, dtype=np.float32)
+    
+    for i in range(N_RA):
+        last_dend_spike_times[i] = struct.unpack("<d", data[(2*SIZE_OF_INT + i*SIZE_OF_DOUBLE):(2*SIZE_OF_INT + (i+1)*SIZE_OF_DOUBLE)])[0]
+            
+    return last_dend_spike_times
+    
     
 def read_num_bursts_in_recent_trials(filename):
     """
@@ -666,11 +685,12 @@ def read_replacement_history(filename):
         file.close()
 
     N_RA = struct.unpack("<i", data[:SIZE_OF_INT])[0]
-        
+    trial_number = struct.unpack("<i", data[SIZE_OF_INT:2*SIZE_OF_INT])[0]  
+    
     time_from_previous_replacement = np.empty(N_RA, np.int32)
     
     for i in range(N_RA):
-        time_from_previous_replacement[i] = struct.unpack("<i", data[(i+1)*SIZE_OF_INT:(i+2)*SIZE_OF_INT])[0]
+        time_from_previous_replacement[i] = struct.unpack("<i", data[(i+2)*SIZE_OF_INT:(i+3)*SIZE_OF_INT])[0]
 
     return time_from_previous_replacement
     

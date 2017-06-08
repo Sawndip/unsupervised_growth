@@ -17,6 +17,7 @@
 #include "NetworkGenerator.h"
 
 using std::vector;
+using std::deque;
 
 typedef boost::circular_buffer<int> intBuffer;
 typedef boost::dynamic_bitset<> bitArray;
@@ -149,7 +150,8 @@ protected:
         vector<vector<int>> active_synapses_global; // array of vectors with IDs of active synapses
 		vector<vector<int>> supersynapses_global; // array of vectors with IDs of supersynapses
 		
-		vector<double> spike_times_dend_global; // array with the most recent dendritic spike times of neurons
+		vector<double> last_dend_spike_time_global; // global array with the most recent dendritic spike times of neurons
+		vector<double> last_dend_spike_time_local; // local array with the most recent dendritic spike times of neurons
 
         vector<vector<double>> spikes_in_trial_soma_global; // array with somatic spike times in the last trial
 		vector<vector<double>> spikes_in_trial_dend_global; // array with dendritic spike times in the last trial
@@ -257,6 +259,7 @@ protected:
         void test_mature_chain(int num_trials); // test of mature network
 	    
         void randomize_after_trial(); // set all neurons to the resting state
+        void reset_after_trial(); // continue the network activity by reset all neurons
 		void set_all_mature(); // set all neurons to a mature state
 
         // supporting STDP rules
@@ -299,9 +302,10 @@ protected:
         void initialize_random_chain_connections(int num_layers); // initialize connections like in a real synfire chain, but wire HVC(RA) neurons randomly, ignoring 
                                                                   // any inhibitory structure
 
-		void set_noise();
-		void set_dynamics();
-		void set_training();
+		void set_noise(); // set noise for all neurons in the network. White noise is used for HVC(RA) and poisson noise for HVC(I)
+		void set_dynamics(); // initialize vector arrays of proper size for dynamics of HVC(RA) and HVC(I) neurons
+		void set_training(); // set parameters for training neurons: gaba potential is mature 
+		void set_time_for_neurons(double t); // set initial time for all neurons in the network to t. Used when chain growth is restarted
 
         // setting simulation parameters
         void set_noise_parameters(const struct NoiseParameters& noise_params); // set noise parameters
@@ -321,7 +325,8 @@ protected:
         void read_weights(const char* filename); // read all synaptic weights from the file
 		void read_num_bursts_in_recent_trials(const char* filename); // read number of recent bursts produced by HVC(RA) neurons in RATE_WINDOW_LONG previous trials
 		void read_replacement_history(const char* filename); // read number of trials since previous neuron replacements
-		
+		void read_last_dendritic_spike_times(const char* filename); // read last dendritic spike information to a file
+
         // internal write functions
 
         void write_weights_time_sequence_from_source_to_target(const std::vector<int>& source, const std::vector<int>&target, const char* filename); // write time
@@ -342,6 +347,7 @@ protected:
         void write_weight_statistics(const char * filename); // write mean synaptic weight and synaptic weight standard deviation
         void write_soma_spike_times(const char* filename); // write somatic spike information to a file
         void write_dend_spike_times(const char* filename); // write dendritic spike information to a file
+        void write_last_dend_spike_times(const char* filename); // write last dendritic spike information to a file
         void write_interneuron_spike_times(const char* filename); // write interneuron spike information to a file
         void write_maturation_info(const char* filename); // write mature neurons
         void write_time_info(const char* filename); // write simulation time information

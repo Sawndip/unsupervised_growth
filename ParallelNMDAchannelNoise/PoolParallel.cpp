@@ -179,6 +179,35 @@ void PoolParallel::new_chain_growth(std::string networkDirectory, bool training,
 	this->chain_growth(training, save_freq_short, save_freq_long);
 }
 
+void PoolParallel::read_network_state(std::string dataDir, int starting_trial)
+{
+	std::string trial_extension; // extension for file name, which takes into account trial number
+	
+	if (starting_trial > 0)
+		trial_extension = "_" + std::to_string(starting_trial) + "_";
+	else
+		trial_extension = "";
+	
+	std::string fileActiveGraph = dataDir + "RA_RA_active_connections" + trial_extension + ".bin";
+    std::string fileSuperGraph = dataDir + "RA_RA_super_connections" + trial_extension + ".bin";
+    std::string fileMaturationGraph = dataDir + "mature" + trial_extension + ".bin";
+	std::string fileNumRecentBursts = dataDir + "num_bursts_in_recent_trials" + trial_extension + ".bin";
+    std::string fileLastBurstTimes = dataDir + "last_dendritic_spike_times" + trial_extension + ".bin";
+	std::string fileReplacementHistory = dataDir + "replacement_history" + trial_extension + ".bin";
+    std::string fileWeightsGraph = dataDir + "weights"  + trial_extension + ".bin";
+    
+	networkGen.read_network_with_weights_from_directory(trial_extension, dataDir);
+	this->initialize_network();
+
+	this->read_super_synapses(fileSuperGraph.c_str());
+    this->read_active_synapses(fileActiveGraph.c_str());
+    this->read_weights(fileWeightsGraph.c_str());
+    this->read_maturation_info(fileMaturationGraph.c_str());
+    this->read_num_bursts_in_recent_trials(fileNumRecentBursts.c_str());
+    this->read_replacement_history(fileReplacementHistory.c_str());
+    this->read_last_dendritic_spike_times(fileLastBurstTimes.c_str());
+}
+
 void PoolParallel::continue_chain_growth(std::string dataDir, int starting_trial, bool training, int save_freq_short, int save_freq_long)
 {
 	std::string trial_extension; // extension for file name, which takes into account trial number
@@ -188,35 +217,18 @@ void PoolParallel::continue_chain_growth(std::string dataDir, int starting_trial
 	else
 		trial_extension = "";
 		
-	
-    std::string fileActiveGraph = dataDir + "RA_RA_active_connections" + trial_extension + ".bin";
-    std::string fileActiveGraphNew = outputDirectory + "RA_RA_active_connections" + trial_extension + "NEW.bin";
-    
-    std::string fileSuperGraph = dataDir + "RA_RA_super_connections" + trial_extension + ".bin";
+	std::string fileActiveGraphNew = outputDirectory + "RA_RA_active_connections" + trial_extension + "NEW.bin";
     std::string fileSuperGraphNew = outputDirectory + "RA_RA_super_connections" + trial_extension + "NEW.bin";
-    
-    std::string fileMaturationGraph = dataDir + "mature" + trial_extension + ".bin";
     std::string fileMaturationGraphNew = outputDirectory + "mature" + trial_extension + "NEW.bin";
-
-	std::string fileNumRecentBursts = dataDir + "num_bursts_in_recent_trials" + trial_extension + ".bin";
-    std::string fileNumRecentBurstsNew = outputDirectory + "num_bursts_in_recent_trials" + trial_extension + "NEW.bin";
-
-	std::string fileReplacementHistory = dataDir + "replacement_history" + trial_extension + ".bin";
-    std::string fileReplacementHistoryNew = outputDirectory + "replacement_history" + trial_extension + "NEW.bin";
-
-    std::string fileWeightsGraph = dataDir + "weights"  + trial_extension + ".bin";
+	std::string fileNumRecentBurstsNew = outputDirectory + "num_bursts_in_recent_trials" + trial_extension + "NEW.bin";
+    std::string fileLastBurstTimesNew = outputDirectory + "last_dendritic_spike_times" + trial_extension + "NEW.bin";
+	std::string fileReplacementHistoryNew = outputDirectory + "replacement_history" + trial_extension + "NEW.bin";
     std::string fileWeightsGraphNew = outputDirectory + "weights"  + trial_extension + "NEW.bin";
 	
-	networkGen.read_network_with_weights_from_directory(trial_extension, dataDir);
-	this->initialize_network();
-	
-	this->read_super_synapses(fileSuperGraph.c_str());
-    this->read_active_synapses(fileActiveGraph.c_str());
-    this->read_weights(fileWeightsGraph.c_str());
-    this->read_maturation_info(fileMaturationGraph.c_str());
-    this->read_num_bursts_in_recent_trials(fileNumRecentBursts.c_str());
-    this->read_replacement_history(fileReplacementHistory.c_str());
+	this->read_network_state(dataDir, starting_trial);
     
+    trial_number++;
+    this->set_time_for_neurons(trial_number * trial_duration);
     //this->print_super();
    
     
@@ -231,8 +243,9 @@ void PoolParallel::continue_chain_growth(std::string dataDir, int starting_trial
     this->write_maturation_info(fileMaturationGraphNew.c_str());
     this->write_num_bursts_in_recent_trials(fileNumRecentBurstsNew.c_str());
     this->write_replacement_history(fileReplacementHistoryNew.c_str());
+	this->write_last_dend_spike_times(fileLastBurstTimesNew.c_str());
 	
-	trial_number++;
+	
 	this->chain_growth(training, save_freq_short, save_freq_long);
 }
 
@@ -250,6 +263,16 @@ void PoolParallel::set_noise()
         HVCI_local[i].set_noise_generator(&generator);
         HVCI_local[i].set_poisson_noise();
     }
+}
+
+void PoolParallel::set_time_for_neurons(double t)
+{
+	for (int i = 0; i < N_RA_local; i++)
+		HVCRA_local[i].set_time(t);
+
+	
+    for (int i = 0; i < N_I_local; i++)
+		HVCI_local[i].set_time(t);
 }
 
 void PoolParallel::set_dynamics()
@@ -600,6 +623,60 @@ void PoolParallel::read_active_synapses(const char *filename)
                 //~ std::cout << "Active supersynapse " << Id_RA_local[i] << " -> " << j << std::endl; 
 //~ }
 
+void PoolParallel::read_last_dendritic_spike_times(const char* filename)
+{
+	std::ifstream inp;
+
+    inp.open(filename, std::ios::in | std::ios::binary);
+
+    // read number of HVC(RA) neurons
+
+	int N;
+
+    inp.read(reinterpret_cast<char *>(&N), sizeof(N));
+
+    if (N != N_RA)
+        std::cerr << "Number of HVC(RA) neurons read from file with last dendritic spike times: N = " << N 
+				<< "is different from N_RA = " << N_RA << std::endl;
+
+	
+
+    int num_trial;
+    
+    inp.read(reinterpret_cast<char *>(&num_trial), sizeof(num_trial));
+    
+    if (MPI_rank == 0)
+        std::cout << "Trial number read from file with last dendritic spike times: " << num_trial << std::endl;
+
+    int counter = 0; // counter of neuron id in the process
+	double spike_time; // last dendritic spike time
+
+    for (int i = 0; i < N_RA; i++)
+    {
+        bool source_neuron_found = false; // indicator that source neuron is found
+        
+        if (counter < N_RA_local)
+            if (Id_RA_local[counter] == i)
+            {
+
+              source_neuron_found = true;
+            }
+       
+		inp.read(reinterpret_cast<char *>(&spike_time), sizeof(spike_time));
+
+		if (source_neuron_found)
+		{
+			last_dend_spike_time_local[counter] = spike_time;
+			counter++;
+
+		}
+
+         
+    }
+    inp.close();
+	
+}
+
 void PoolParallel::read_num_bursts_in_recent_trials(const char* filename)
 {
     std::ifstream inp;
@@ -630,7 +707,7 @@ void PoolParallel::read_num_bursts_in_recent_trials(const char* filename)
     inp.read(reinterpret_cast<char *>(&num_trial), sizeof(num_trial));
     
     if (MPI_rank == 0)
-        std::cout << "Trial number read from file with synaptic weights: " << num_trial << std::endl;
+        std::cout << "Trial number read from file with num_bursts_in_recent_trials: " << num_trial << std::endl;
 
     int counter = 0; // counter of neuron id in the process
 	int num_bursts; // number of bursts produced in previoud trial j
@@ -1245,10 +1322,36 @@ void PoolParallel::print_invariable_connections()
 //~ 
 //~ }
 
+void PoolParallel::reset_after_trial()
+{
+	for (int i = 0; i < N_RA; i++)
+    {
+        spikes_in_trial_soma_global[i].clear();
+        spikes_in_trial_dend_global[i].clear();
+
+    }
+
+    for (int i = 0; i < N_I; i++)
+        spikes_in_trial_interneuron_global[i].clear();
+
+    for (int i = 0; i < N_RA_local; i++)
+    {
+	    HVCRA_local[i].reset();
+
+        spikes_in_trial_soma_local[i].clear();
+        spikes_in_trial_dend_local[i].clear();
+    }
+
+    for (int i = 0; i < N_I_local; i++)
+    {
+        HVCI_local[i].reset();
+        spikes_in_trial_interneuron_local[i].clear();
+    }
+	
+}
+
 void PoolParallel::randomize_after_trial()
 {
-    std::fill(spike_times_dend_global.begin(), spike_times_dend_global.end(), -200.0);
-    
     for (int i = 0; i < N_RA; i++)
     {
         spikes_in_trial_soma_global[i].clear();
@@ -1274,17 +1377,22 @@ void PoolParallel::randomize_after_trial()
     }
 }
 
-//~ 
-//~ void PoolParallel::set_training_current(double t)
-//~ {
-    //~ if (MPI_rank == 0)
-    //~ {
-        //~ std::function<double (double)> f = std::bind(&training_current, t, _1);
-//~ 
-        //~ for (int i = 0; i < N_TR; i++)
-            //~ HVCRA_local[i].set_dend_current(f);
-    //~ }
-//~ }
+
+void PoolParallel::set_training_current(double t)
+{
+    std::function<double (double)> f = std::bind(&training_current, t, _1);
+
+	for (int i = 0; i < N_TR; i++)
+	{
+		int rank;
+		int shift;
+		
+		this->get_neuronRA_location(training_neurons[i], &rank, &shift);
+		
+		if (MPI_rank == rank)
+			HVCRA_local[shift].set_dend_current(f);
+	}
+}
  
 
 void PoolParallel::set_training_current()
@@ -1292,7 +1400,7 @@ void PoolParallel::set_training_current()
 	double current_injection_time; // time of current injection to training neurons
 	
     if (MPI_rank == 0)
-        current_injection_time = WAITING_TIME + generator.random(trial_duration-2*WAITING_TIME);
+        current_injection_time = trial_number * trial_duration + WAITING_TIME + generator.random(trial_duration-2*WAITING_TIME);
         
     // send current injection time to all processes
     MPI_Bcast(&current_injection_time, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
@@ -1374,14 +1482,15 @@ void PoolParallel::set_training_current()
     //~ this->chain_growth(training, save_freq_short, save_freq_long);
     //~ 
 //~ }
-//~ 
-//~ void PoolParallel::test_grown_chain(int num_trials, std::string dataDir, int starting_trial, std::string outputDir)
-//~ {
-    //~ this->read_network_state(dataDir, starting_trial); // read data from file
-    //~ outputDirectory = outputDir;
-    //~ this->test_mature_chain(num_trials); // test networkc
-//~ }
-//~ 
+
+void PoolParallel::test_grown_chain(int num_trials, std::string dataDir, int starting_trial, std::string outputDir)
+{
+    this->read_network_state(dataDir, starting_trial); // read data from file
+    trial_number = 0;
+    outputDirectory = outputDir;
+    this->test_mature_chain(num_trials); // test networkc
+}
+
 //~ void PoolParallel::test_random_chain(int num_layers, int num_trials)
 //~ {
     //~ this->initialize_coordinates();
@@ -1397,406 +1506,422 @@ void PoolParallel::set_training_current()
 //~ 
     //~ this->test_mature_chain(num_trials);
 //~ }
-//~ 
-//~ void PoolParallel::test_mature_chain(int num_trials)
-//~ {
-    //~ std::string file_soma_spikes = outputDirectory + "soma_spikes_in_trial.bin"; // file with somatic spikes in trial
-    //~ std::string file_dend_spikes = outputDirectory + "dend_spikes_in_trial.bin"; // file with dendritic spikes in trial
-    //~ std::string file_chain_test = outputDirectory + "mature_chain_test.bin"; // trial with mature chain test info
-//~ 
-	//~ std::vector<std::vector<double>> average_dendritic_spike_time; // array with average dendritic spike time in every trial
-	//~ std::vector<std::vector<int>> num_dendritic_spikes_in_trials; // number of dendritic spikes produced in all trials
-	//~ std::vector<std::vector<int>> num_somatic_spikes_in_trials; // number of somatic spikes produced in all trials
-//~ 
-	//~ average_dendritic_spike_time.resize(N_RA);
-    //~ num_dendritic_spikes_in_trials.resize(N_RA);
-    //~ num_somatic_spikes_in_trials.resize(N_RA);
-//~ 
-    //~ if (MPI_rank == 0)
-    //~ {
-        //~ for (int j = 0; j < N_RA; j++)
-        //~ {
-            //~ num_dendritic_spikes_in_trials[j].resize(num_trials);
-            //~ num_somatic_spikes_in_trials[j].resize(num_trials);
-        //~ }
-    //~ }
-    //~ // neurons for gabaMaturation 300117	
-    //~ /*std::vector<int> RAtoWrite = {71, 186, 187, 84, 44, 175, 219, 238, 224, 70, 288, 117, 99, 276, 23, 24, 165, 
-                                  //~ 128, 184, 155, 114, 203, 257, 65, 273, 183, 294, 19, 35, 97, 142, 233, 6, 192, 
-                                  //~ 248, 295, 38, 69, 207, 268, 49, 263, 132, 101, 33, 206, 90, 252, 77, 43, 293, 36, 
-                                  //~ 5, 180, 282, 65, 34, 267, 208, 66, 146, 179};
-    //~ */
-    //~ /*
-    //~ // neurons for gabaMaturation 310117	
-    //~ std::vector<int> RAtoWrite = {201, 209, 124, 275, 40, 87, 66, 282, 222, 285, 115, 58, 183, 123, 244, 96, 226,
-                                  //~ 110, 15, 20, 178, 215, 192, 128, 280, 38, 7, 235, 273, 258, 227, 132, 169, 172, 
-                                  //~ 243, 100, 188};
-    //~ */
-    //~ // neurons for gabaMaturation 010217	
-    //~ /*std::vector<int> RAtoWrite = {179, 129, 128, 268, 130, 142, 15, 115, 273, 19, 23, 282, 29, 261, 290, 163, 292, 
-                                  //~ 37, 167, 168, 169, 199, 172, 51, 182, 60, 68, 69, 256, 201, 207, 208, 209, 82, 85, 
-                                  //~ 87, 90, 92, 122, 144, 226, 227, 131, 101, 81, 259, 231, 110, 114, 243, 117, 120, 250, 123, 124, 213};
-    //~ */
-	//~ /*
-    //~ // neurons for gabaMaturation270317 huxley
-    //~ std::vector<int> RAtoWrite = {179, 66, 11, 123, 173, 129, 148, 287, 199, 174, 285, 298, 144, 20, 161, 165, 205, 89, 17}; 
-    //~ */
-    //~ // neurons for gabaMaturation270317 huxley
-    //~ //std::vector<int> RAtoWrite = {179, 66, 11, 123, 173, 129, 148, 287, 199, 174, 285, 298, 144, 20, 161, 165, 205, 89, 17}; 
-    //~ //std::vector<int> ItoWrite;
-//~ 
-	//~ /*
-    //~ // neurons for gabaMaturation010417 hodgkin
-    //~ std::vector<int> RAtoWrite = {281, 156, 84, 52, 16, 92, 238, 75, 47, 10, 283, 171, 115, 194, 225, 78, 268, 221, 289, 104,
-                                  //~ 185, 285, 287, 21, 58, 55, 229, 222, 145, 239, 123, 173, 295, 179, 240, 134, 280, 42, 228, 178, 
-                                  //~ 208, 244, 294, 130, 45, 4, 217, 143, 87, 226, 148, 233, 190, 223, 255, 138, 29, 192, 290, 12, 
-                                  //~ 142, 129, 150, 48, 69, 271, 174, 17, 167, 168, 273, 68, 35, 95, 163, 207, 128, 172, 231, 258, 
-                                  //~ 99, 30, 100}; 
-    //~ */
-    //~ /*
-    //~ // neurons for gabaMaturation280317 huxley
-    //~ std::vector<int> RAtoWrite = {111, 253, 62, 265, 260, 8, 291, 160, 143, 64, 271, 128, 134, 84, 38, 72, 267, 34, 137, 77, 
-                                  //~ 20, 188, 200, 136, 173, 13, 206, 5, 118};
-    //~ */
-    //~ /*
-    //~ // neurons for gabaMaturation040417 huxley
-    //~ std::vector<int> RAtoWrite = {85, 197, 201, 44, 262, 247, 228, 249, 185, 46, 199, 212, 64, 140, 174, 210, 236, 77, 129, 
-								  //~ 15, 39, 298, 168, 216, 142, 295, 204, 13, 23, 34, 280, 186, 299, 121, 54, 269, 292, 105, 9, 
-								  //~ 35, 57, 251, 100, 69, 260, 182, 136, 237, 134, 26, 66, 157, 286, 135, 193, 45, 219, 80, 20, 
-								  //~ 126, 196, 211, 6, 190, 257, 81, 104, 36, 253, 25, 90, 115, 30, 183, 63, 109, 266, 202, 94, 113, 
-								  //~ 222, 187, 246, 86, 206, 232, 160, 125, 240, 117, 282, 152, 19, 259, 198, 128};
-    //~ */
-    //~ /*
-    //~ // neurons for gabaMaturation130417 huxley
-    //~ std::vector<int> RAtoWrite = {51, 48, 146, 172, 132, 277, 203, 175, 275, 28, 31, 37, 140, 235, 67, 245, 21, 50, 138, 93, 76,
-									//~ 228, 46, 225, 187, 231, 156, 210, 246, 148, 7, 49, 195, 74, 124, 255, 169, 152, 269, 206, 260, 
-									//~ 94, 83, 259, 57, 171, 114, 23, 222, 248, 113, 165, 20, 104, 116, 59, 257, 25, 26, 89, 252, 151, 
-									//~ 229, 253, 106, 176, 115, 183, 283, 30, 112, 226, 267, 139, 238, 158, 167, 95, 84, 268, 162, 111, 164, 163};
-	//~ */
-	//~ 
-	//~ // neurons for gabaMaturation280317 hodgkin
-    //~ //std::vector<int> RAtoWrite = {102, 18, 13, 141, 88, 269, 40, 286, 256, 63, 119, 262, 41, 109, 195, 128, 276, 153, 288, 271,
-	//~ //							  51, 204, 231, 120, 173, 215, 124, 280, 273, 163, 259, 127, 146, 261, 21, 66, 65, 267, 98, 34, 22, 221, 
-	//~ //							  44, 290, 125, 235, 249, 46, 90, 138, 137}; 
-	//~ 
-    //~ // neurons for gabaMaturation300317 hodgkin
-    //~ //std::vector<int> RAtoWrite = {297, 28, 278, 286, 225, 194, 292, 78, 15, 284, 14, 299, 240, 122, 59, 228, 145, 80, 239, 254,
-		//~ //						  79, 98, 298, 65, 197, 248, 91, 211, 133, 215, 192, 223, 128, 136, 68, 200, 234, 120, 188, 100, 
-			//~ //					  172, 89}; 
-	//~ 
-	//~ /*
-	//~ // neurons for gabaMaturation090417 hodgkin
-    //~ std::vector<int> RAtoWrite = {187, 209, 32, 155, 136, 271, 74, 267, 135, 181, 260, 122, 117, 279, 227, 11, 177, 169, 166, 148, 
-		//~ 251, 126, 116, 139, 86, 275, 151, 132, 248, 61, 119, 52, 90, 120, 174, 16, 214, 33, 273, 101, 189, 76, 173, 96, 261, 21, 112,
-		 //~ 150, 178, 179, 84, 17, 68, 192, 31, 92, 224, 254, 56, 257, 144, 171, 288, 223, 199, 159, 237, 118, 121, 168, 228, 263, 161, 234, 
-		 //~ 128, 71, 75, 200, 218, 99, 167, 217, 95, 48};
-	//~ */
-	//~ 
-     //~ // neurons for gabaMaturation170417 huxley
-    //~ std::vector<int> RAtoWrite = {62, 215, 293, 184, 270, 41, 61, 146, 277, 122, 132, 288, 133, 254, 275, 249, 245, 140, 67, 33, 125,
-								   //~ 21, 32, 77, 228, 192 , 263, 46, 194, 210, 287, 230, 131, 145, 99, 71, 56, 64, 266, 204, 147, 12, 163, 
-								   //~ 280, 252, 162, 59, 268, 104, 190, 25, 183, 253, 114, 165, 181, 109, 83, 286, 4, 240, 128, 152, 241,
-								    //~ 269, 170, 23, 271, 103, 19, 34, 276, 151, 191, 68, 87, 13, 11, 142, 278, 166, 70, 294, 5, 189, 35, 58,
-								     //~ 299, 217, 42, 130, 9};
-    //~ 
-    //~ std::vector<int> ItoWrite;
-//~ 
-    //~ for (int i = 0; i < N_I; i++)
-        //~ ItoWrite.push_back(i);
-//~ 
-    //~ for (int i = 0; i < num_trials; i++)
-	//~ {
-        //~ if (MPI_rank == 0)
-            //~ std::cout << "Trial " << i << std::endl;
-//~ 
-		//~ this->mature_trial();
-		//~ this->gather_mature_data(average_dendritic_spike_time);
-//~ 
-        //~ if (MPI_rank == 0)
-        //~ {
-            //~ for (int j = 0; j < N_RA; j++)
-            //~ {
-                //~ num_dendritic_spikes_in_trials[j][i] = static_cast<int>(spikes_in_trial_dend_global[j].size());
-                //~ num_somatic_spikes_in_trials[j][i] = static_cast<int>(spikes_in_trial_soma_global[j].size());
-            //~ }
-//~ 
-        //~ }
-//~ 
-        //~ for (size_t j = 0; j < RAtoWrite.size(); j++)
-            //~ this->write_RA((outputDirectory + "RA/RA" + std::to_string(RAtoWrite[j]) + "_trial" + std::to_string(i+1) + ".bin").c_str(), RAtoWrite[j]);
-        //~ 
-        //~ for (size_t j = 0; j < ItoWrite.size(); j++)
-            //~ this->write_I((outputDirectory + "I/I" + std::to_string(ItoWrite[j]) + "_trial" + std::to_string(i+1) + ".bin").c_str(), ItoWrite[j]);
-        //~ 
-        //~ if (i == 0)
-        //~ {
-		    //~ this->write_soma_spike_times(file_soma_spikes.c_str());
-		    //~ this->write_dend_spike_times(file_dend_spikes.c_str());
-        //~ }
-		//~ this->randomize_after_trial();
-	//~ }
-	//~ 
-	//~ // process dendritic spikes
-//~ 
-	//~ std::vector<double> mean_burst_time; // average of dendritic spike time
-	//~ std::vector<double> std_burst_time; // standard deviation of dendritic spike time
-    //~ std::vector<double> average_num_dend_spikes_in_trial; // average number of dendritic spikes in trial
-    //~ std::vector<double> average_num_soma_spikes_in_trial; // average number of somatic spikes in trials
-//~ 
-    //~ std::vector<int> num_trials_with_dend_spikes; // number of trials in which neuron produced dendritic spikes
-//~ 
-	//~ mean_burst_time.resize(N_RA);
-	//~ std_burst_time.resize(N_RA);
-    //~ average_num_dend_spikes_in_trial.resize(N_RA);
-    //~ average_num_soma_spikes_in_trial.resize(N_RA);
-    //~ num_trials_with_dend_spikes.resize(N_RA);
-//~ 
-	//~ if (MPI_rank == 0)
-	//~ {
-		//~ for (int i = 0; i < N_RA; i++)
-		//~ {
-            //~ average_num_dend_spikes_in_trial[i] = std::accumulate(num_dendritic_spikes_in_trials[i].begin(), num_dendritic_spikes_in_trials[i].end(), 0.0) 
-                                                //~ / static_cast<double>(num_trials);
-//~ 
-            //~ average_num_soma_spikes_in_trial[i] = std::accumulate(num_somatic_spikes_in_trials[i].begin(), num_somatic_spikes_in_trials[i].end(), 0.0) 
-                                                //~ / static_cast<double>(num_trials);
-            //~ 
-            //~ num_trials_with_dend_spikes[i] = static_cast<int>(average_dendritic_spike_time[i].size());
-			//~ 
-            //~ /*
-            //~ if (i == 288)
-            //~ {
-                //~ std::cout << "Number of somatic spikes in all trials: " << std::endl;
-                //~ for (int j = 0; j < num_trials; j++)
-                    //~ std::cout << num_somatic_spikes_in_trials[i][j] << '\t';
-//~ 
-                //~ std::cout << '\n' << std::endl;
-                //~ 
-                //~ std::cout << "Number of dendritic spikes in all trials: " << std::endl;
-                //~ for (int j = 0; j < num_trials; j++)
-                    //~ std::cout << num_dendritic_spikes_in_trials[i][j] << "\t";
-//~ 
-                //~ std::cout << std::endl << std::endl;
-                //~ 
-                //~ std::cout << "Number of trials in which neuron produced dendritic bursts: " << num_trials_with_dend_spikes[i] << "\n" << std::endl;
-                //~ std::cout << "All dendritic burst times in these trials: " << std::endl;
-                //~ 
-                //~ for (size_t j = 0; j < average_dendritic_spike_time[i].size(); j++)
-                    //~ std::cout << average_dendritic_spike_time[i][j] << "\t";
-//~ 
-                //~ std::cout << std::endl;
-//~ 
-            //~ }
-            //~ */
-//~ 
-            //~ if (num_trials_with_dend_spikes[i] > 0)
-            //~ {
-//~ 
-                //~ //for (int j = 0; j < (int) average_dendritic_spike_time[i].size(); j++)
-                  //~ //  printf("average_dendritic_spike_time[%d][%d] = %f\n", i, j, average_dendritic_spike_time[i][j]);
-				//~ mean_burst_time[i] = std::accumulate(average_dendritic_spike_time[i].begin(), average_dendritic_spike_time[i].end(), 0.0) / 
-                                        //~ static_cast<double>(num_trials_with_dend_spikes[i]);
-//~ 
-            //~ }
-//~ 
-			//~ else
-				//~ mean_burst_time[i] = -1;
-			//~ // calculate standard deviation of burst times
-//~ 
-			//~ double accum = 0;
-			//~ double mean = mean_burst_time[i];
-//~ 
-			//~ std::for_each(average_dendritic_spike_time[i].begin(), average_dendritic_spike_time[i].end(), [&accum, mean](const double t)
-			//~ {
-				//~ accum += (t - mean) * (t - mean);
-			//~ });
-//~ 
-			//~ if (static_cast<int>(average_dendritic_spike_time[i].size() > 1))
-				//~ std_burst_time[i] = sqrt(accum / (static_cast<double>(average_dendritic_spike_time[i].size()) - 1));
-			//~ else
-				//~ std_burst_time[i] = -1;
-//~ 
-//~ 
-		//~ }
-	//~ }
-//~ 
-	//~ this->write_chain_test(num_trials, num_trials_with_dend_spikes, average_num_dend_spikes_in_trial, average_num_soma_spikes_in_trial, 
-                           //~ mean_burst_time, std_burst_time, file_chain_test.c_str());
-//~ }
-//~ 
-//~ void PoolParallel::mature_trial()
-//~ {
-	//~ int some_RA_neuron_fired_soma_local;
-//~ 
-	//~ int some_I_neuron_fired_local;
-	//~ int some_RA_neuron_fired_soma_global;
-//~ 
-	//~ int some_I_neuron_fired_global;
-//~ 
-    //~ trial_number++;
-    //~ 
-    //~ internal_time = 0;
-    //~ network_time = internal_time + network_update_frequency;
-//~ 
-	//~ // set training current
-	//~ double current_injection_time = 100; //ms
-    //~ this->set_training_current(current_injection_time);
-//~ 
-	//~ // initialize update arrays and fired indicators
-	//~ std::fill(update_Ge_RA_local.begin(), update_Ge_RA_local.end(), 0.0);
-	//~ std::fill(update_Ge_RA_global.begin(), update_Ge_RA_global.end(), 0.0);
-	//~ std::fill(update_Gi_RA_local.begin(), update_Gi_RA_local.end(), 0.0);
-	//~ std::fill(update_Gi_RA_global.begin(), update_Gi_RA_global.end(), 0.0);
-	//~ std::fill(update_Ge_I_local.begin(), update_Ge_I_local.end(), 0.0);
-	//~ std::fill(update_Ge_I_global.begin(), update_Ge_I_global.end(), 0.0);
-//~ 
-    //~ some_RA_neuron_fired_soma_local = 0;
-	//~ some_RA_neuron_fired_soma_global = 0;
-//~ 
-    //~ some_I_neuron_fired_local = 0;
-    //~ some_I_neuron_fired_global = 0;
-	//~ 
-    //~ // evolve dynamics
-    //~ for (int t = 1; t < size; t++)
-	//~ {
-		//~ internal_time += timeStep;
-		//~ 
-		//~ for (int i = 0; i < N_RA_local; i++)
-		//~ {
-            //~ // set GABA potential
-            //~ HVCRA_local[i].set_Ei(gaba_potential_local[i]);
-            //~ 
-            //~ // Debraband step
-            //~ HVCRA_local[i].Debraband_step_no_target_update();
-            //~ 
-            //~ // if some neuron produced somatic spike
-            //~ if (HVCRA_local[i].get_fired_soma())
-            //~ {
-                //~ spikes_in_trial_soma_local[i].push_back(internal_time);
-                //~ 
-                //~ // if neuron is mature, update conductances of targets
-                //~ if (mature_local[i] == 1)
-                //~ {
-                    //~ some_RA_neuron_fired_soma_local = 1;
-                    //~ // loop over all inhibitory targets of fired neurons
-                    //~ size_t num_I_targets = syn_ID_RA_I_local[i].size();
-                    //~ for (size_t j = 0; j < num_I_targets; j++)
-                    //~ {
-                        //~ int syn_ID = syn_ID_RA_I_local[i][j];
-                        //~ update_Ge_I_local[syn_ID] += weights_RA_I_local[i][j];
-//~ 
-                    //~ }
-                    //~ 
-                    //~ // loop over all excitatory targets
-                    //~ size_t num_RA_targets = active_synapses_local[i].size();
-                    //~ 
-                    //~ //std::cout << "Neuron fired: " << Id_RA_local[i] << " num_RA_targets: " << num_RA_targets << std::endl;
-//~ 
-                    //~ for (size_t j = 0; j < num_RA_targets; j++)
-                    //~ {
-                        //~ int syn_ID = active_synapses_local[i][j];
-                        //~ update_Ge_RA_local[syn_ID] += weights_local[i][syn_ID];
-                        //~ //std::cout << "Neuron fired: " << Id_RA_local[i] << " target: " << syn_ID << " synaptic weight: " << weights_local[i][syn_ID] << std::endl;
-                    //~ }
-                //~ }
-            //~ } 
-//~ 
-            //~ if (HVCRA_local[i].get_fired_dend())
-            //~ {
-                //~ spikes_in_trial_dend_local[i].push_back(internal_time);
-            //~ }
-		//~ }
-//~ 
-		//~ for (int i = 0; i < N_I_local; i++)
-		//~ {
-            //~ HVCI_local[i].DP8_step_no_target_update();
-            //~ 
-            //~ //  if some I neuron spikes, change conductance update array
-            //~ if (HVCI_local[i].get_fired())
-            //~ {
-                //~ //printf("My rank = %d; I neuron %d fired; spike_time = %f\n", MPI_rank, Id_I_local[i], internal_time);
-                //~ some_I_neuron_fired_local = 1;
-                //~ spikes_in_trial_interneuron_local[i].push_back(internal_time);
-//~ 
-                //~ size_t num_RA_targets = syn_ID_I_RA_local[i].size();
-                //~ // loop over all targets of fired neurons
-                //~ for (size_t j = 0; j < num_RA_targets; j++)
-                //~ {
-                    //~ int syn_ID = syn_ID_I_RA_local[i][j];
-                    //~ update_Gi_RA_local[syn_ID] += weights_I_RA_local[i][j];
-                    //~ //printf("Rank = %d; i = %d; update_Gi_RA_local[%d] = %f; weights_I_RA_local[%d][%d] = %f\n", MPI_rank, i, syn_ID,
-                     //~ //   update_Gi_RA_local[syn_ID], weights_I_RA_local[fired_ID][j], fired_ID, j);
-                //~ }
-            //~ }
-		//~ }
-//~ 
-        //~ // if we need to update network state
-        //~ // get if any neurons fired in some process
-//~ 
-        //~ if (internal_time > network_time)
-        //~ {
-            //~ MPI_Allreduce(&some_RA_neuron_fired_soma_local, &some_RA_neuron_fired_soma_global, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
-            //~ MPI_Allreduce(&some_I_neuron_fired_local, &some_I_neuron_fired_global, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
-        //~ 
-            //~ if (some_I_neuron_fired_global > 0)
-            //~ {
-            //~ // sum update array and send to all processes
-//~ 
-                //~ MPI_Allreduce(&update_Gi_RA_local[0], &update_Gi_RA_global[0], N_RA, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-//~ 
-                //~ for (int i = 0; i < N_RA_local; i++)
-                //~ {
-                    //~ HVCRA_local[i].raiseI(update_Gi_RA_global[Id_RA_local[i]]);
-                //~ }
-//~ 
-				//~ // reset fired indicators and arrays
-				//~ some_I_neuron_fired_global = 0;
-				//~ some_I_neuron_fired_local = 0;
-//~ 
-//~ 
-				//~ std::fill(update_Gi_RA_local.begin(), update_Gi_RA_local.end(), 0.0);
-				//~ std::fill(update_Gi_RA_global.begin(), update_Gi_RA_global.end(), 0.0);
-            //~ }
-//~ 
-            //~ //if (some_RA_neuron_fired_global == 1)
-            //~ //    printf("Rank %d; some_RA_neuron_fired_global: %d\n", MPI_rank, some_RA_neuron_fired_global);
-//~ 
-            //~ // if somatic compartment of any neuron in the pool fired, update synaptic conductances
-             //~ if (some_RA_neuron_fired_soma_global > 0)
-             //~ {
-            //~ // sum all update arrays and send to all processes
-//~ 
-                //~ MPI_Allreduce(&update_Ge_RA_local[0], &update_Ge_RA_global[0], N_RA, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-                //~ MPI_Allreduce(&update_Ge_I_local[0], &update_Ge_I_global[0], N_I, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-//~ 
-                //~ // now update excitatory conductances of all neurons
-                //~ for (int i = 0; i < N_RA_local; i++)
-                //~ {
-                    //~ HVCRA_local[i].raiseE(update_Ge_RA_global[Id_RA_local[i]]); // update conductance
-				//~ }
-//~ 
-                //~ for (int i = 0; i < N_I_local; i++)
-                //~ {
-                    //~ HVCI_local[i].raiseE(update_Ge_I_global[Id_I_local[i]]);
-                //~ }
-//~ 
-				//~ // reset conductance arrays and fired indicators
-				//~ some_RA_neuron_fired_soma_global = 0;
-				//~ some_RA_neuron_fired_soma_local = 0;
-//~ 
-				//~ std::fill(update_Ge_RA_local.begin(), update_Ge_RA_local.end(), 0.0);
-				//~ std::fill(update_Ge_RA_global.begin(), update_Ge_RA_global.end(), 0.0);
-				//~ std::fill(update_Ge_I_local.begin(), update_Ge_I_local.end(), 0.0);
-				//~ std::fill(update_Ge_I_global.begin(), update_Ge_I_global.end(), 0.0);
-            //~ }
-//~ 
-            //~ network_time += network_update_frequency;
-        //~ } // end network update
-//~ 
-//~ 
-        //~ //MPI_Barrier(MPI_COMM_WORLD);
-    //~ } //~ // end evolve dynamics
-//~ }
+
+void PoolParallel::test_mature_chain(int num_trials)
+{
+    std::string file_soma_spikes = outputDirectory + "soma_spikes_in_trial.bin"; // file with somatic spikes in trial
+    std::string file_dend_spikes = outputDirectory + "dend_spikes_in_trial.bin"; // file with dendritic spikes in trial
+    std::string file_chain_test = outputDirectory + "mature_chain_test.bin"; // trial with mature chain test info
+
+	std::vector<std::vector<double>> average_dendritic_spike_time; // array with average dendritic spike time in every trial
+	std::vector<std::vector<int>> num_dendritic_spikes_in_trials; // number of dendritic spikes produced in all trials
+	std::vector<std::vector<int>> num_somatic_spikes_in_trials; // number of somatic spikes produced in all trials
+
+	average_dendritic_spike_time.resize(N_RA);
+    num_dendritic_spikes_in_trials.resize(N_RA);
+    num_somatic_spikes_in_trials.resize(N_RA);
+
+    if (MPI_rank == 0)
+    {
+        for (int j = 0; j < N_RA; j++)
+        {
+            num_dendritic_spikes_in_trials[j].resize(num_trials);
+            num_somatic_spikes_in_trials[j].resize(num_trials);
+        }
+    }
+    // neurons for gabaMaturation 300117	
+    /*std::vector<int> RAtoWrite = {71, 186, 187, 84, 44, 175, 219, 238, 224, 70, 288, 117, 99, 276, 23, 24, 165, 
+                                  128, 184, 155, 114, 203, 257, 65, 273, 183, 294, 19, 35, 97, 142, 233, 6, 192, 
+                                  248, 295, 38, 69, 207, 268, 49, 263, 132, 101, 33, 206, 90, 252, 77, 43, 293, 36, 
+                                  5, 180, 282, 65, 34, 267, 208, 66, 146, 179};
+    */
+    /*
+    // neurons for gabaMaturation 310117	
+    std::vector<int> RAtoWrite = {201, 209, 124, 275, 40, 87, 66, 282, 222, 285, 115, 58, 183, 123, 244, 96, 226,
+                                  110, 15, 20, 178, 215, 192, 128, 280, 38, 7, 235, 273, 258, 227, 132, 169, 172, 
+                                  243, 100, 188};
+    */
+    // neurons for gabaMaturation 010217	
+    /*std::vector<int> RAtoWrite = {179, 129, 128, 268, 130, 142, 15, 115, 273, 19, 23, 282, 29, 261, 290, 163, 292, 
+                                  37, 167, 168, 169, 199, 172, 51, 182, 60, 68, 69, 256, 201, 207, 208, 209, 82, 85, 
+                                  87, 90, 92, 122, 144, 226, 227, 131, 101, 81, 259, 231, 110, 114, 243, 117, 120, 250, 123, 124, 213};
+    */
+	/*
+    // neurons for gabaMaturation270317 huxley
+    std::vector<int> RAtoWrite = {179, 66, 11, 123, 173, 129, 148, 287, 199, 174, 285, 298, 144, 20, 161, 165, 205, 89, 17}; 
+    */
+    // neurons for gabaMaturation270317 huxley
+    //std::vector<int> RAtoWrite = {179, 66, 11, 123, 173, 129, 148, 287, 199, 174, 285, 298, 144, 20, 161, 165, 205, 89, 17}; 
+    //std::vector<int> ItoWrite;
+
+	/*
+    // neurons for gabaMaturation010417 hodgkin
+    std::vector<int> RAtoWrite = {281, 156, 84, 52, 16, 92, 238, 75, 47, 10, 283, 171, 115, 194, 225, 78, 268, 221, 289, 104,
+                                  185, 285, 287, 21, 58, 55, 229, 222, 145, 239, 123, 173, 295, 179, 240, 134, 280, 42, 228, 178, 
+                                  208, 244, 294, 130, 45, 4, 217, 143, 87, 226, 148, 233, 190, 223, 255, 138, 29, 192, 290, 12, 
+                                  142, 129, 150, 48, 69, 271, 174, 17, 167, 168, 273, 68, 35, 95, 163, 207, 128, 172, 231, 258, 
+                                  99, 30, 100}; 
+    */
+    /*
+    // neurons for gabaMaturation280317 huxley
+    std::vector<int> RAtoWrite = {111, 253, 62, 265, 260, 8, 291, 160, 143, 64, 271, 128, 134, 84, 38, 72, 267, 34, 137, 77, 
+                                  20, 188, 200, 136, 173, 13, 206, 5, 118};
+    */
+    /*
+    // neurons for gabaMaturation040417 huxley
+    std::vector<int> RAtoWrite = {85, 197, 201, 44, 262, 247, 228, 249, 185, 46, 199, 212, 64, 140, 174, 210, 236, 77, 129, 
+								  15, 39, 298, 168, 216, 142, 295, 204, 13, 23, 34, 280, 186, 299, 121, 54, 269, 292, 105, 9, 
+								  35, 57, 251, 100, 69, 260, 182, 136, 237, 134, 26, 66, 157, 286, 135, 193, 45, 219, 80, 20, 
+								  126, 196, 211, 6, 190, 257, 81, 104, 36, 253, 25, 90, 115, 30, 183, 63, 109, 266, 202, 94, 113, 
+								  222, 187, 246, 86, 206, 232, 160, 125, 240, 117, 282, 152, 19, 259, 198, 128};
+    */
+    /*
+    // neurons for gabaMaturation130417 huxley
+    std::vector<int> RAtoWrite = {51, 48, 146, 172, 132, 277, 203, 175, 275, 28, 31, 37, 140, 235, 67, 245, 21, 50, 138, 93, 76,
+									228, 46, 225, 187, 231, 156, 210, 246, 148, 7, 49, 195, 74, 124, 255, 169, 152, 269, 206, 260, 
+									94, 83, 259, 57, 171, 114, 23, 222, 248, 113, 165, 20, 104, 116, 59, 257, 25, 26, 89, 252, 151, 
+									229, 253, 106, 176, 115, 183, 283, 30, 112, 226, 267, 139, 238, 158, 167, 95, 84, 268, 162, 111, 164, 163};
+	*/
+	
+	// neurons for gabaMaturation280317 hodgkin
+    //std::vector<int> RAtoWrite = {102, 18, 13, 141, 88, 269, 40, 286, 256, 63, 119, 262, 41, 109, 195, 128, 276, 153, 288, 271,
+	//							  51, 204, 231, 120, 173, 215, 124, 280, 273, 163, 259, 127, 146, 261, 21, 66, 65, 267, 98, 34, 22, 221, 
+	//							  44, 290, 125, 235, 249, 46, 90, 138, 137}; 
+	
+    // neurons for gabaMaturation300317 hodgkin
+    //std::vector<int> RAtoWrite = {297, 28, 278, 286, 225, 194, 292, 78, 15, 284, 14, 299, 240, 122, 59, 228, 145, 80, 239, 254,
+		//						  79, 98, 298, 65, 197, 248, 91, 211, 133, 215, 192, 223, 128, 136, 68, 200, 234, 120, 188, 100, 
+			//					  172, 89}; 
+	
+	/*
+	// neurons for gabaMaturation090417 hodgkin
+    std::vector<int> RAtoWrite = {187, 209, 32, 155, 136, 271, 74, 267, 135, 181, 260, 122, 117, 279, 227, 11, 177, 169, 166, 148, 
+		251, 126, 116, 139, 86, 275, 151, 132, 248, 61, 119, 52, 90, 120, 174, 16, 214, 33, 273, 101, 189, 76, 173, 96, 261, 21, 112,
+		 150, 178, 179, 84, 17, 68, 192, 31, 92, 224, 254, 56, 257, 144, 171, 288, 223, 199, 159, 237, 118, 121, 168, 228, 263, 161, 234, 
+		 128, 71, 75, 200, 218, 99, 167, 217, 95, 48};
+	*/
+	
+     // neurons for gabaMaturation170417 huxley
+     /*
+    std::vector<int> RAtoWrite = {62, 215, 293, 184, 270, 41, 61, 146, 277, 122, 132, 288, 133, 254, 275, 249, 245, 140, 67, 33, 125,
+								   21, 32, 77, 228, 192 , 263, 46, 194, 210, 287, 230, 131, 145, 99, 71, 56, 64, 266, 204, 147, 12, 163, 
+								   280, 252, 162, 59, 268, 104, 190, 25, 183, 253, 114, 165, 181, 109, 83, 286, 4, 240, 128, 152, 241,
+								    269, 170, 23, 271, 103, 19, 34, 276, 151, 191, 68, 87, 13, 11, 142, 278, 166, 70, 294, 5, 189, 35, 58,
+								     299, 217, 42, 130, 9};
+    */
+    
+    std::vector<int> RAtoWrite = {0, 1, 2};
+    std::vector<int> ItoWrite;
+
+    for (int i = 0; i < N_I; i++)
+        ItoWrite.push_back(i);
+
+    for (int i = 0; i < num_trials; i++)
+	{
+        if (MPI_rank == 0)
+            std::cout << "Trial " << i << std::endl;
+
+		this->mature_trial();
+		this->gather_data();
+		//this->gather_mature_data(average_dendritic_spike_time);
+		
+		if (MPI_rank == 0)
+		{
+			for (int i = 0; i < N_RA; i++)
+			{
+				if (spikes_in_trial_dend_global[i].size() > 0)
+				{
+					double average_spike_time = std::accumulate(spikes_in_trial_dend_global[i].begin(), spikes_in_trial_dend_global[i].end(), 0.0) / static_cast<double>(spikes_in_trial_dend_global[i].size());
+
+					//printf("Average dendritic spike time = %f\n", average_spike_time);
+					average_dendritic_spike_time[i].push_back(average_spike_time);
+				}
+			}
+		}
+
+        if (MPI_rank == 0)
+        {
+            for (int j = 0; j < N_RA; j++)
+            {
+                num_dendritic_spikes_in_trials[j][i] = static_cast<int>(spikes_in_trial_dend_global[j].size());
+                num_somatic_spikes_in_trials[j][i] = static_cast<int>(spikes_in_trial_soma_global[j].size());
+            }
+
+        }
+
+        for (size_t j = 0; j < RAtoWrite.size(); j++)
+            this->write_RA((outputDirectory + "RA/RA" + std::to_string(RAtoWrite[j]) + "_trial" + std::to_string(i+1) + ".bin").c_str(), RAtoWrite[j]);
+        
+        for (size_t j = 0; j < ItoWrite.size(); j++)
+            this->write_I((outputDirectory + "I/I" + std::to_string(ItoWrite[j]) + "_trial" + std::to_string(i+1) + ".bin").c_str(), ItoWrite[j]);
+        
+       
+		this->write_soma_spike_times((outputDirectory + "soma_spikes_in_trial_" + std::to_string(trial_number) + "_.bin").c_str());
+		this->write_dend_spike_times((outputDirectory + "dend_spikes_in_trial_" + std::to_string(trial_number) + "_.bin").c_str());
+        
+		this->randomize_after_trial();
+		this->set_time_for_neurons(0.0);
+		trial_number++;
+	}
+	
+	// process dendritic spikes
+
+	std::vector<double> mean_burst_time; // average of dendritic spike time
+	std::vector<double> std_burst_time; // standard deviation of dendritic spike time
+    std::vector<double> average_num_dend_spikes_in_trial; // average number of dendritic spikes in trial
+    std::vector<double> average_num_soma_spikes_in_trial; // average number of somatic spikes in trials
+
+    std::vector<int> num_trials_with_dend_spikes; // number of trials in which neuron produced dendritic spikes
+
+	mean_burst_time.resize(N_RA);
+	std_burst_time.resize(N_RA);
+    average_num_dend_spikes_in_trial.resize(N_RA);
+    average_num_soma_spikes_in_trial.resize(N_RA);
+    num_trials_with_dend_spikes.resize(N_RA);
+
+	if (MPI_rank == 0)
+	{
+		for (int i = 0; i < N_RA; i++)
+		{
+            average_num_dend_spikes_in_trial[i] = std::accumulate(num_dendritic_spikes_in_trials[i].begin(), num_dendritic_spikes_in_trials[i].end(), 0.0) 
+                                                / static_cast<double>(num_trials);
+
+            average_num_soma_spikes_in_trial[i] = std::accumulate(num_somatic_spikes_in_trials[i].begin(), num_somatic_spikes_in_trials[i].end(), 0.0) 
+                                                / static_cast<double>(num_trials);
+            
+            num_trials_with_dend_spikes[i] = static_cast<int>(average_dendritic_spike_time[i].size());
+			
+            /*
+            if (i == 288)
+            {
+                std::cout << "Number of somatic spikes in all trials: " << std::endl;
+                for (int j = 0; j < num_trials; j++)
+                    std::cout << num_somatic_spikes_in_trials[i][j] << '\t';
+
+                std::cout << '\n' << std::endl;
+                
+                std::cout << "Number of dendritic spikes in all trials: " << std::endl;
+                for (int j = 0; j < num_trials; j++)
+                    std::cout << num_dendritic_spikes_in_trials[i][j] << "\t";
+
+                std::cout << std::endl << std::endl;
+                
+                std::cout << "Number of trials in which neuron produced dendritic bursts: " << num_trials_with_dend_spikes[i] << "\n" << std::endl;
+                std::cout << "All dendritic burst times in these trials: " << std::endl;
+                
+                for (size_t j = 0; j < average_dendritic_spike_time[i].size(); j++)
+                    std::cout << average_dendritic_spike_time[i][j] << "\t";
+
+                std::cout << std::endl;
+
+            }
+            */
+
+            if (num_trials_with_dend_spikes[i] > 0)
+            {
+
+                //for (int j = 0; j < (int) average_dendritic_spike_time[i].size(); j++)
+                  //  printf("average_dendritic_spike_time[%d][%d] = %f\n", i, j, average_dendritic_spike_time[i][j]);
+				mean_burst_time[i] = std::accumulate(average_dendritic_spike_time[i].begin(), average_dendritic_spike_time[i].end(), 0.0) / 
+                                        static_cast<double>(num_trials_with_dend_spikes[i]);
+
+            }
+
+			else
+				mean_burst_time[i] = -1;
+			// calculate standard deviation of burst times
+
+			double accum = 0;
+			double mean = mean_burst_time[i];
+
+			std::for_each(average_dendritic_spike_time[i].begin(), average_dendritic_spike_time[i].end(), [&accum, mean](const double t)
+			{
+				accum += (t - mean) * (t - mean);
+			});
+
+			if (static_cast<int>(average_dendritic_spike_time[i].size() > 1))
+				std_burst_time[i] = sqrt(accum / (static_cast<double>(average_dendritic_spike_time[i].size()) - 1));
+			else
+				std_burst_time[i] = -1;
+
+
+		}
+	}
+
+	this->write_chain_test(num_trials, num_trials_with_dend_spikes, average_num_dend_spikes_in_trial, average_num_soma_spikes_in_trial, 
+                           mean_burst_time, std_burst_time, file_chain_test.c_str());
+}
+
+void PoolParallel::mature_trial()
+{
+	int some_RA_neuron_fired_soma_local;
+
+	int some_I_neuron_fired_local;
+	int some_RA_neuron_fired_soma_global;
+
+	int some_I_neuron_fired_global;
+    
+    internal_time = 0;
+    network_time = internal_time + network_update_frequency;
+
+	// set training current
+	double current_injection_time = 100; //ms
+    this->set_training_current(current_injection_time);
+
+	// initialize update arrays and fired indicators
+	std::fill(update_Ge_RA_local.begin(), update_Ge_RA_local.end(), 0.0);
+	std::fill(update_Ge_RA_global.begin(), update_Ge_RA_global.end(), 0.0);
+	std::fill(update_Gi_RA_local.begin(), update_Gi_RA_local.end(), 0.0);
+	std::fill(update_Gi_RA_global.begin(), update_Gi_RA_global.end(), 0.0);
+	std::fill(update_Ge_I_local.begin(), update_Ge_I_local.end(), 0.0);
+	std::fill(update_Ge_I_global.begin(), update_Ge_I_global.end(), 0.0);
+
+    some_RA_neuron_fired_soma_local = 0;
+	some_RA_neuron_fired_soma_global = 0;
+
+    some_I_neuron_fired_local = 0;
+    some_I_neuron_fired_global = 0;
+	
+    // evolve dynamics
+    for (int t = 1; t < size; t++)
+	{
+		internal_time += timeStep;
+		
+		for (int i = 0; i < N_RA_local; i++)
+		{
+            // set GABA potential
+            HVCRA_local[i].set_Ei(gaba_potential_local[i]);
+            
+            // Debraband step
+            HVCRA_local[i].Debraband_step_no_target_update();
+            
+            // if some neuron produced somatic spike
+            if (HVCRA_local[i].get_fired_soma())
+            {
+                spikes_in_trial_soma_local[i].push_back(internal_time);
+                
+                // update conductances of targets
+                
+				some_RA_neuron_fired_soma_local = 1;
+				// loop over all inhibitory targets of fired neurons
+				size_t num_I_targets = syn_ID_RA_I_local[i].size();
+				for (size_t j = 0; j < num_I_targets; j++)
+				{
+					int syn_ID = syn_ID_RA_I_local[i][j];
+					update_Ge_I_local[syn_ID] += weights_RA_I_local[i][j];
+
+				}
+				
+				// loop over all excitatory targets
+				size_t num_RA_targets = active_synapses_local[i].size();
+				
+				//std::cout << "Neuron fired: " << Id_RA_local[i] << " num_RA_targets: " << num_RA_targets << std::endl;
+
+				for (size_t j = 0; j < num_RA_targets; j++)
+				{
+					int syn_ID = active_synapses_local[i][j];
+					update_Ge_RA_local[syn_ID] += weights_local[i][syn_ID];
+					//std::cout << "Neuron fired: " << Id_RA_local[i] << " target: " << syn_ID << " synaptic weight: " << weights_local[i][syn_ID] << std::endl;
+				}
+                
+            } 
+
+            if (HVCRA_local[i].get_fired_dend())
+            {
+                spikes_in_trial_dend_local[i].push_back(internal_time);
+            }
+		}
+
+		for (int i = 0; i < N_I_local; i++)
+		{
+            HVCI_local[i].DP8_step_no_target_update();
+            
+            //  if some I neuron spikes, change conductance update array
+            if (HVCI_local[i].get_fired())
+            {
+                //printf("My rank = %d; I neuron %d fired; spike_time = %f\n", MPI_rank, Id_I_local[i], internal_time);
+                some_I_neuron_fired_local = 1;
+                spikes_in_trial_interneuron_local[i].push_back(internal_time);
+
+                size_t num_RA_targets = syn_ID_I_RA_local[i].size();
+                // loop over all targets of fired neurons
+                for (size_t j = 0; j < num_RA_targets; j++)
+                {
+                    int syn_ID = syn_ID_I_RA_local[i][j];
+                    update_Gi_RA_local[syn_ID] += weights_I_RA_local[i][j];
+                    //printf("Rank = %d; i = %d; update_Gi_RA_local[%d] = %f; weights_I_RA_local[%d][%d] = %f\n", MPI_rank, i, syn_ID,
+                     //   update_Gi_RA_local[syn_ID], weights_I_RA_local[fired_ID][j], fired_ID, j);
+                }
+            }
+		}
+
+        // if we need to update network state
+        // get if any neurons fired in some process
+
+        if (internal_time > network_time)
+        {
+            MPI_Allreduce(&some_RA_neuron_fired_soma_local, &some_RA_neuron_fired_soma_global, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+            MPI_Allreduce(&some_I_neuron_fired_local, &some_I_neuron_fired_global, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+        
+            if (some_I_neuron_fired_global > 0)
+            {
+            // sum update array and send to all processes
+
+                MPI_Allreduce(&update_Gi_RA_local[0], &update_Gi_RA_global[0], N_RA, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+
+                for (int i = 0; i < N_RA_local; i++)
+                {
+                    HVCRA_local[i].raiseI(update_Gi_RA_global[Id_RA_local[i]]);
+                }
+
+				// reset fired indicators and arrays
+				some_I_neuron_fired_global = 0;
+				some_I_neuron_fired_local = 0;
+
+
+				std::fill(update_Gi_RA_local.begin(), update_Gi_RA_local.end(), 0.0);
+				std::fill(update_Gi_RA_global.begin(), update_Gi_RA_global.end(), 0.0);
+            }
+
+            //if (some_RA_neuron_fired_global == 1)
+            //    printf("Rank %d; some_RA_neuron_fired_global: %d\n", MPI_rank, some_RA_neuron_fired_global);
+
+            // if somatic compartment of any neuron in the pool fired, update synaptic conductances
+             if (some_RA_neuron_fired_soma_global > 0)
+             {
+            // sum all update arrays and send to all processes
+
+                MPI_Allreduce(&update_Ge_RA_local[0], &update_Ge_RA_global[0], N_RA, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+                MPI_Allreduce(&update_Ge_I_local[0], &update_Ge_I_global[0], N_I, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+
+                // now update excitatory conductances of all neurons
+                for (int i = 0; i < N_RA_local; i++)
+                {
+                    HVCRA_local[i].raiseE(update_Ge_RA_global[Id_RA_local[i]]); // update conductance
+				}
+
+                for (int i = 0; i < N_I_local; i++)
+                {
+                    HVCI_local[i].raiseE(update_Ge_I_global[Id_I_local[i]]);
+                }
+
+				// reset conductance arrays and fired indicators
+				some_RA_neuron_fired_soma_global = 0;
+				some_RA_neuron_fired_soma_local = 0;
+
+				std::fill(update_Ge_RA_local.begin(), update_Ge_RA_local.end(), 0.0);
+				std::fill(update_Ge_RA_global.begin(), update_Ge_RA_global.end(), 0.0);
+				std::fill(update_Ge_I_local.begin(), update_Ge_I_local.end(), 0.0);
+				std::fill(update_Ge_I_global.begin(), update_Ge_I_global.end(), 0.0);
+            }
+
+            network_time += network_update_frequency;
+        } // end network update
+
+
+        //MPI_Barrier(MPI_COMM_WORLD);
+    } // end evolve dynamics
+}
 //~ 
 //~ void PoolParallel::run_trials_no_save(int num_trials)
 //~ {
@@ -1874,7 +1999,9 @@ void PoolParallel::chain_growth(bool training, int save_freq_short, int save_fre
 
     bool data_gathered; // indicator if data was already gathered
 
-    std::vector<int> RAtoWrite{0, 1, 2, 3};
+    std::vector<int> RAtoWrite{0, 1, 2, 3, 6};
+    std::vector<int> ItoWrite{0, 1, 2, 3};
+    
 
     std::vector<int> source{0, 1, 2, 3};
     std::vector<int> target{};
@@ -1904,11 +2031,21 @@ void PoolParallel::chain_growth(bool training, int save_freq_short, int save_fre
         
 		this->trial_burst_stdp(training);
 
-       
-        //pool.gather_data();
+		//pool.gather_data();
 
         //pool.statistics();
+		for (int i = 0; i < (int) RAtoWrite.size(); i++)
+	    {
+			this->write_RA((RAdir + "RA" + std::to_string(RAtoWrite[i]) + "_trial_" + std::to_string(trial_number) + "_.bin").c_str(), RAtoWrite[i]);
+	    }
+	    
+	    for (int i = 0; i < (int) ItoWrite.size(); i++)
+	    {
+			this->write_I((Idir + "I" + std::to_string(ItoWrite[i]) + "_trial_" + std::to_string(trial_number) + "_.bin").c_str(), ItoWrite[i]);
+	    }
 
+		
+        
 
         if (trial_number % save_freq_short == 0)
         {
@@ -1928,10 +2065,7 @@ void PoolParallel::chain_growth(bool training, int save_freq_short, int save_fre
             //this->write_weights_time_sequence_from_source_to_target(source, target, fileWeightsSourceToTarget.c_str());
             //this->write_maturation_time_sequence(target, fileMaturationTimeSequence.c_str());
 
-            //for (int i = 0; i < (int) RAtoWrite.size(); i++)
-	    	//{
-			//	this->write_RA((RAdir + "RA" + std::to_string(RAtoWrite[i]) + ".bin").c_str(), RAtoWrite[i]);
-	    	//}
+            
 
 			//fileMature = fileMaturePerm + "mature" + std::to_string(count) + ".bin";
 			//pool.write_mature(fileMature.c_str());
@@ -1953,6 +2087,8 @@ void PoolParallel::chain_growth(bool training, int save_freq_short, int save_fre
 			this->write_maturation_info((outputDirectory + "mature_" + std::to_string(trial_number) + "_.bin").c_str());
 			this->write_num_bursts_in_recent_trials((outputDirectory + "num_bursts_in_recent_trials_" + std::to_string(trial_number) + "_.bin").c_str());
 			this->write_replacement_history((outputDirectory + "replacement_history_" + std::to_string(trial_number) + "_.bin").c_str());
+			this->write_last_dend_spike_times((outputDirectory + "last_dendritic_spike_times_" + std::to_string(trial_number) + "_.bin").c_str());
+			
 			networkGen.write_alterable_network_to_directory("_" + std::to_string(trial_number) + "_", outputDirectory);
 		
 		}
@@ -1963,10 +2099,18 @@ void PoolParallel::chain_growth(bool training, int save_freq_short, int save_fre
 	      //  fileAllIneurons = Idir + "I" + std::to_string(i) + ".bin";
 		//	pool.write_I(fileAllIneurons.c_str(), i);
 	    //}
-
-        trial_number++;
-        this->randomize_after_trial();
+	    
+		this->reset_after_trial();
 		
+		// gather all neurons that are to be replaced
+		this->gather_neurons_2replace();
+    
+		// if some neurons are to be replaced, replace them
+		if (replace_real_id_global.size() > 0)
+			this->replace_neurons();
+			
+        trial_number++;
+        //this->randomize_after_trial();
 		//break;
     }
 }
@@ -1987,8 +2131,9 @@ void PoolParallel::trial_burst_stdp(int training)
     std::vector<int> RA_neurons_fired_dend_global;
     std::vector<int> RA_neurons_fired_dend_realID;
 
-    internal_time = 0;
-    network_time = network_update_frequency;
+    
+    internal_time = trial_number * trial_duration;
+    network_time = internal_time + network_update_frequency;
 
     // advance internal time of each neuron
     for (int i = 0; i < N_RA_local; i++)
@@ -2033,7 +2178,7 @@ void PoolParallel::trial_burst_stdp(int training)
             // if some neuron produced somatic spike, do LTD for all previous dendritic spikes
             if (HVCRA_local[i].get_fired_soma())
             {
-                spikes_in_trial_soma_local[i].push_back(internal_time);
+                spikes_in_trial_soma_local[i].push_back(internal_time - trial_number * trial_duration);
                
 				some_RA_neuron_fired_soma_local = 1;
 				
@@ -2070,7 +2215,9 @@ void PoolParallel::trial_burst_stdp(int training)
             if (HVCRA_local[i].get_fired_dend())
             {
                 some_RA_neuron_fired_dend_local = 1;
-                spikes_in_trial_dend_local[i].push_back(internal_time);
+                spikes_in_trial_dend_local[i].push_back(internal_time - trial_number * trial_duration); // dend spike time relative to trial onset
+                
+                last_dend_spike_time_local[i] = internal_time; // last burst time of HVC(RA) neuron
                 //printf("My rank = %d; RA neuron %d fired; spike_time = %f\n", MPI_rank, Id_RA_local[i], internal_time);
                 RA_neurons_fired_dend_realID.push_back(Id_RA_local[i]);
                 spike_times_fired_dend_local.push_back(internal_time);
@@ -2083,9 +2230,9 @@ void PoolParallel::trial_burst_stdp(int training)
                     {
                         int supersynapse_id = supersynapses_local[i][k];
                         
-                        if ( (spikes_in_trial_dend_global[supersynapse_id].size() > 0) && (Id_RA_local[i] != supersynapse_id) )
+                        if ( Id_RA_local[i] != supersynapse_id )
                         {
-                            double dt = internal_time - spikes_in_trial_dend_global[supersynapse_id].back();
+                            double dt = internal_time - last_dend_spike_time_global[supersynapse_id];
 
                             //std::cout << "dt in saturated LTD = " << dt << std::endl;
 
@@ -2115,9 +2262,9 @@ void PoolParallel::trial_burst_stdp(int training)
                 {
                     for (int j = 0; j < N_RA; j++)
                     {
-                        if ( (spikes_in_trial_dend_global[j].size() > 0) && (Id_RA_local[i] != j) )
+                        if ( Id_RA_local[i] != j )
                         {
-                            double dt = internal_time - spikes_in_trial_dend_global[j].back();
+                            double dt = internal_time - last_dend_spike_time_global[j];
                             
                             //std::cout << "dt in LTD = " << dt << std::endl;
 
@@ -2151,7 +2298,7 @@ void PoolParallel::trial_burst_stdp(int training)
             {
                 //printf("My rank = %d; I neuron %d fired; spike_time = %f\n", MPI_rank, Id_I_local[i], internal_time);
                 some_I_neuron_fired_local = 1;
-                spikes_in_trial_interneuron_local[i].push_back(internal_time);
+                spikes_in_trial_interneuron_local[i].push_back(internal_time - trial_number * trial_duration);
 
                 size_t num_RA_targets = syn_ID_I_RA_local[i].size();
                 // loop over all targets of fired neurons
@@ -2165,10 +2312,10 @@ void PoolParallel::trial_burst_stdp(int training)
             }
 		} // end if i -> N_I_local
 
-        // if we need to update network state
+        // if we need to update network state or if we reached the end of the trial
         // get if any neurons fired in some process
 
-        if (internal_time > network_time)
+        if ( (internal_time > network_time) || (t == size-1) )
         {
             //if (MPI_rank == 0)
             //{
@@ -2247,7 +2394,7 @@ void PoolParallel::trial_burst_stdp(int training)
                 }
                 */
 
-                // apply LTP rule for all recent dendritic bursts and dendritic spike of fired neurons
+                // apply LTP rule to the last dendritic bursts and dendritic spike of fired neurons
 
                 for (int i = 0; i < N_RA_local; i++)
                 {
@@ -2263,27 +2410,26 @@ void PoolParallel::trial_burst_stdp(int training)
 
                             if (pos!=supersynapses_local[i].end())
                             {
-                                for  (size_t k = 0; k < spikes_in_trial_dend_local[i].size(); k++)
-                                {
-                                    double dt = spikes_in_trial_dend_global[fired_ID].back() - spikes_in_trial_dend_local[i][k];
+						   
+								double dt = last_dend_spike_time_global[fired_ID] - last_dend_spike_time_local[i];
 
-									//std::cout << "From neuron " << Id_RA_local[i] << " to neuron " << fired_ID << " dt = " << dt << std::endl;
-                                    if (dt < STDP_WINDOW)
-                                    {
-										if (dt <= T_0)
-											LTD_burst(weights_local[i][fired_ID], -dt);
-										else
-											LTP_burst(weights_local[i][fired_ID], dt);
-											
-                                        //double w = weights_local[i][fired_ID];
-                                        
-                                        //printf("LTP from saturated neuron %d onto %d; somatic spike at %f; dendritic spike at %f; dt = %f; dw = %f\n", 
-                                         //           Id_RA_local[i], fired_ID, spikes_in_trial_soma_local[i][k], spike_times_dend_global[fired_ID], 
-                                         //           dt, weights_local[i][fired_ID] - w);
-                                        
-                                        update_synapse(i, fired_ID);
-									}
-                                }
+								//std::cout << "From neuron " << Id_RA_local[i] << " to neuron " << fired_ID << " dt = " << dt << std::endl;
+								if (dt < STDP_WINDOW)
+								{
+									if (dt <= T_0)
+										LTD_burst(weights_local[i][fired_ID], -dt);
+									else
+										LTP_burst(weights_local[i][fired_ID], dt);
+										
+									//double w = weights_local[i][fired_ID];
+									
+									//printf("LTP from saturated neuron %d onto %d; somatic spike at %f; dendritic spike at %f; dt = %f; dw = %f\n", 
+									 //           Id_RA_local[i], fired_ID, spikes_in_trial_soma_local[i][k], spike_times_dend_global[fired_ID], 
+									 //           dt, weights_local[i][fired_ID] - w);
+									
+									update_synapse(i, fired_ID);
+								}
+							
                             }
                         }
 
@@ -2297,29 +2443,28 @@ void PoolParallel::trial_burst_stdp(int training)
                             // don't allow self-to-self connections
                             if (fired_ID != Id_RA_local[i])
                             {
-                                // loop over last somatic spikes
-                                for  (size_t k = 0; k < spikes_in_trial_dend_local[i].size(); k++)
-                                {
-                                    double dt = spikes_in_trial_dend_global[fired_ID].back() - spikes_in_trial_dend_local[i][k];
+                                // apply to the last dendritic burst
+                                
+								double dt = last_dend_spike_time_global[fired_ID] - last_dend_spike_time_local[i];
 
-									//std::cout << "From neuron " << Id_RA_local[i] << " to neuron " << fired_ID << " dt = " << dt << std::endl;
-                                    if (dt < STDP_WINDOW)
-                                    {
-                                       if (dt <= T_0)
-											LTD_burst(weights_local[i][fired_ID], -dt);
-										else
-											LTP_burst(weights_local[i][fired_ID], dt);
-											
-                                        //double w = weights_local[i][fired_ID];
-                                        
-                                        //printf("LTP from saturated neuron %d onto %d; somatic spike at %f; dendritic spike at %f; dt = %f; dw = %f\n", 
-                                         //           Id_RA_local[i], fired_ID, spikes_in_trial_soma_local[i][k], spike_times_dend_global[fired_ID], 
-                                         //           dt, weights_local[i][fired_ID] - w);
-                                        
-                                        update_synapse(i, fired_ID);
-                                  		
-									}
-                                }
+								//std::cout << "From neuron " << Id_RA_local[i] << " to neuron " << fired_ID << " dt = " << dt << std::endl;
+								if (dt < STDP_WINDOW)
+								{
+								   if (dt <= T_0)
+										LTD_burst(weights_local[i][fired_ID], -dt);
+									else
+										LTP_burst(weights_local[i][fired_ID], dt);
+										
+									//double w = weights_local[i][fired_ID];
+									
+									//printf("LTP from saturated neuron %d onto %d; somatic spike at %f; dendritic spike at %f; dt = %f; dw = %f\n", 
+									 //           Id_RA_local[i], fired_ID, spikes_in_trial_soma_local[i][k], spike_times_dend_global[fired_ID], 
+									 //           dt, weights_local[i][fired_ID] - w);
+									
+									update_synapse(i, fired_ID);
+									
+								}
+                                
                             }
                         }
                    }
@@ -2387,11 +2532,11 @@ void PoolParallel::trial_burst_stdp(int training)
 	this->update_Ei();
     
     // gather all neurons that are to be replaced
-    this->gather_neurons_2replace();
+    //this->gather_neurons_2replace();
     
     // if some neurons are to be replaced, replace them
-    if (replace_real_id_global.size() > 0)
-        this->replace_neurons();
+    //if (replace_real_id_global.size() > 0)
+    //    this->replace_neurons();
 }
 
 
@@ -2454,7 +2599,9 @@ void PoolParallel::gather_bursts(std::vector<int>& RA_neurons_fired_dend_realID,
 			//if (MPI_rank == 0)
 			//	std::cout << "neuron " << RA_neurons_fired_dend_global[i] << " bursted at " << spike_times_fired_dend_global[i] << std::endl;
             
-			spikes_in_trial_dend_global[RA_neurons_fired_dend_global[i]].push_back(spike_times_fired_dend_global[i]);   
+			spikes_in_trial_dend_global[RA_neurons_fired_dend_global[i]].push_back(spike_times_fired_dend_global[i]); 
+			last_dend_spike_time_global[RA_neurons_fired_dend_global[i]] = spike_times_fired_dend_global[i]; 
+			  
         }
 
         delete [] recvcounts;
@@ -2530,10 +2677,15 @@ void PoolParallel::kill_neuron(int local_id, int global_id, int process_rank)
 		firing_rate_long_local[local_id] = 0.0;
     
         num_trials_after_replacement_local[local_id] = 0;
+        
+        last_dend_spike_time_local[local_id] = -200.0;
 
         // clear all recent bursts
         for (int j = 0; j < RATE_WINDOW_LONG; j++)
             num_bursts_in_recent_trials[local_id].push_back(0);
+            
+        // set all variables to steady state
+        HVCRA_local[local_id].renew_neuron();
     }
 
     // do for all processes
@@ -2594,6 +2746,7 @@ void PoolParallel::replace_neurons()
     this->write_active_synapses((outputDirectory + "RA_RA_active_connections_before_replacement_trial_" + std::to_string(trial_number) + "_.bin").c_str());
     this->write_supersynapses((outputDirectory + "RA_RA_super_connections_before_replacement_trial_" + std::to_string(trial_number) + "_.bin").c_str());
     this->write_maturation_info((outputDirectory + "mature_before_replacement_trial_" + std::to_string(trial_number) + "_.bin").c_str());
+	this->write_last_dend_spike_times((outputDirectory + "last_dendritic_spike_times_before_replacement_trial_" + std::to_string(trial_number) + "_.bin").c_str());
 
     // loop through all neurons that are to be replaced
     for (size_t i = 0; i < replace_local_id_global.size(); i++)
@@ -2606,7 +2759,7 @@ void PoolParallel::replace_neurons()
 	// initialize new coordinates and connections for replaced neurons
 	if (MPI_rank == 0)
 	{
-		std::string extension = "_after_replacement_trial_" + std::to_string(trial_number);
+		std::string extension = "_after_replacement_trial_" + std::to_string(trial_number) + "_";
 		std::string fileReplaced = outputDirectory + "replaced_neurons.bin";
 		
 		networkGen.replace_neurons(replace_real_id_global, extension, outputDirectory);
@@ -2638,6 +2791,8 @@ void PoolParallel::replace_neurons()
     this->write_active_synapses((outputDirectory + "RA_RA_active_connections_after_replacement_trial_" + std::to_string(trial_number) + "_.bin").c_str());
     this->write_supersynapses((outputDirectory + "RA_RA_super_connections_after_replacement_trial_" + std::to_string(trial_number) + "_.bin").c_str());
     this->write_maturation_info((outputDirectory + "mature_after_replacement_trial_" + std::to_string(trial_number) + "_.bin").c_str());
+	this->write_last_dend_spike_times((outputDirectory + "last_dendritic_spike_times_after_replacement_trial_" + std::to_string(trial_number) + "_.bin").c_str());
+
 }
 
 //~ void PoolParallel::add_new_neurons(int N)
@@ -2851,7 +3006,8 @@ void PoolParallel::resize_arrays_for_RA(int n_local, int n_total)
     update_Gi_RA_global.resize(n_total);
 	
     // spikes in trials
-    spike_times_dend_global.resize(n_total);
+    last_dend_spike_time_global.resize(n_total);
+    last_dend_spike_time_local.resize(n_local);
     
     spikes_in_trial_soma_global.resize(n_total);
     spikes_in_trial_dend_global.resize(n_total);
@@ -2892,7 +3048,9 @@ void PoolParallel::resize_arrays_for_RA(int n_local, int n_total)
 		num_bursts_in_recent_trials_global[i].resize(RATE_WINDOW_LONG);
 		
     // initialize last dendritic spike times
-    std::fill(spike_times_dend_global.begin(), spike_times_dend_global.end(), -200.0);
+    std::fill(last_dend_spike_time_global.begin(), last_dend_spike_time_global.end(), -200.0);
+    std::fill(last_dend_spike_time_local.begin(), last_dend_spike_time_local.end(), -200.0);
+    
 
     // initialize arrays
 	for (int i = 0; i < n_local; i++)
@@ -3315,8 +3473,6 @@ void PoolParallel::LTD_burst(double &w, double t)
     //~ delete [] spike_num_dend_global;
 	//~ delete [] spike_num_interneuron_local;
 	//~ delete [] spike_num_interneuron_global;
-//~ 
-//~ 
 //~ }
 
 void PoolParallel::gather_data()
@@ -3398,6 +3554,11 @@ void PoolParallel::gather_data()
     MPI_Gatherv(&spike_num_dend_local[0], N_RA_local, MPI_INT,
         &spike_num_dend_global[0], recvcounts_RA, displs_RA, MPI_INT, 0, MPI_COMM_WORLD);
 
+	// gather last dendritic spike times
+	MPI_Gatherv(&last_dend_spike_time_local[0], N_RA_local, MPI_DOUBLE,
+        &last_dend_spike_time_global[0], recvcounts_RA, displs_RA, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    
+	
 	// gather maturation info   
     MPI_Gatherv(&num_trials_after_replacement_local[0], N_RA_local, MPI_INT,
         &num_trials_after_replacement_global[0], recvcounts_RA, displs_RA, MPI_INT, 0, MPI_COMM_WORLD);
@@ -3699,34 +3860,34 @@ void PoolParallel::get_neuronRA_location(int n, int* rank, int* shift)
 	//~ }
 //~ }
 //~ 
-//~ void PoolParallel::write_chain_test(int num_trials, std::vector<int>& num_trials_with_dend_spikes, std::vector<double>& average_num_dend_spikes_in_trials, 
-                                    //~ std::vector<double>& average_num_soma_spikes_in_trials, std::vector<double>& mean_burst_time, 
-                                    //~ std::vector<double>& std_burst_time, const char* filename)
-//~ {
-    //~ if (MPI_rank == 0)
-    //~ {
-        //~ std::ofstream out;
-//~ 
-        //~ out.open(filename, std::ios::out | std::ios::binary);
-//~ 
-        //~ // write number of neurons to each file
-//~ 
-        //~ out.write(reinterpret_cast<char *>(&N_RA), sizeof(N_RA));
-        //~ out.write(reinterpret_cast<char *>(&num_trials), sizeof(num_trials));
-//~ 
-        //~ for (int i = 0; i < N_RA; i++)
-        //~ {
-            //~ double firing_robustness = num_trials_with_dend_spikes[i] / static_cast<double>(num_trials);
-//~ 
-            //~ out.write(reinterpret_cast<char *>(&firing_robustness), sizeof(firing_robustness));
-            //~ out.write(reinterpret_cast<char *>(&average_num_dend_spikes_in_trials[i]), sizeof(average_num_dend_spikes_in_trials[i]));
-            //~ out.write(reinterpret_cast<char *>(&average_num_soma_spikes_in_trials[i]), sizeof(average_num_soma_spikes_in_trials[i]));
-            //~ out.write(reinterpret_cast<char *>(&mean_burst_time[i]), sizeof(mean_burst_time[i]));
-            //~ out.write(reinterpret_cast<char *>(&std_burst_time[i]), sizeof(std_burst_time[i]));
-        //~ }
-        //~ out.close();
-    //~ }
-//~ }
+void PoolParallel::write_chain_test(int num_trials, std::vector<int>& num_trials_with_dend_spikes, std::vector<double>& average_num_dend_spikes_in_trials, 
+                                    std::vector<double>& average_num_soma_spikes_in_trials, std::vector<double>& mean_burst_time, 
+                                    std::vector<double>& std_burst_time, const char* filename)
+{
+    if (MPI_rank == 0)
+    {
+        std::ofstream out;
+
+        out.open(filename, std::ios::out | std::ios::binary);
+
+        // write number of neurons to each file
+
+        out.write(reinterpret_cast<char *>(&N_RA), sizeof(N_RA));
+        out.write(reinterpret_cast<char *>(&num_trials), sizeof(num_trials));
+
+        for (int i = 0; i < N_RA; i++)
+        {
+            double firing_robustness = num_trials_with_dend_spikes[i] / static_cast<double>(num_trials);
+
+            out.write(reinterpret_cast<char *>(&firing_robustness), sizeof(firing_robustness));
+            out.write(reinterpret_cast<char *>(&average_num_dend_spikes_in_trials[i]), sizeof(average_num_dend_spikes_in_trials[i]));
+            out.write(reinterpret_cast<char *>(&average_num_soma_spikes_in_trials[i]), sizeof(average_num_soma_spikes_in_trials[i]));
+            out.write(reinterpret_cast<char *>(&mean_burst_time[i]), sizeof(mean_burst_time[i]));
+            out.write(reinterpret_cast<char *>(&std_burst_time[i]), sizeof(std_burst_time[i]));
+        }
+        out.close();
+    }
+}
 
 void PoolParallel::write_active_synapses(const char* RA_RA)
 {
@@ -3968,6 +4129,27 @@ void PoolParallel::write_soma_spike_times(const char* filename)
     }
 }
 
+void PoolParallel::write_last_dend_spike_times(const char* filename)
+{
+	if (MPI_rank == 0)
+    {
+        std::ofstream out;
+
+        out.open(filename, std::ios::out | std::ios::binary );
+        out.write(reinterpret_cast<char *>(&N_RA), sizeof(N_RA));
+        out.write(reinterpret_cast<char *>(&trial_number), sizeof(trial_number));
+        
+
+       
+        for (int i = 0; i < N_RA; i++)
+        	out.write(reinterpret_cast<char *>(&last_dend_spike_time_global[i]), sizeof(last_dend_spike_time_global[i]));
+			
+	
+        out.close();
+    }
+	
+}
+
 void PoolParallel::write_dend_spike_times(const char* filename)
 {
     if (MPI_rank == 0)
@@ -3989,12 +4171,12 @@ void PoolParallel::write_dend_spike_times(const char* filename)
             out.write(reinterpret_cast<char *>(&spike_array_size), sizeof(int));
 	    
             for (int j = 0; j < spike_array_size; j++)
-	    {
+			{
                 //out.write(reinterpret_cast<char *>(&spikes_in_trial_dend_global[i][j]), sizeof(double));
         	out.write(reinterpret_cast<char *>(&spikes_in_trial_dend_global[i][j]), sizeof(spikes_in_trial_dend_global[i][j]));
 			//printf("Neuron %d; relative spike time = %f\n", i, relative_spike_time);
-	    }
-	}
+			}
+		}
         //out.write(reinterpret_cast<char *>(spike_times), N_RA*sizeof(double));
 
         out.close();
@@ -4045,7 +4227,8 @@ void PoolParallel::write_replacement_history(const char* filename)
         out.write(reinterpret_cast<char *>(&N_RA), sizeof(N_RA));
 
         out.write(reinterpret_cast<char *>(&trial_number), sizeof(trial_number));
-
+		
+		
         for (int i = 0; i < N_RA; i++)
 			out.write(reinterpret_cast<char *>(&num_trials_after_replacement_global[i]), sizeof(num_trials_after_replacement_global[i]));
                

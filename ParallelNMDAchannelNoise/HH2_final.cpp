@@ -145,6 +145,11 @@ void HH2_final::initialize_poisson_noise(int& noise_time, double lambda)
 
 }
 
+void HH2_final::set_time(double t)
+{
+	time[0] = t;
+}
+
 void HH2_final::set_Ei(double E)
 {
     Ei = E;
@@ -207,11 +212,102 @@ void HH2_final::set_dynamics(double interval, double tS)
 
 }
 
+void HH2_final::reset()
+{
+	itime = 0;
+
+	time[0] = time.back();
+	Vs[0] = Vs.back();
+	Vd[0] = Vd.back();
+	n[0] = n.back();
+	h[0] = h.back();
+	r[0] = r.back();
+	c[0] = c.back();
+	Ca[0] = Ca.back();
+	Ginh_s[0] = Ginh_s.back();
+	Gexc_s[0] = Gexc_s.back();
+	Ginh_d[0] = Ginh_d.back();
+	Gexc_d[0] = Gexc_d.back();
+	E_gaba[0] = E_gaba.back();
+
+	flag_soma[0] = 0;
+    flag_dend[0] = 0;
+
+	if (poisson_noise)
+	{
+		noise_exc_soma -= size - 1;
+		noise_inh_soma -= size - 1;
+		noise_exc_dend -= size - 1;
+		noise_inh_dend -= size - 1;
+			
+		if (noise_exc_soma < 0)
+		{
+			std::cerr << "Noise time is negative! noise_exc_soma = " << noise_exc_soma << std::endl;
+			this->initialize_poisson_noise(noise_exc_soma, lambda_exc);
+		}
+			
+		if (noise_inh_soma < 0)
+		{
+			std::cerr << "Noise time is negative! noise_inh_soma = " << noise_inh_soma << std::endl;
+			this->initialize_poisson_noise(noise_inh_soma, lambda_inh);
+		}
+		
+		if (noise_exc_dend < 0)
+		{
+			std::cerr << "Noise time is negative! noise_exc_dend = " << noise_exc_dend << std::endl;
+			this->initialize_poisson_noise(noise_exc_dend, lambda_exc);
+		}
+		
+		if (noise_inh_dend < 0)
+		{
+			std::cerr << "Noise time is negative! noise_inh_dend = " << noise_inh_dend << std::endl;
+			this->initialize_poisson_noise(noise_inh_dend, lambda_inh);
+		}
+		
+	}
+}
+
+void HH2_final::renew_neuron()
+{
+	itime = 0;
+
+	time[0] = time.back();
+	Vs[0] = -79.97619025;
+	Vd[0] = -79.97268759;
+	n[0] = 0.01101284;
+	h[0] = 0.9932845;
+	r[0] = 0.00055429;
+	c[0] = 0.00000261762353;
+	Ca[0] = 0.01689572;
+	Ginh_s[0] = 0.0;
+	Gexc_s[0] = 0.0;
+	Ginh_d[0] = 0.0;
+	Gexc_d[0] = 0.0;
+	E_gaba[0] = Ei;
+
+	flag_soma[0] = 0;
+    flag_dend[0] = 0;
+    
+    Nspikes = 0;
+    Nspikes_dend = 0;
+
+	//	initialize up noise
+    if (poisson_noise)
+    {
+	    this->initialize_poisson_noise(noise_exc_soma, lambda_exc);
+	    this->initialize_poisson_noise(noise_inh_soma, lambda_inh);
+	    this->initialize_poisson_noise(noise_exc_dend, lambda_exc);
+	    this->initialize_poisson_noise(noise_inh_dend, lambda_inh);
+    }
+
+	
+}
+
 void HH2_final::set_to_rest()
 {
 	itime = 0;
 
-	time[0] = 0;
+	time[0] = time.back();
 	Vs[0] = -79.97619025;
 	Vd[0] = -79.97268759;
 	n[0] = 0.01101284;

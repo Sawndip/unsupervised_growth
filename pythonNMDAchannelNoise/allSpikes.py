@@ -34,7 +34,7 @@ def remap_ID(order):
     
 
 
-filename = "/home/eugene/Output/networks/RandomChainTest240217/soma_spikes_in_trial.bin"
+filename = "/mnt/hodgkin_home/eugene/Output/matureTest/test/soma_spikes_in_trial_2_.bin"
 
 (trial_number, simulation_time, spike_times, neuron_fired) = reading.read_time_info(filename)
 

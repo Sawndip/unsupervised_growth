@@ -79,10 +79,12 @@ public:
 	void raiseE(double G);	//	increase excitatory conductance of the neuron due to excitatory spike
 	void raiseI(double G);	//	increase inhibitory conductance of the neuron due to inhibitory spike
 
+	void set_time(double t); // set initial time
 	void set_injected_current(DDfunction f); // set a function for injected current
 	
 	void set_to_rest(); // set all variables to the resting state
-
+	void reset(); // reset neuron activity. Last values for all variables are assinged to the first elements 
+	
 	void writeToFile(const char * filename);	//	function to write data to binary file
 	
 	

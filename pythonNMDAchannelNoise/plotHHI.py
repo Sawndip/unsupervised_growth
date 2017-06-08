@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import reading
 
-FileRel = "/home/eugene/Output/networks/IdealChainTest220217/I/I25_trial1.bin"	#	datafile name
+FileRel = "/mnt/hodgkin_home/eugene/Output/networks/networkTest/Ineurons/I1_trial_52_.bin"	#	datafile name
 #testFileRel = "1.bin"
 SIZE_OF_DOUBLE = 8
 SIZE_OF_INT = 4
@@ -22,6 +22,16 @@ FileAbs = os.path.join(script_dir, FileRel)
 
 #print I.size
 
+def print_time_state(ind):
+    print "Variables at time:", ind
+    print "V = ",v[ind]
+    print "n = ",n[ind]
+    print "h = ",h[ind]
+    print "m = ",m[ind]
+    print "Ge = ",Ge[ind]
+    print "Gi = ",Gi[ind]
+    
+
 for i in range(I.size):
    I[i] *= 0.06
 
@@ -33,6 +43,8 @@ print v
 #print I[100]
 print Nspikes
 print Nspikes / (t[-1] / 1000)
+
+print_time_state(-1)
 
 fig1 = plt.figure(1)
 

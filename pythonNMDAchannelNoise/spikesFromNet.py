@@ -17,7 +17,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import math
 
-TRIAL_DURATION = 150
+TRIAL_DURATION = 1000
 
 def std(x):
     mean = np.mean(x)

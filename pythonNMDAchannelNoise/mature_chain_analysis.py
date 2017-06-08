@@ -13,8 +13,8 @@ from matplotlib import cm
 import matplotlib as mpl
 from matplotlib import ticker
 
-file_chain_test = "/home/eugene/Output/matureTest/gabaMaturation130417/mature_chain_test.bin"
-file_RA_super = "/home/eugene/Output/networks/gabaMaturation130417/RA_RA_super_connections.bin"
+file_chain_test = "/mnt/hodgkin_home/eugene/Output/matureTest/test/mature_chain_test.bin"
+file_RA_super = "/mnt/hodgkin_home/eugene/Output/networks/networkTest/RA_RA_super_connections_500_.bin"
 
 CURRENT_INJECTION_TIME = 100
 ROBUST_FIRING_THRESHOLD = 0.25

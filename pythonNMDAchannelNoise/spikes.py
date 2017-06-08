@@ -34,8 +34,8 @@ def remap_ID(order):
     
 
 
-filename = "/home/eugene/Output/networks/gabaMaturation100217/spike_times_soma.bin"
-RARA = "/home/eugene/Output/networks/gabaMaturation100217/RA_RA_super_connections.bin"
+filename = "/mnt/hodgkin_home/eugene/Output/networks/networkTest/spike_times_soma.bin"
+RARA = "/mnt/hodgkin_home/eugene/Output/networks/networkTest/RA_RA_super_connections.bin"
 
 (trial_number, simulation_time, spike_times, neuron_fired) = reading.read_time_info(filename)
 
@@ -61,12 +61,14 @@ print "stronglyConnected:", stronglyConnected
 spike_times = [t for sublist in list(spike_times) for t in sublist]
 neuron_fired = [ind for sublist in list(neuron_fired) for ind in sublist]
 
+print "spike_times: ", spike_times
+print "neuron_fired: ", neuron_fired
+
 first_spike = min(spike_times)
 
 spike_times = map(lambda x: x - first_spike, spike_times)
 
-print "spike_times: ", spike_times
-print "neuron_fired: ", neuron_fired
+
 
 stronglyConnectedFired = [i for i in neuron_fired if i in stronglyConnected]
 stronglyConnectedSpikeTimes = [t for ind, t in enumerate(spike_times) if neuron_fired[ind] in stronglyConnected]
