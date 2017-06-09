@@ -11,10 +11,10 @@ import reading
 import matplotlib.pyplot as plt
 import numpy as np
 
-replacement_trial = 199 # trial number when replacement occured
-reference_trial = 150 # reference trial
+replacement_trial = 500 # trial number when replacement occured
+reference_trial = 500 # reference trial
 
-neuron_id = 0 # id of some replaced neuron
+neuron_id = 53 # id of some replaced neuron
 
 dirname = "/mnt/hodgkin_home/eugene/Output/networks/networkTest/"
 

@@ -81,7 +81,7 @@ void ConfigurationNetworkGenerator::write_configuration(const char* filename) co
     // write spatial parameters
     out << "spatialParameters = " << std::endl;
     out << "{" << std::endl;
-    out << "\tSIDE = " << spatial_params.SIDE << ";" << std::endl;
+    out << "\tSIDE = " << std::fixed << std::setprecision(6) << spatial_params.SIDE << ";" << std::endl;
     out << "\tMIN_INTERNEURON_DISTANCE = " << spatial_params.MIN_INTERNEURON_DISTANCE << ";" << std::endl << std::endl;
     
     out << "\tA_RA2I = " << spatial_params.A_RA2I << ";" << std::endl;

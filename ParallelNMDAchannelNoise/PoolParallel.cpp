@@ -3,7 +3,7 @@
 #include <fstream>
 #include <iostream>
 #include <sstream>
-
+#include <unordered_set>
 #include <functional>
 #include "training_current.h"
 
@@ -206,6 +206,19 @@ void PoolParallel::read_network_state(std::string dataDir, int starting_trial)
     this->read_num_bursts_in_recent_trials(fileNumRecentBursts.c_str());
     this->read_replacement_history(fileReplacementHistory.c_str());
     this->read_last_dendritic_spike_times(fileLastBurstTimes.c_str());
+}
+
+void PoolParallel::test_chain_recovery(std::string dataDir, int starting_trial, double fraction, bool training, int save_freq_short, int save_freq_long)
+{
+	this->read_network_state(dataDir, starting_trial);
+    
+    
+    this->set_time_for_neurons(trial_number * trial_duration);
+	this->make_lesion(fraction);
+	
+	this->gather_data();
+    trial_number++;
+	//this->chain_growth(training, save_freq_short, save_freq_long);
 }
 
 void PoolParallel::continue_chain_growth(std::string dataDir, int starting_trial, bool training, int save_freq_short, int save_freq_long)
@@ -2735,7 +2748,135 @@ void PoolParallel::kill_neuron(int local_id, int global_id, int process_rank)
         weights_local[i][global_id] = 0.0;
 }
 
+void PoolParallel::find_chain_neurons(std::vector<int>& chain_neurons)
+{
+	this->gather_data();
+	
+	if (MPI_rank == 0)
+	{
+		// start checking with training neurons
+		std::vector<int> current_neurons_to_check = training_neurons; // current group of neurons to check outgoing connections for supersynapses
+		std::vector<int> next_neurons_to_check; // next group of neurons to check outgoing connections for supersynapses
+	
+		do
+		{
+			for (size_t i = 0; i < current_neurons_to_check.size(); i++)
+			{
+				size_t num_supersynapses = supersynapses_global[current_neurons_to_check[i]].size();
+				
+				for (size_t j = 0; j < num_supersynapses; j++)
+				{
+					// check if neuron is already in the chain
+					std::vector<int>::iterator pos = std::find(chain_neurons.begin(), chain_neurons.end(), supersynapses_global[current_neurons_to_check[i]][j]);
+				
+					// if neuron is not already in the chain, add it to the chain and to neurons that will be checked next iteration 
+					if (pos == chain_neurons.end())
+					{
+						chain_neurons.push_back(supersynapses_global[current_neurons_to_check[i]][j]);
+						next_neurons_to_check.push_back(supersynapses_global[current_neurons_to_check[i]][j]);
+					}
+				}
+				
+				
+			}
+			current_neurons_to_check = next_neurons_to_check;
+			next_neurons_to_check.clear();
+		}
+		while (current_neurons_to_check.size() > 0);
+	}
+	
+}
 
+void PoolParallel::make_lesion(double fraction)
+{
+	// first estimate how many neurons are in the chain
+	std::vector<int> chain_neurons; // putative chain neurons
+	
+	this->find_chain_neurons(chain_neurons);
+	
+	if (MPI_rank == 0)
+	{
+		std::cout << "Number of neurons in the chain: " << chain_neurons.size() << std::endl 
+				<< "Chain neurons: " << std::endl;
+		
+		for (size_t i = 0; i < chain_neurons.size(); i++)
+			std::cout << chain_neurons[i] << "\t";
+		
+		std::cout << std::endl;
+	}
+	
+	int num_to_kill; // num neurons to kill
+	std::vector<int> neurons_to_kill; // neurons to kill
+	
+	if (MPI_rank == 0)
+	{	
+		// estimate number of neurons to kill
+		num_to_kill = static_cast<int>(std::round(fraction * chain_neurons.size()));
+	
+		// sample random indices of neurons to kill
+		std::vector<int>::iterator pos;
+		
+		for (int i = 0; i < num_to_kill; i++)
+		{
+			int random_ind; // random index of neuron in chain_neurons array 
+			
+			do
+			{
+				random_ind = generator.sample_integer(0, chain_neurons.size()-1);
+				
+				// check if neuron is already selected
+				pos = std::find(neurons_to_kill.begin(), neurons_to_kill.end(), chain_neurons[random_ind]);
+			}
+			while (pos != neurons_to_kill.end());
+			
+			neurons_to_kill.push_back(chain_neurons[random_ind]);
+		}
+		
+		std::cout << "Neurons to kill: " << std::endl;
+			
+		for (size_t i = 0; i < neurons_to_kill.size(); i++)
+			std::cout << neurons_to_kill[i] << "\t";
+			
+		std::cout << std::endl;
+	}
+	
+	// send number of neurons to kill to all processes
+	MPI_Bcast(&num_to_kill, 1, MPI_INT, 0, MPI_COMM_WORLD);
+	
+	neurons_to_kill.resize(num_to_kill);
+	
+	// send neurons to kill to all processes
+	MPI_Bcast(&neurons_to_kill[0], num_to_kill, MPI_INT, 0, MPI_COMM_WORLD);
+	
+	// calculate location of neurons to kill
+	int rank; // rank of the process that contains neuron to kill
+	int shift; // location within the process of the neuron to kill
+	
+	for (int i = 0; i < num_to_kill; i++)
+	{
+		this->get_neuronRA_location(neurons_to_kill[i], &rank, &shift);
+		
+		replace_local_id_global.push_back(shift);
+		replace_real_id_global.push_back(neurons_to_kill[i]);
+		replace_process_rank_global.push_back(rank);
+		
+	}
+	
+	if (MPI_rank == 1)
+	{
+		std::cout << "Rank 1; Neurons to kill: " << std::endl;
+			
+		for (size_t i = 0; i < neurons_to_kill.size(); i++)
+			std::cout << "real id = " << replace_real_id_global[i] << " process = " << replace_process_rank_global[i]
+					  << " local id = " << replace_local_id_global[i] << std::endl;
+		
+			
+		std::cout << std::endl;
+	}
+	
+	// replace neurons
+	this->replace_neurons();
+}
 
 void PoolParallel::replace_neurons()
 {

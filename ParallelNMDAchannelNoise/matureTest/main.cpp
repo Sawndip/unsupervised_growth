@@ -13,7 +13,7 @@ int main(int argc, char** argv)
     std::string dataDir = "/mnt/hodgkin_home/eugene/Output/networks/networkTest/"; // directory with data 
     std::string outputDir = "/mnt/hodgkin_home/eugene/Output/matureTest/test/"; // directory with data 
     
-    int starting_trial = 500; // trial number defining network state
+    int starting_trial = 800; // trial number defining network state
     
    
     int rank; // MPI process rank

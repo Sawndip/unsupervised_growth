@@ -17,7 +17,6 @@
 #include "NetworkGenerator.h"
 
 using std::vector;
-using std::deque;
 
 typedef boost::circular_buffer<int> intBuffer;
 typedef boost::dynamic_bitset<> bitArray;
@@ -56,7 +55,9 @@ public:
 	void continue_chain_growth(std::string dataDir, int starting_trial, bool training, int save_freq_short, int save_freq_long); // continue chain growth using network state defined by files in 
 																						// directory dataDir from trial starting_trial
 
-
+	void test_chain_recovery(std::string dataDir, int starting_trial,
+				double fraction, bool training, int save_freq_short, int save_freq_long); // make lesion by killing fraction of chain neurons. Then continue growth to see how network recovers
+				
     void test_grown_chain(int num_trials, std::string dataDir, int starting_trial, std::string outputDir); // test grown synfire chain. All data files should 
                                                                             // be located in directory dataDir; network state is taken from trials starting_trial
                                                                             // output goes to directory outputDir
@@ -275,6 +276,8 @@ protected:
         // neurogenesis support
         void add_new_neurons(int N); // add N immature neurons to network
         void replace_neurons(); // replace all neurons specified by replace arrays
+        void find_chain_neurons(std::vector<int>& chain_neurons); // find neurons in the chain
+        void make_lesion(double fraction); // kill fraction of neurons in the chain and replace them with new neurons
         void kill_neuron(int local_id, int global_id, int process_rank); // erase all outgoing and incoming connections from HVC(RA) 
                                                                          // neurons for replaced neuron. Clean indicator arrays, active and super synapses
 	    // coordinates and connections
