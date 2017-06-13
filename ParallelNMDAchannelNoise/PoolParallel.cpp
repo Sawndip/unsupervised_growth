@@ -2091,19 +2091,21 @@ void PoolParallel::chain_growth(bool training, int save_freq_short, int save_fre
 		{
 			if (!data_gathered)
 				this->gather_data();
-
-            this->write_weight_statistics(fileWeightStatistics.c_str());
-            this->write_weights(fileWeightsGraph.c_str());
-            this->write_active_synapses((outputDirectory + "RA_RA_active_connections_" + std::to_string(trial_number) + "_.bin").c_str());
-            this->write_supersynapses((outputDirectory + "RA_RA_super_connections_" + std::to_string(trial_number) + "_.bin").c_str());
-			this->write_weights((outputDirectory + "weights_" + std::to_string(trial_number) + "_.bin").c_str());
-			this->write_maturation_info((outputDirectory + "mature_" + std::to_string(trial_number) + "_.bin").c_str());
-			this->write_num_bursts_in_recent_trials((outputDirectory + "num_bursts_in_recent_trials_" + std::to_string(trial_number) + "_.bin").c_str());
-			this->write_replacement_history((outputDirectory + "replacement_history_" + std::to_string(trial_number) + "_.bin").c_str());
-			this->write_last_dend_spike_times((outputDirectory + "last_dendritic_spike_times_" + std::to_string(trial_number) + "_.bin").c_str());
 			
-			networkGen.write_alterable_network_to_directory("_" + std::to_string(trial_number) + "_", outputDirectory);
-		
+			if (MPI_rank == 0)
+			{
+				this->write_weight_statistics(fileWeightStatistics.c_str());
+				this->write_weights(fileWeightsGraph.c_str());
+				this->write_active_synapses((outputDirectory + "RA_RA_active_connections_" + std::to_string(trial_number) + "_.bin").c_str());
+				this->write_supersynapses((outputDirectory + "RA_RA_super_connections_" + std::to_string(trial_number) + "_.bin").c_str());
+				this->write_weights((outputDirectory + "weights_" + std::to_string(trial_number) + "_.bin").c_str());
+				this->write_maturation_info((outputDirectory + "mature_" + std::to_string(trial_number) + "_.bin").c_str());
+				this->write_num_bursts_in_recent_trials((outputDirectory + "num_bursts_in_recent_trials_" + std::to_string(trial_number) + "_.bin").c_str());
+				this->write_replacement_history((outputDirectory + "replacement_history_" + std::to_string(trial_number) + "_.bin").c_str());
+				this->write_last_dend_spike_times((outputDirectory + "last_dendritic_spike_times_" + std::to_string(trial_number) + "_.bin").c_str());
+				
+				networkGen.write_alterable_network_to_directory("_" + std::to_string(trial_number) + "_", outputDirectory);
+			}
 		}
 		
 		//break;    

@@ -294,7 +294,7 @@ def find_chain_formation_mechanism(chain, RA2I_targets, I2RA_targets, starting_l
     return (num_recruited_due_to_previous, num_recruited_due_to_layers_before_previous, num_recruited_due_to_mixture_previous, \
         num_recruited_due_to_same, num_recruited_due_to_mixture_of_all_mechanisms, num_recruited_due_to_unknown_mechanism)
     
-def find_chain_layers(RA2RA_targets):
+def find_chain_layers(RA2RA_targets, training_neurons):
     """
     Find which neurons are in each chain layer
     """
@@ -515,7 +515,7 @@ if __name__ == "__main__":
     #(chain, RA2I_targets, I2RA_targets) = create_chain(num_layers)   
     
     
-    chain = find_chain_layers(RA2RA_targets)    
+    chain = find_chain_layers(RA2RA_targets, training_neurons)    
     print [i for chain_layer in chain for i in chain_layer]
     
     starting_layer = 2 

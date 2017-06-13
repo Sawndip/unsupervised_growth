@@ -20,7 +20,7 @@ SIDE = 100
 FONT_SIZE = 5
 TRIAL_DURATION = 1000
 
-outdir = "/mnt/hodgkin_home/eugene/Output/networks/gabaMaturation080617_huxley/"
+outdir = "/mnt/hodgkin_home/eugene/Output/networks/gabaMaturation120617_huxley/"
 
 filename_weights = os.path.join(outdir, "weights.bin")
 filename_weight_statistics = os.path.join(outdir, "weight_statistics.bin")
