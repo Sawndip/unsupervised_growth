@@ -7,14 +7,14 @@ Created on Wed May 11 12:41:50 2016
 import os
 import math
 
-dirname = "/home/eugene/Output/networks/gabaMaturation020517/"
+dirname = "/home/eugene/Output/networks/120617_lionx_1/"
 #dirname = "/home/eugene/lionX/clustered/network/"
-RA_xy = os.path.join(dirname, "RA_xy.bin")
+RA_xy = os.path.join(dirname, "RA_xy_initial.bin")
 I_xy = os.path.join(dirname, "I_xy.bin")
-RA2I = os.path.join(dirname, "RA_I_connections.bin")
-I2RA = os.path.join(dirname, "I_RA_connections.bin")
-#RARA = os.path.join(dirname, "RA_RA_super_connections.bin")
-RARA = "/home/eugene/Output/networks/gabaMaturation020517/RA_RA_super_connections.bin"
+RA2I = os.path.join(dirname, "RA_I_connections_initial.bin")
+I2RA = os.path.join(dirname, "I_RA_connections_initial.bin")
+RARA = os.path.join(dirname, "RA_RA_super_connections.bin")
+#RARA = "/home/eugene/Output/networks/gabaMaturation010517/RA_RA_super_connections.bin"
 #RARA = "/home/eugene/lionX/clustered/r0.05/gabaMaturation180417_0/RA_RA_super_connections.bin"
 
 import reading

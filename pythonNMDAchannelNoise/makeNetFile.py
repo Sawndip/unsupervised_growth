@@ -8,11 +8,14 @@ Script creates .net text file for pajek from binary files with neuronal coordina
 of HVC(RA) neurons and synapses betweeen them
 """
 import reading
+import os
 
-file_xy = "/home/eugene/Output/networks/gabaMaturation130417/RA_xy.bin"
-file_super = "/home/eugene/Output/networks/gabaMaturation130417/RA_RA_super_connections.bin"
+dirname = "/home/eugene/Output/networks/gabaMaturation090617_lionx_2/"
 
-file_pajek = "/home/eugene/Output/networks/gabaMaturation130417/super.net"
+file_xy = os.path.join(dirname, "RA_xy_initial.bin")
+file_super = os.path.join(dirname, "RA_RA_super_connections.bin")
+file_training = os.path.join(dirname, "training_neurons.bin")
+file_pajek = os.path.join(dirname, "super.net")
 
 SIDE = 100.0 # side of square modeling HVC
 N_TR = 4 # number of training neurons
@@ -23,14 +26,18 @@ N_TR = 4 # number of training neurons
 #print targets_ID
 #print targets_G
 
+training_neurons = reading.read_training_neurons(file_training)
+
+print "Training neurons: ",training_neurons
+
 with open(file_pajek, 'w') as f:
     f.write("*Vertices {0}\n".format(N_RA))
     
-    for i in range(N_TR):
-        f.write('{0} "{1}" {2} {3} ic Green\n'.format(i+1, i, xx[i] / SIDE, yy[i] / SIDE))
-        
-    for i in range(N_TR, N_RA):
-        f.write('{0} "{1}" {2} {3} ic Yellow\n'.format(i+1, i, xx[i] / SIDE, yy[i] / SIDE))
+    for i in range(N_RA):
+        if i in training_neurons:    
+            f.write('{0} "{1}" {2} {3} ic Green\n'.format(i+1, i, xx[i] / SIDE, yy[i] / SIDE))
+        else:    
+            f.write('{0} "{1}" {2} {3} ic Yellow\n'.format(i+1, i, xx[i] / SIDE, yy[i] / SIDE))
         
 
     f.write("*Arcs\n".format(N_RA))

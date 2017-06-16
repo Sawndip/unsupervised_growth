@@ -676,6 +676,24 @@ def read_num_bursts_in_recent_trials(filename):
             
     return num_bursts_in_recent_trials
 
+def read_training_neurons(filename):
+    """
+    Read ids of training neurons
+    """
+    with open(filename, "rb") as file:
+        data = file.read()
+        file.close()
+
+    N_TR = struct.unpack("<i", data[:SIZE_OF_INT])[0]
+    
+    training_neurons = np.empty(N_TR, np.int32)
+    
+    for i in range(N_TR):
+        training_neurons[i] = struct.unpack("<i", data[(i+1)*SIZE_OF_INT:(i+2)*SIZE_OF_INT])[0]
+
+    return training_neurons
+    
+
 def read_replacement_history(filename):
     """
     Read the time of the previous replacement for each HVC(RA) neuron in the network

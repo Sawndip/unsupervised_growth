@@ -475,7 +475,34 @@ def autolabel(rects, name):
         plt.text(rect.get_x()+rect.get_width()/2., 1.02*height, '%s'% (name[ii]),
                 ha='center', va='bottom')
     
-           
+
+def find_candidates_for_second_layer(training_neurons, RA2I_targets, I2RA_targets, Gi, threshold_min, threshold_max, convergence_map):
+    """
+    Find neurons likely to be recruited to the second chain layer.
+    For candidate neuron total input inhibition should be larger than threshold_min
+    and smaller than threshold_max.
+    Convergence map relates number of convergent inputs to interneurin to the 
+    number of spikes it fires
+    """
+    print len(RA2I_targets)
+    
+    # loop through all pool neurons and get number of indirect inhibitory connections
+    # Then calculate input conductance using the inhibitory neurons and how many
+    # convergent inputs for training neurons they receive
+    
+    for neuron in range(len(RA2I_targets)):
+        if neuron not in training_neurons:
+            _, _, num_convergent_inputs_to_interneurons_connected_to_neuron = \
+            find_indirect_connections_to_target(training_neurons, [neuron], RA2I_targets, I2RA_targets)
+            
+            if len(num_convergent_inputs_to_interneurons_connected_to_neuron[0]) > 0:
+                effective_G = 0
+                
+                for num_conv_inputs in num_convergent_inputs_to_interneurons_connected_to_neuron[0]:
+                    effective_G += convergence_map[num_conv_inputs] * Gi
+                if effective_G >= threshold_min and effective_G <= threshold_max:
+                    print "neuron {0}; inhibitory input = {1}; effective G = {2}".format(neuron, num_convergent_inputs_to_interneurons_connected_to_neuron[0], effective_G)
+          
 if __name__ == "__main__":
     
     RA2I = "/home/eugene/Output/networks/gabaMaturation130417/RA_I_connections.bin"
