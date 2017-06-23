@@ -12,6 +12,7 @@ import math
 import matplotlib.pyplot as plt
 import numpy as np
 from collections import defaultdict
+import os
 
 # default set of training neurons
 training_neurons = [0, 1, 2, 3]
@@ -505,9 +506,13 @@ def find_candidates_for_second_layer(training_neurons, RA2I_targets, I2RA_target
           
 if __name__ == "__main__":
     
-    RA2I = "/home/eugene/Output/networks/gabaMaturation130417/RA_I_connections.bin"
-    I2RA = "/home/eugene/Output/networks/gabaMaturation130417/I_RA_connections.bin"
-    RA2RA = "/home/eugene/Output/networks/gabaMaturation130417/RA_RA_super_connections.bin"
+    dirname = "/home/eugene/results/noDelays/dispersed/dispersed_1/120617_lionx_2/"    
+    
+    RA2I = os.path.join(dirname, "RA_I_connections_initial.bin")
+    I2RA = os.path.join(dirname, "I_RA_connections_initial.bin")
+    RA2RA = os.path.join(dirname, "RA_RA_super_connections.bin")
+    file_training = os.path.join(dirname, "training_neurons.bin")
+    
     fileMature = "/home/eugene/Output/networks/gabaMaturation130417/mature.bin"
     fileBursts = "/home/eugene/Output/networks/gabaMaturation130417/spike_times_dend.bin"
     
@@ -530,8 +535,8 @@ if __name__ == "__main__":
     #print I2RA_targets
     #print RA2RA_targets
             
-    training = [0, 1, 2, 3]
-    num_layers = 5
+    training_neurons = reading.read_training_neurons(file_training)
+   
     
     #indirect_connections_in_groups(training, RA2I_targets, RA2RA_targets, I2RA_targets, num_layers)
     

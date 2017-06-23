@@ -35,6 +35,8 @@ const double HH2_final::tInh = 5;
 
 const double HH2_final::threshold = 0;
 const double HH2_final::threshold_dend = 0;
+const double HH2_final::spike_margin = 5.0;
+
 
 HH2_final::HH2_final() : mu_soma(0.0), sigma_soma(0.0), mu_dend(0.0), sigma_dend(0.0), point_distribution{sqrt(6), -sqrt(6), 1, 1, 1, 1, 1, 1, 1, 1, 1, 
 																										  -1, -1, -1, -1, -1, -1, -1, -1, -1, 0, 0, 0,
@@ -563,7 +565,7 @@ void HH2_final::state_noise_check()
 void HH2_final::state_check()
 {
     // somatic spike is defined as membrane potential second crossing of th threshold (when potential gows down)
-	if ((flag_soma[itime] == 1) && (Vs[itime] < threshold))
+	if ((flag_soma[itime] == 1) && (Vs[itime] < threshold - spike_margin))
 	{
 		spike_time = time[itime];
 		flag_soma[itime + 1] = 0;
@@ -593,7 +595,7 @@ void HH2_final::state_check()
 	else
 	{
 		//	check if we should change the state of neuron (voltage crossed the threshold)
-		if ((flag_dend[itime] == 1) && (Vd[itime] < threshold_dend))
+		if ((flag_dend[itime] == 1) && (Vd[itime] < threshold_dend - spike_margin))
 			flag_dend[itime + 1] = 0;
 		else
 		{

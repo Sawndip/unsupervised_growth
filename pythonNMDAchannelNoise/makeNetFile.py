@@ -10,7 +10,7 @@ of HVC(RA) neurons and synapses betweeen them
 import reading
 import os
 
-dirname = "/home/eugene/Output/networks/gabaMaturation090617_lionx_2/"
+dirname = "/home/eugene/results/noDelays/dispersed/dispersed_1/120617_lionx_2/"
 
 file_xy = os.path.join(dirname, "RA_xy_initial.bin")
 file_super = os.path.join(dirname, "RA_RA_super_connections.bin")

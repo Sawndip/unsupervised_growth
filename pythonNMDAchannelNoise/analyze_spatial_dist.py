@@ -39,13 +39,13 @@ def get_fraction_chain_neurons(dirname):
     return len(strongly_connected) / float(N_RA)
                 
     
-def get_statistics_of_grown_conn(dirname, networkDir):
+def get_statistics_of_grown_conn(dirname):
     """
     Get mean and std of grown connections between HVC(RA) neurons
     """
     RARA = os.path.join(dirname, "RA_RA_super_connections.bin")
-    RA_xy = os.path.join(networkDir, "RA_xy.bin")
-    I2RA = os.path.join(dirname, "I_RA_connections.bin")
+    RA_xy = os.path.join(dirname, "RA_xy_initial.bin")
+    I2RA = os.path.join(dirname, "I_RA_connections_initial.bin")
     
     (N_I, _, I_targets_G) = reading.read_connections(I2RA)
     
@@ -75,16 +75,16 @@ def get_statistics_of_grown_conn(dirname, networkDir):
     
     return dist_RA2RA, Gie
 
-def plot_spatial_dist_fixed(dirname, networkDir):
+def plot_spatial_dist_fixed(dirname):
     """
     Plot spatial distributions of fixed connections between HVC(RA) and HVC(I) neurons
     using files in directory dirname
     """
 
-    RA_xy = os.path.join(networkDir, "RA_xy.bin")
-    I_xy = os.path.join(networkDir, "I_xy.bin")
-    RA2I = os.path.join(dirname, "RA_I_connections.bin")
-    I2RA = os.path.join(dirname, "I_RA_connections.bin")
+    RA_xy = os.path.join(dirname, "RA_xy_initial.bin")
+    I_xy = os.path.join(dirname, "I_xy.bin")
+    RA2I = os.path.join(dirname, "RA_I_connections_initial.bin")
+    I2RA = os.path.join(dirname, "I_RA_connections_initial.bin")
 
     (x_I, y_I) = reading.read_coordinates(I_xy)
     (x_RA, y_RA) = reading.read_coordinates(RA_xy)
@@ -135,8 +135,7 @@ def plot_spatial_dist_fixed(dirname, networkDir):
 
 
 if __name__ == "__main__":
-    dirname = "/mnt/hodgkin/eugene/lionX/clustered/r0.2/"
-    networkDir = "/mnt/hodgkin/eugene/lionX/clustered/network/"
+    dirname = "/home/eugene/results/noDelays/dispersed/dispersed_1/"
     #plot_spatial_dist_fixed(dirname)
     directories = os.listdir(dirname)    
     
@@ -147,22 +146,25 @@ if __name__ == "__main__":
     mean = [] # mean distance between HVC(RA) neurons
     std = [] # standard deviation of the distance between HVC(RA) neurons
     
-    for dir in directories:    
-        
-        
-        #m, s, gie = get_statistics_of_grown_conn(os.path.join(dirname, dir), networkDir)
-        
-        dist, gie = get_statistics_of_grown_conn(os.path.join(dirname, dir), networkDir)
-        
-        if gie < 0:
-            print "Error! No inhibitory connections are present!"
-        else:
-            #mean.append(m)
-            #std.append(s)
-            Gie.append(gie)
-            distances_between_chain.append(dist)            
-            fraction_chain_neurons.append(get_fraction_chain_neurons(os.path.join(dirname, dir)))
+#    dirs_to_exclude = ["matureTest", "figures", "120617_lionx_0", "120617_lionx_3", "120617_lionx_4", "160617_lionx_4", "160617_lionx_6"]    
+    dirs_to_exclude = ["figures"]
     
+    for dir in directories:    
+        if dir not in dirs_to_exclude:
+            
+            #m, s, gie = get_statistics_of_grown_conn(os.path.join(dirname, dir), networkDir)
+            
+            dist, gie = get_statistics_of_grown_conn(os.path.join(dirname, dir))
+            
+            if gie < 0:
+                print "Error! No inhibitory connections are present!"
+            else:
+                #mean.append(m)
+                #std.append(s)
+                Gie.append(gie)
+                distances_between_chain.append(dist)            
+                fraction_chain_neurons.append(get_fraction_chain_neurons(os.path.join(dirname, dir)))
+        
     #Gie, mean, std, fraction_chain_neurons = zip(*sorted(zip(Gie, mean, std, fraction_chain_neurons)))
     Gie, distances_between_chain, fraction_chain_neurons = zip(*sorted(zip(Gie, distances_between_chain, fraction_chain_neurons)))
     
@@ -186,6 +188,8 @@ if __name__ == "__main__":
     
     ax.scatter(Gie, fraction_chain_neurons)
     ax.set_xlim([0, 0.75])
+    ax.set_ylim([0, max(fraction_chain_neurons)+0.05])
+    
     ax.set_ylabel("fraction of neurons in the chain")
     ax.set_xlabel("$Gie (mS/cm^2)$")
     

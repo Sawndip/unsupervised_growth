@@ -128,6 +128,11 @@ protected:
 	//	thresholds
 	const static double threshold; // threshold for somatic spike
 	const static double threshold_dend; // threshold for dendritic spike
+	const static double spike_margin; // spike margin used to make sure that voltage fluctuations don't lead to
+									  // the emergence of non-present dendritic and somatic burst. 
+									  // New spike can now be registered only if membrane potential first does below 
+									  // spike_threshold - spike_margin and then crosses the spike threshold
+	
 	
 	// functions for external current
 	DDfunction Is_training; // training current to soma
