@@ -10,10 +10,10 @@ int main(int argc, char** argv)
 {
     
     
-    std::string dataDir = "/home/eugene/results/noDelays/dispersed/dispersed_1/120617_lionx_2/"; // directory with data 
-    std::string outputDir = "/home/eugene/results/noDelays/dispersed/dispersed_1/matureTest/120617_lionx_2/"; // directory with output
+    std::string dataDir = "/mnt/hodgkin_home/eugene/results/noDelays/replacement/dispersed/190617_lionx_2/"; // directory with data 
+    std::string outputDir = "/mnt/hodgkin_home/eugene/results/noDelays/replacement/dispersed/matureTest/190617_lionx_2/"; // directory with output
     
-    int starting_trial = 22400; // trial number defining network state
+    int starting_trial = 181000; // trial number defining network state
     
    
     int rank; // MPI process rank
