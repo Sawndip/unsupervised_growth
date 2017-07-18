@@ -33,7 +33,7 @@ void ConfigurationNetworkGenerator::read_configuration(const char* filename)
         const Setting& spatial_params_setting = root["spatialParameters"];
 
         // Only output the record if all of the expected fields are present.
-        spatial_params_setting.lookupValue("SIDE", spatial_params.SIDE);
+        spatial_params_setting.lookupValue("dimensionality", spatial_params.dimensionality);
           
         spatial_params_setting.lookupValue("MIN_INTERNEURON_DISTANCE", spatial_params.MIN_INTERNEURON_DISTANCE);
         
@@ -60,7 +60,7 @@ void ConfigurationNetworkGenerator::print_configuration() const
     // display all spatial parameters read from file
     std::cout << std::endl << "Spatial parameters read from configuration file: " << std::endl << std::endl;
     
-    std::cout << "SIDE = " << spatial_params.SIDE << std::endl;
+    std::cout << "dimensionality = " << spatial_params.dimensionality << std::endl;
     std::cout << "MIN_INTERNEURON_DISTANCE = " << spatial_params.MIN_INTERNEURON_DISTANCE << std::endl << std::endl;
     
     std::cout << "A_RA2I = " << spatial_params.A_RA2I << std::endl;
@@ -81,8 +81,8 @@ void ConfigurationNetworkGenerator::write_configuration(const char* filename) co
     // write spatial parameters
     out << "spatialParameters = " << std::endl;
     out << "{" << std::endl;
-    out << "\tSIDE = " << std::fixed << std::setprecision(6) << spatial_params.SIDE << ";" << std::endl;
-    out << "\tMIN_INTERNEURON_DISTANCE = " << spatial_params.MIN_INTERNEURON_DISTANCE << ";" << std::endl << std::endl;
+    out << "\tdimensionality = " << spatial_params.dimensionality << ";" << std::endl;
+    out << "\tMIN_INTERNEURON_DISTANCE = " << std::fixed << std::setprecision(6) << spatial_params.MIN_INTERNEURON_DISTANCE << ";" << std::endl << std::endl;
     
     out << "\tA_RA2I = " << spatial_params.A_RA2I << ";" << std::endl;
     out << "\tSIGMA_RA2I = " << spatial_params.SIGMA_RA2I << ";" << std::endl;

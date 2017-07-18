@@ -1,4 +1,6 @@
 #!/bin/sh
-# "path to configuration file"
 # path to network directory
-mpirun -np 23 ./growth /mnt/hodgkin_home/eugene/Output/networks/dispersed/ /mnt/hodgkin_home/eugene/Output/networks/150617_huxley_2/ /mnt/hodgkin_home/eugene/Output/networks/150617_huxley_2/
+# path to training file
+# path to growth configuration file
+# path to output directory
+mpirun -np 23 ./growth /home/eugene/Output/networks/sphere/ /home/eugene/Output/networks/sphere/training/clustered_training.bin /home/eugene/Output/networks/sphere_170717_hodgkin/ /home/eugene/Output/networks/sphere_170717_hodgkin/

@@ -10,7 +10,7 @@ using namespace libconfig;
 // structure with spatial parameters
 struct SpatialParameters
 {
-    double SIDE; // side of the square modeling HVC
+	int dimensionality; // dimensionality of a network
     double MIN_INTERNEURON_DISTANCE; // minimum allowed distance between two neurons
 
     // spatial connectivity distributions (modeled by Gaussians)

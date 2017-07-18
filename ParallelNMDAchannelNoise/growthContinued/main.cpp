@@ -47,7 +47,7 @@ int main(int argc, char** argv)
 
 
 	int save_freq_short = 20; // save frequency for graph update
-	int save_freq_long = 100; // save frequency for network state update
+	int save_freq_long = 200; // save frequency for network state update
 	bool training = true;
 	
 	pool.print_simulation_parameters(); 

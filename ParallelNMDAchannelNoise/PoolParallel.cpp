@@ -29,14 +29,14 @@ PoolParallel::PoolParallel(ConfigurationNetworkGenerator& cfgNetwork, Configurat
     struct GabaParameters gaba_params = cfgGrowth.get_gaba_parameters();
     struct TimeParameters time_params = cfgGrowth.get_time_parameters();
     struct NoiseParameters noise_params = cfgGrowth.get_noise_parameters();
-    struct InhibitoryParameters inhibitory_params = cfgGrowth.get_inhibitory_parameters();
     
+    network_params = cfgGrowth.get_network_parameters();
     
-    // set inhibitory parameters for network generator
+     // set inhibitory parameters for network generator
     double Gie_mean, Gie_std; // inhibitory strength parameters
     
-    Gie_mean = inhibitory_params.Gie_mean;
-    Gie_std = inhibitory_params.Gie_std;
+    Gie_mean = network_params.Gie_mean;
+    Gie_std = network_params.Gie_std;
     
     networkGen.set_inhibitory_strength(Gie_mean, Gie_std);
     
@@ -48,18 +48,22 @@ PoolParallel::PoolParallel(ConfigurationNetworkGenerator& cfgNetwork, Configurat
 
 void PoolParallel::initialize_network()
 {
-	// get number of neurons in the network
-	networkGen.get_neuron_numbers(&N_RA, &N_TR, &N_I);
-	
-	//this->print_simulation_parameters();
-	
 	if (MPI_rank == 0)
 	{
+		// get number of neurons in the network
+	
+		networkGen.get_neuron_numbers(&N_RA, &N_TR, &N_I);
+		
 		std::cout << "N_RA = " << N_RA << std::endl;
 		std::cout << "N_TR = " << N_TR << std::endl;
 		std::cout << "N_I = " << N_I << std::endl;
 		
 	}
+
+	// send number of neurons to all processes
+	MPI_Bcast(&N_RA, 1, MPI_INT, 0, MPI_COMM_WORLD);
+	MPI_Bcast(&N_TR, 1, MPI_INT, 0, MPI_COMM_WORLD);
+	MPI_Bcast(&N_I, 1, MPI_INT, 0, MPI_COMM_WORLD);
 	
 	training_neurons.resize(N_TR);
 	
@@ -165,16 +169,24 @@ void PoolParallel::initialize_network()
 	this->send_connections();
 }
 
-void PoolParallel::new_chain_growth(std::string networkDirectory, bool training, int save_freq_short, int save_freq_long)
+void PoolParallel::new_chain_growth(std::string networkDirectory, std::string fileTraining,  bool training, int save_freq_short, int save_freq_long)
 {
-	// read initial network from directory
-	networkGen.read_network_from_directory("_initial", networkDirectory);
-	
-	// write network to output directory both as initial
-	networkGen.write_invariant_network_to_directory(outputDirectory);
-	networkGen.write_alterable_network_to_directory("_initial", outputDirectory);
-	networkGen.write_configuration_to_directory(outputDirectory);
-	
+	if (MPI_rank == 0)
+	{
+		// read initial network from directory
+		networkGen.read_network_from_directory("_initial", networkDirectory, fileTraining);
+		
+		// write network to output directory both as initial
+		networkGen.write_invariant_network_to_directory(outputDirectory);
+		networkGen.write_alterable_network_to_directory("_initial", outputDirectory);
+		
+		// write training neurons to file training_neurons.bin in outputDirectory 
+		std::string outTraining = outputDirectory + "training_neurons.bin";
+		
+		networkGen.write_training_neurons(outTraining.c_str());
+		
+		networkGen.write_configuration_to_directory(outputDirectory);
+	}
 	this->initialize_network();
 	this->chain_growth(training, save_freq_short, save_freq_long);
 }
@@ -195,8 +207,11 @@ void PoolParallel::read_network_state(std::string dataDir, int starting_trial)
     std::string fileLastBurstTimes = dataDir + "last_dendritic_spike_times" + trial_extension + ".bin";
 	std::string fileReplacementHistory = dataDir + "replacement_history" + trial_extension + ".bin";
     std::string fileWeightsGraph = dataDir + "weights"  + trial_extension + ".bin";
-    
-	networkGen.read_network_with_weights_from_directory(trial_extension, dataDir);
+    std::string fileTraining = dataDir + "training_neurons.bin";
+   
+   	if (MPI_rank == 0)
+		networkGen.read_network_with_weights_from_directory(trial_extension, dataDir, fileTraining.c_str());
+	
 	this->initialize_network();
 
 	this->read_super_synapses(fileSuperGraph.c_str());

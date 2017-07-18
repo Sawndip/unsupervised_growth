@@ -20,7 +20,9 @@ SIDE = 100
 FONT_SIZE = 5
 TRIAL_DURATION = 1000
 
-outdir = "/home/eugene/results/noDelays/dispersed/dispersed_2/180617_lionx_5/"
+#outdir = "/home/eugene/results/delays/5ms/clustered/100717_lionx_6/"
+outdir = "/home/eugene/Output/networks/sphere_170717_hodgkin/"
+#outdir = "/home/eugene/results/delays/10ms/clustered/130717_lionx_3/"
 
 filename_weights = os.path.join(outdir, "weights.bin")
 filename_weight_statistics = os.path.join(outdir, "weight_statistics.bin")

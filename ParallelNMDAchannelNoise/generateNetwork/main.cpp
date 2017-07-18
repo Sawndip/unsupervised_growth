@@ -7,8 +7,8 @@ using namespace std;
 
 int main(int argc, char** argv)
 {
-	int N_RA = 75; // number of HVC(RA) neurons
-	int N_I = 25; // number of HVC(I) neurons
+	int N_RA = 300; // number of HVC(RA) neurons
+	int N_I = 100; // number of HVC(I) neurons
 	int N_TR = 4; // number of training HVC(RA) neurons
 
     std::string configurationFile; // configuration file
@@ -46,10 +46,11 @@ int main(int argc, char** argv)
 
 	NetworkGenerator network_gen(cfg, &noise_generator);
 
-    network_gen.generate_network_with_clustered_training(N_RA, N_TR, N_I); // generate network
+    network_gen.generate_default_network(N_RA, N_TR, N_I, outputDirectory);
+    //network_gen.generate_network_with_clustered_training(N_RA, N_TR, N_I); // generate network
     //network_gen.generate_network_with_dispersed_training(); // generate network and write to to directory networkDir
-    network_gen.write_invariant_network_to_directory(outputDirectory);
-    network_gen.write_alterable_network_to_directory("_initial", outputDirectory); // write initial network to directory
+    //network_gen.write_invariant_network_to_directory(outputDirectory);
+    //network_gen.write_alterable_network_to_directory("_initial", outputDirectory); // write initial network to directory
     
 	
 

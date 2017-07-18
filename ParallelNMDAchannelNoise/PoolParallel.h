@@ -50,7 +50,7 @@ public:
                                                                        // NOTE: coordinates and connections MUST be initialized before using chain_growth
 
 	
-	void new_chain_growth(std::string networkDirectory, bool training, int save_freq_short, int save_freq_long);
+	void new_chain_growth(std::string networkDirectory, std::string fileTraining, bool training, int save_freq_short, int save_freq_long);
 	
 	void continue_chain_growth(std::string dataDir, int starting_trial, bool training, int save_freq_short, int save_freq_long); // continue chain growth using network state defined by files in 
 																						// directory dataDir from trial starting_trial
@@ -74,7 +74,8 @@ public:
 	void print_simulation_parameters(); // print simulation parameters
 protected:
 		NetworkGenerator networkGen; // object to generate coordinates and connections between original and replaced neurons
-
+		struct NetworkParameters network_params; // struct with network parameters: inhibition strength and axonal delays
+		
         std::string outputDirectory; // directory to which write output
 		std::string networkDirectory; // directory which contains network
 		

@@ -10,12 +10,18 @@ of HVC(RA) neurons and synapses betweeen them
 import reading
 import os
 
-dirname = "/home/eugene/results/noDelays/dispersed/dispersed_1/120617_lionx_2/"
+dirname = "/home/eugene/results/delays/10ms/clustered/130717_lionx_3"
 
-file_xy = os.path.join(dirname, "RA_xy_initial.bin")
-file_super = os.path.join(dirname, "RA_RA_super_connections.bin")
+#dirname = "/home/eugene/Output/networks/140717_huxley/"
+
+trial_number = 20000
+
+file_xy = os.path.join(dirname, "RA_xy_" + str(trial_number) + "_.bin")
+file_super = os.path.join(dirname, "RA_RA_super_connections_" + str(trial_number) + "_.bin")
+
+#file_training = None
 file_training = os.path.join(dirname, "training_neurons.bin")
-file_pajek = os.path.join(dirname, "super.net")
+file_pajek = os.path.join(dirname, "super_" + str(trial_number) + "_.net")
 
 SIDE = 100.0 # side of square modeling HVC
 N_TR = 4 # number of training neurons
@@ -25,9 +31,11 @@ N_TR = 4 # number of training neurons
 
 #print targets_ID
 #print targets_G
-
-training_neurons = reading.read_training_neurons(file_training)
-
+if file_training:
+    training_neurons = reading.read_training_neurons(file_training)
+else:
+    training_neurons = []
+    
 print "Training neurons: ",training_neurons
 
 with open(file_pajek, 'w') as f:

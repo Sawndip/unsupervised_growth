@@ -67,11 +67,13 @@ struct NoiseParameters
     double white_noise_std_dend; // standard deviation of white noise cuurent injected to dendrite
 };
 
-// structure with inhibitory strength parameters
-struct InhibitoryParameters
+// structure with network parameters
+struct NetworkParameters
 {
 	double Gie_mean; // mean HVC(I) -> HVC(RA) connection strength
     double Gie_std; // standard deviation of HVC(I) -> HVC(RA) connection strength
+	
+	double delay_constant; // constant which converts distances between neurons into axonal delays
 };
 
 
@@ -86,14 +88,14 @@ public:
     struct GabaParameters get_gaba_parameters() const {return gaba_params;};
     struct TimeParameters get_time_parameters() const {return time_params;};
     struct NoiseParameters get_noise_parameters() const {return noise_params;};
-    struct InhibitoryParameters get_inhibitory_parameters() const {return inhibitory_params;};
+    struct NetworkParameters get_network_parameters() const {return network_params;};
     
 private:
     struct SynapticParameters synaptic_params;
     struct GabaParameters gaba_params;
     struct TimeParameters time_params;
     struct NoiseParameters noise_params;
-    struct InhibitoryParameters inhibitory_params;
+    struct NetworkParameters network_params;
     
 };
 

@@ -15,8 +15,8 @@ from matplotlib import ticker
 
 
 
-file_chain_test = "/home/eugene/results/noDelays/dispersed/dispersed_1/matureTest/120617_lionx_2/mature_chain_test.bin"
-file_RA_super = "/home/eugene/results/noDelays//dispersed/dispersed_1/120617_lionx_2/RA_RA_super_connections_22400_.bin"
+file_chain_test = "/home/eugene/results/noDelays/replacement/clustered/matureTest/190617_lionx_3/mature_chain_test.bin"
+file_RA_super = "/home/eugene/results/noDelays/replacement/clustered/190617_lionx_3/RA_RA_super_connections_189000_.bin"
 
 CURRENT_INJECTION_TIME = 100
 ROBUST_FIRING_THRESHOLD = 0.25

@@ -112,18 +112,19 @@ void ConfigurationGrowth::read_configuration(const char* filename)
         std::cerr << "Noise parameter setting is not found in configuration file!" << std::endl;
     }
     
-    // Get the inhibitory strength parameters
+    // Get the network parameters
     try
     {
-        const Setting& inhibitory_params_setting = root["inhibitoryParameters"];
+        const Setting& network_params_setting = root["networkParameters"];
 
-        inhibitory_params_setting.lookupValue("Gie_mean", inhibitory_params.Gie_mean);
-        inhibitory_params_setting.lookupValue("Gie_std", inhibitory_params.Gie_std);
+        network_params_setting.lookupValue("Gie_mean", network_params.Gie_mean);
+        network_params_setting.lookupValue("Gie_std", network_params.Gie_std);
+        network_params_setting.lookupValue("delay_constant", network_params.delay_constant);
         
     }
     catch(const SettingNotFoundException &nfex)
     {
-        std::cerr << "Inhibitory parameter setting is not found in configuration file!" << std::endl;
+        std::cerr << "Network parameter setting is not found in configuration file!" << std::endl;
     }
 }
 
@@ -183,11 +184,12 @@ void ConfigurationGrowth::print_configuration() const
     std::cout << "white_noise_mean_dend = " << noise_params.white_noise_mean_dend << std::endl;
     std::cout << "white_noise_std_dend = " << noise_params.white_noise_std_dend << std::endl;
     
-    // display inhibitory strength parameters read from file
-    std::cout << std::endl << "Inhibitory strength parameters read from configuration file: " << std::endl << std::endl;
+    // display network parameters read from file
+    std::cout << std::endl << "Network parameters read from configuration file: " << std::endl << std::endl;
     
-    std::cout << "Gie_mean = " << inhibitory_params.Gie_mean << std::endl;
-    std::cout << "Gie_std = " << inhibitory_params.Gie_std << std::endl;
+    std::cout << "Gie_mean = " << network_params.Gie_mean << std::endl;
+    std::cout << "Gie_std = " << network_params.Gie_std << std::endl;
+    std::cout << "delay_constant = " << network_params.delay_constant << std::endl;
    
 }
 
@@ -255,11 +257,13 @@ void ConfigurationGrowth::write_configuration(const char* filename) const
     out << "\twhite_noise_std_dend = " << noise_params.white_noise_std_dend << ";" << std::endl;
     out << "};" << std::endl << std::endl;
     
-    // write inhibitory strength parameters
-    out << "inhibitoryParameters = " << std::endl;
+    // write network parameters
+    out << "networkParameters = " << std::endl;
     out << "{" << std::endl;
-    out << "\tGie_mean = " << inhibitory_params.Gie_mean << ";" << std::endl;
-    out << "\tGie_std = " << inhibitory_params.Gie_std << ";" << std::endl;
+    out << "\tGie_mean = " << network_params.Gie_mean << ";" << std::endl;
+    out << "\tGie_std = " << network_params.Gie_std << ";" << std::endl;
+    out << "\tdelay_constant = " << network_params.delay_constant << ";" << std::endl;
+    
     out << "};" << std::endl << std::endl;
 
     out.close();
