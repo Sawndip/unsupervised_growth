@@ -62,7 +62,7 @@ def read_connections(filename):
 
     return (N_RA, targets_ID, targets_G)
     
-def read_coordinates(filename):
+def read_coordinates(dim, filename):
     """
     Read coordinates of neurons from binary file
     """
@@ -72,20 +72,39 @@ def read_coordinates(filename):
     
     N = struct.unpack('<i', data[:SIZE_OF_INT])[0] # get number of neurons
     
-    xx = [] # x-coordinates
-    yy = [] # y-coordinates
-
+   
     ind = SIZE_OF_INT # position in file    
     
-    for i in range(N):
-        x = struct.unpack('<d', data[ind:(ind + SIZE_OF_DOUBLE)])[0]
-        y = struct.unpack('<d', data[(ind + SIZE_OF_DOUBLE):(ind + 2*SIZE_OF_DOUBLE)])[0]
+    if dim == 2:    
+         coord = np.empty(shape=(N,2), dtype=np.float32) # coordinates
+         coord.fill(np.nan)
+         
+         for i in range(N):
+             coord[i][0] = struct.unpack('<d', data[ind:(ind + SIZE_OF_DOUBLE)])[0]
+             coord[i][1] = struct.unpack('<d', data[(ind + SIZE_OF_DOUBLE):(ind + 2*SIZE_OF_DOUBLE)])[0]
+            
+             ind += 2 * SIZE_OF_DOUBLE
         
-        xx.append(x)
-        yy.append(y)
-        ind += 2 * SIZE_OF_DOUBLE
+         return coord
+        
+    if dim == 3:    
+         coord = np.empty(shape=(N,3), dtype=np.float32) # coordinates
+         coord.fill(np.nan)
     
-    return (xx, yy)
+         for i in range(N):
+             coord[i][0] = struct.unpack('<d', data[ind:(ind + SIZE_OF_DOUBLE)])[0]
+             coord[i][1] = struct.unpack('<d', data[(ind + SIZE_OF_DOUBLE):(ind + 2*SIZE_OF_DOUBLE)])[0]
+             coord[i][2] = struct.unpack('<d', data[(ind + 2*SIZE_OF_DOUBLE):(ind + 3*SIZE_OF_DOUBLE)])[0]
+            
+            
+             ind += 3 * SIZE_OF_DOUBLE
+        
+         return coord
+        
+    else:
+        print "Dimensionality %s is not supported!",dim
+        return -1
+    
 
 def read_global_index_array(filename):
     """

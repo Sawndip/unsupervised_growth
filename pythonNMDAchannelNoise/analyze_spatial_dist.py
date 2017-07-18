@@ -38,14 +38,38 @@ def get_fraction_chain_neurons(dirname):
             
     return len(strongly_connected) / float(N_RA)
                 
+
+def find_latest_checkpoint(dirname):
+    """
+    Find trial number of the latest checkpoint created in simulation
+    """
+    files = os.listdir(dirname)
+
+    latest_checkpoint = -1
+
+    for f in files:
+        if "replacement_history_" in f:
+            trial_num = int(f.split("_")[2])
+            
+            #print f.split("_")[2]
+            if trial_num > latest_checkpoint:
+                latest_checkpoint = trial_num
+                
+            
+    return latest_checkpoint
     
 def get_statistics_of_grown_conn(dirname):
     """
     Get mean and std of grown connections between HVC(RA) neurons
     """
-    RARA = os.path.join(dirname, "RA_RA_super_connections.bin")
-    RA_xy = os.path.join(dirname, "RA_xy_initial.bin")
-    I2RA = os.path.join(dirname, "I_RA_connections_initial.bin")
+    latest_checkpoint = find_latest_checkpoint(dirname) 
+
+    print "latest_checkpoint for directory {0} = {1}".format(dirname, latest_checkpoint)
+    
+    
+    RARA = os.path.join(dirname, "RA_RA_super_connections_" + str(latest_checkpoint) + "_.bin")
+    RA_xy = os.path.join(dirname, "RA_xy_" + str(latest_checkpoint) + "_.bin")
+    I2RA = os.path.join(dirname, "I_RA_connections_" + str(latest_checkpoint) + "_.bin")
     
     (N_I, _, I_targets_G) = reading.read_connections(I2RA)
     
@@ -135,7 +159,7 @@ def plot_spatial_dist_fixed(dirname):
 
 
 if __name__ == "__main__":
-    dirname = "/home/eugene/results/noDelays/dispersed/dispersed_1/"
+    dirname = "/home/eugene/results/noDelays/replacement/dispersed/"
     #plot_spatial_dist_fixed(dirname)
     directories = os.listdir(dirname)    
     
@@ -146,8 +170,7 @@ if __name__ == "__main__":
     mean = [] # mean distance between HVC(RA) neurons
     std = [] # standard deviation of the distance between HVC(RA) neurons
     
-#    dirs_to_exclude = ["matureTest", "figures", "120617_lionx_0", "120617_lionx_3", "120617_lionx_4", "160617_lionx_4", "160617_lionx_6"]    
-    dirs_to_exclude = ["figures"]
+    dirs_to_exclude = ["matureTest", "figures", "220617_lionx_8", "170617_lionx_6"]    
     
     for dir in directories:    
         if dir not in dirs_to_exclude:
@@ -156,11 +179,13 @@ if __name__ == "__main__":
             
             dist, gie = get_statistics_of_grown_conn(os.path.join(dirname, dir))
             
+            
             if gie < 0:
                 print "Error! No inhibitory connections are present!"
             else:
                 #mean.append(m)
                 #std.append(s)
+                
                 Gie.append(gie)
                 distances_between_chain.append(dist)            
                 fraction_chain_neurons.append(get_fraction_chain_neurons(os.path.join(dirname, dir)))
@@ -187,9 +212,10 @@ if __name__ == "__main__":
     ax = f.add_subplot(111)
     
     ax.scatter(Gie, fraction_chain_neurons)
-    ax.set_xlim([0, 0.75])
-    ax.set_ylim([0, max(fraction_chain_neurons)+0.05])
+
+    ax.set_ylim([0, max(fraction_chain_neurons) + 0.1])
     
+    ax.set_xlim([0, max(Gie) + 0.05])
     ax.set_ylabel("fraction of neurons in the chain")
     ax.set_xlabel("$Gie (mS/cm^2)$")
     
