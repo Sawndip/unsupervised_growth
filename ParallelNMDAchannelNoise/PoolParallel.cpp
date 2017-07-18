@@ -1675,11 +1675,14 @@ void PoolParallel::test_mature_chain(int num_trials)
     //~ 
     
     // 120617_lionx_2
-    std::vector<int> RAtoWrite = {195, 274, 259, 79, 298, 130, 90, 118, 256, 162, 177, 247, 254, 12, 176, 67, 295, 292, 122, 144};
+    //std::vector<int> RAtoWrite = {195, 274, 259, 79, 298, 130, 90, 118, 256, 162, 177, 247, 254, 12, 176, 67, 295, 292, 122, 144};
+    
+    std::vector<int> RAtoWrite = {};
+    
     std::vector<int> ItoWrite;
 
-    for (int i = 0; i < N_I; i++)
-        ItoWrite.push_back(i);
+    //for (int i = 0; i < N_I; i++)
+    //    ItoWrite.push_back(i);
 
     for (int i = 0; i < num_trials; i++)
 	{
@@ -2299,11 +2302,11 @@ void PoolParallel::trial_burst_stdp(int training)
                         
                         if ( Id_RA_local[i] != supersynapse_id )
                         {
-                            double dt = internal_time - last_dend_spike_time_global[supersynapse_id];
+                            double dt = last_dend_spike_time_global[supersynapse_id] - internal_time;
 
                             //std::cout << "dt in saturated LTD = " << dt << std::endl;
 
-                            if (dt < STDP_WINDOW)
+                            if (fabs(dt) < STDP_WINDOW)
                             {
                                 //double w = weights_local[i][supersynapse_id];     
                        
@@ -2331,11 +2334,11 @@ void PoolParallel::trial_burst_stdp(int training)
                     {
                         if ( Id_RA_local[i] != j )
                         {
-                            double dt = internal_time - last_dend_spike_time_global[j];
+                            double dt = last_dend_spike_time_global[j] - internal_time;
                             
                             //std::cout << "dt in LTD = " << dt << std::endl;
 
-                            if (dt < STDP_WINDOW)
+                            if (fabs(dt) < STDP_WINDOW)
                             {
 
                                 //double w = weights_local[i][j];
@@ -2484,7 +2487,7 @@ void PoolParallel::trial_burst_stdp(int training)
 								if (dt < STDP_WINDOW)
 								{
 									if (dt <= T_0)
-										LTD_burst(weights_local[i][fired_ID], -dt);
+										LTD_burst(weights_local[i][fired_ID], dt);
 									else
 										LTP_burst(weights_local[i][fired_ID], dt);
 										
@@ -2518,7 +2521,7 @@ void PoolParallel::trial_burst_stdp(int training)
 								if (dt < STDP_WINDOW)
 								{
 								   if (dt <= T_0)
-										LTD_burst(weights_local[i][fired_ID], -dt);
+										LTD_burst(weights_local[i][fired_ID], dt);
 									else
 										LTP_burst(weights_local[i][fired_ID], dt);
 										
@@ -3410,21 +3413,21 @@ void PoolParallel::update_synapse(int i, int j)
     }
 }
 
-void PoolParallel::LTP_burst(double &w, double t)
+void PoolParallel::LTP_burst(double &w, double dt)
 {
-	if (t <= T_0)
+	// dt in LTP_burst is postsynaptic burst time - presynaptic burst time  
+	if (dt <= T_0)
 	{
-		std::cerr << "Time t = " << t << " is smaller than T_0 in LTP!" << std::endl;
+		std::cerr << "Time t = " << dt << " is smaller than T_0 in LTP!" << std::endl;
 		return;
 	}
 	
-    if (t <= T_P)
-        w = w + A_P * (t - T_0) / (T_P - T_0);
-    
-    else
-        w = w + A_P * exp(- (t - T_P) / TAU_P);
-
-    if (w > WEIGHT_MAX)
+	if (dt <= T_0 + T_P)
+		w = w + A_P * (dt - T_0) / T_P;
+	else
+		w = w + A_P * exp(-(dt - T_0 - T_P) / TAU_P);
+		
+	if (w > WEIGHT_MAX)
         w = WEIGHT_MAX;
 
     if (w < 0)
@@ -3432,24 +3435,22 @@ void PoolParallel::LTP_burst(double &w, double t)
 }
 
 
-void PoolParallel::LTD_burst(double &w, double t)
+void PoolParallel::LTD_burst(double &w, double dt)
 {
-	// dt in LTD_burst is time of postsynaptic minus time of presynaptic burst
-	// so mostly it is positive (in LTD post leads pre)
-	
-	if (t < -T_0)
-	{
-		std::cerr << "Time dt = " << t << " is bigger than T_0 in LTD!" << std::endl;
+	// dt in LTD_burst is postsynaptic burst time - presynaptic burst time  
+    if (dt > T_0)
+    {
+		std::cerr << "Time in LTD dt = " << dt << " is bigger than T0 = " << T_0 << std::endl;
 		return;
 	}
 	
-    if (t <= T_D)
-        w = w - w * A_D * (t + T_0) / (T_D + T_0);
-    else
-        w = w - w * A_D * exp(- (t - T_D) / TAU_D);
-
-    if (w < 0)
-        w = 0;
+	if (dt >= T_0 - T_D)
+		w = w + w * A_D * (dt - T_0) / T_D;
+	else
+		w = w - w * A_D * exp((dt - T_0 + T_D) / TAU_D);
+		
+	if (w < 0)
+		w = 0;
 }
 
 //~ void PoolParallel::gather_mature_data(std::vector<std::vector<double>>& average_dendritic_spike_time) 
