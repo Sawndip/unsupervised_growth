@@ -47,6 +47,7 @@ int main(int argc, char** argv)
 	NetworkGenerator network_gen(cfg, &noise_generator);
 
     network_gen.generate_default_network(N_RA, N_TR, N_I, outputDirectory);
+    network_gen.write_pajek_fixed((outputDirectory + "fixed_initial.net").c_str());
     //network_gen.generate_network_with_clustered_training(N_RA, N_TR, N_I); // generate network
     //network_gen.generate_network_with_dispersed_training(); // generate network and write to to directory networkDir
     //network_gen.write_invariant_network_to_directory(outputDirectory);

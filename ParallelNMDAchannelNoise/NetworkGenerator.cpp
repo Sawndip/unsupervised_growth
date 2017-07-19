@@ -14,10 +14,16 @@ NetworkGenerator::NetworkGenerator(ConfigurationNetworkGenerator cfg, Poisson_no
 
 void NetworkGenerator::set_spatial_parameters(const struct SpatialParameters& spatial_params)
 {
-	dimensionality = spatial_params.dimensionality;
+	arrangement = spatial_params.arrangement;
 	
-    MIN_INTERNEURON_DISTANCE = spatial_params.MIN_INTERNEURON_DISTANCE;
-
+	if (arrangement == "square")
+		dimensionality = 2;
+	else
+		if ( (arrangement == "sphere") || (arrangement == "cube"))
+			dimensionality = 3;
+		else
+			std::cerr << "arrangement = " << arrangement << " is not supported!" << std::endl;
+	
     A_RA2I = spatial_params.A_RA2I;
     SIGMA_RA2I = spatial_params.SIGMA_RA2I;
     B_I2RA = spatial_params.B_I2RA;
@@ -46,34 +52,41 @@ void NetworkGenerator::get_axonal_delays(double delay_constant, std::vector<std:
 			 std::vector<std::vector<double>>& axonal_delays_RA_RA)
 {
 	// check dimensionality
-	switch (dimensionality)
+	if (arrangement == "square")
 	{
-		case 2:		
-			for (int i = 0; i < N_RA; i++)
-			{
-				for (int j = 0; j < N_I; j++)
-					axonal_delays_RA_I[i][j] = delay_constant * distance(xx_RA[i], yy_RA[i], xx_I[j], yy_I[j]);
-			
-				for (int j = 0; j < N_RA; j++)
-					axonal_delays_RA_RA[i][j] = delay_constant * distance(xx_RA[i], yy_RA[i], xx_RA[j], yy_RA[j]);
-			}
-			break;
+		for (int i = 0; i < N_RA; i++)
+		{
+			for (int j = 0; j < N_I; j++)
+				axonal_delays_RA_I[i][j] = delay_constant * distance2d(xx_RA[i], yy_RA[i], xx_I[j], yy_I[j]);
 		
-		case 3:		
-			for (int i = 0; i < N_RA; i++)
-			{
-				for (int j = 0; j < N_I; j++)
-					axonal_delays_RA_I[i][j] = delay_constant * distance_on_sphere(xx_RA[i], yy_RA[i], zz_RA[i], xx_I[j], yy_I[j], zz_I[j]);
-			
-				for (int j = 0; j < N_RA; j++)
-					axonal_delays_RA_RA[i][j] = delay_constant * distance_on_sphere(xx_RA[i], yy_RA[i], zz_RA[i], xx_RA[j], yy_RA[j], zz_RA[j]);
-			}
-			break;
-			
-		default:
-			std::cerr << "Dimensionality " << dimensionality << " is not supported for setting up connections" << std::endl;
-			break;		
+			for (int j = 0; j < N_RA; j++)
+				axonal_delays_RA_RA[i][j] = delay_constant * distance2d(xx_RA[i], yy_RA[i], xx_RA[j], yy_RA[j]);
+		}
 	}
+	
+	if (arrangement == "sphere")
+	{	
+		for (int i = 0; i < N_RA; i++)
+		{
+			for (int j = 0; j < N_I; j++)
+				axonal_delays_RA_I[i][j] = delay_constant * distance_on_sphere(xx_RA[i], yy_RA[i], zz_RA[i], xx_I[j], yy_I[j], zz_I[j]);
+		
+			for (int j = 0; j < N_RA; j++)
+				axonal_delays_RA_RA[i][j] = delay_constant * distance_on_sphere(xx_RA[i], yy_RA[i], zz_RA[i], xx_RA[j], yy_RA[j], zz_RA[j]);
+		}
+	}
+	
+	if (arrangement == "cube")
+	{	
+		for (int i = 0; i < N_RA; i++)
+		{
+			for (int j = 0; j < N_I; j++)
+				axonal_delays_RA_I[i][j] = delay_constant * distance3d(xx_RA[i], yy_RA[i], zz_RA[i], xx_I[j], yy_I[j], zz_I[j]);
+		
+			for (int j = 0; j < N_RA; j++)
+				axonal_delays_RA_RA[i][j] = delay_constant * distance3d(xx_RA[i], yy_RA[i], zz_RA[i], xx_RA[j], yy_RA[j], zz_RA[j]);
+		}
+	}	
 }
 
 void NetworkGenerator::get_network(std::vector<std::vector<int>>* id_RA_I, std::vector<std::vector<double>>* w_RA_I, 
@@ -243,217 +256,208 @@ void NetworkGenerator::replace_neurons(const std::vector<int>& neurons_to_replac
 
 void NetworkGenerator::initialize_coordinates()
 {   
-	// check network dimensionality
-	switch (dimensionality)
+	// check arrangement
+	
+	if (arrangement == "square")
 	{
-		case 2:
+		// set coordinates for HVC(I) neurons
+		// HVC(I) neurons form nearly ideal lattice
+		for (int i = 0; i < (int) sqrt(N_I); i++)
 		{
-			double xx; // temporary x-coordinate
-			double yy; // temporary y-coordinate
-
-			bool close; // are neurons too close or not
-			// set coordinates for HVC(I) neurons
-			for (int i = 0; i < (int) sqrt(N_I); i++)
+			for (int k = 0; k < (int) sqrt(N_I); k++)
 			{
-				for (int k = 0; k < (int) sqrt(N_I); k++)
-				{
-					do
-					{
-						close = false;
-						xx = (double) (i+1) / (sqrt(N_I)+1) + noise_generator->random(0.25 / (sqrt(N_I) + 1));
-						yy = (double) (k+1) / (sqrt(N_I)+1) + noise_generator->random(0.25 / (sqrt(N_I) + 1));
-
-						// check distances to all previous I neurons
-
-						for (size_t j = 0; j < i * ((int) sqrt(N_I)) + k; j++)
-						{
-							if (distance(xx,yy,xx_I[j],yy_I[j]) < MIN_INTERNEURON_DISTANCE)
-							{
-								close = true;
-								break;
-							}
-						}
-					} while(close);
-
-				xx_I[i * ((int) sqrt(N_I)) + k] = xx;
-				yy_I[i * ((int) sqrt(N_I)) + k] = yy;
-
-				}
+				xx_I[i * ((int) sqrt(N_I)) + k] = (double) (i+1) / (sqrt(N_I)+1) + noise_generator->random(0.25 / (sqrt(N_I) + 1));
+				yy_I[i * ((int) sqrt(N_I)) + k] = (double) (k+1) / (sqrt(N_I)+1) + noise_generator->random(0.25 / (sqrt(N_I) + 1));
 			}
-
-			// set coordinates for HVC(RA) neurons
-			for (int i = 0; i < N_RA; i++)
-			{
-				do
-				{
-					close = false;
-					xx = 0.5 / (sqrt(N_I)+1) + noise_generator->random(1.0 - 1.0 / (sqrt(N_I)+1));
-					yy = 0.5 / (sqrt(N_I)+1) + noise_generator->random(1.0 - 1.0 / (sqrt(N_I)+1));
-
-					// check distances to all I neurons
-
-					for (int j = 0; j < N_I; j++)
-					{
-						if (distance(xx,yy,xx_I[j],yy_I[j]) < MIN_INTERNEURON_DISTANCE)
-						{
-							close = true;
-							break;
-						}
-					}
-
-					// check distances to all previous RA neurons
-					if (!close)
-						for (int j = 0; j < i; j++)
-						{
-							if (distance(xx, yy, xx_RA[j], yy_RA[j]) < MIN_INTERNEURON_DISTANCE)
-						{
-							close = true;
-							break;
-						}
-
-					}
-				} while(close);
-
-				xx_RA[i] = xx;
-				yy_RA[i] = yy;
-			}
-			break;
 		}
-		
-		case 3:
+
+		// set coordinates for HVC(RA) neurons
+		// HVC(RA) neurons are sampled unuformly from the square
+		for (int i = 0; i < N_RA; i++)
 		{
-			double zz; // temporary z-coordinate
-
-			// set coordinates for HVC(I) neurons
-			// HVC(I) neurons are sampled equally distantly on sphere
-			const double pi = 3.14159265358979323846; // value of constant pi
-			
-			double dphi = pi * (3.0 - sqrt(5.0)); // angle phi increment value
-			double dz = 2 / static_cast<double>(N_I); // z increment value
-			
-			double phi = 0; // current value of angle phi
-			double z = 1 - dz/2.0; // current value of z  
-			double r; // current value of disk radius
-
-			for (int i = 0; i < N_I; i++)
-			{
-				r = sqrt(1.0 - z*z);
-				
-				xx_I[i] = cos(phi) * r;
-				yy_I[i] = sin(phi) * r;
-				zz_I[i] = z;
-				
-				z = z - dz;
-				phi = phi + dphi;
-			}
-
-			// set coordinates for HVC(RA) neurons
-			// HVC(RA) neurons are sample from uniform distribution on sphere
-			for (int i = 0; i < N_RA; i++)
-			{
-				z = 2*noise_generator->random(1.0) - 1; // generate z in range(-1, 1)
-				phi = noise_generator->random(2.0 * pi); // generate phi in range(0, 2*pi)
-				
-				xx_RA[i] = sin(acos(z)) * cos(phi);
-				yy_RA[i] = sin(acos(z)) * sin(phi);
-				zz_RA[i] = z;		
-			}
-			break;
+			xx_RA[i] = 0.5 / (sqrt(N_I)+1) + noise_generator->random(1.0 - 1.0 / (sqrt(N_I)+1));
+			yy_RA[i] = 0.5 / (sqrt(N_I)+1) + noise_generator->random(1.0 - 1.0 / (sqrt(N_I)+1));	
 		}
+	}
 		
-		default:
-			std::cerr << "Dimensionality " << dimensionality << " is not supported for setting up connections" << std::endl;
-			break;
+	if (arrangement == "sphere")
+	{
+		double zz; // temporary z-coordinate
+
+		// set coordinates for HVC(I) neurons
+		// HVC(I) neurons are sampled equally distantly on sphere
+		const double pi = 3.14159265358979323846; // value of constant pi
+		
+		double dphi = pi * (3.0 - sqrt(5.0)); // angle phi increment value
+		double dz = 2 / static_cast<double>(N_I); // z increment value
+		
+		double phi = 0; // current value of angle phi
+		double z = 1 - dz/2.0; // current value of z  
+		double r; // current value of disk radius
+
+		for (int i = 0; i < N_I; i++)
+		{
+			r = sqrt(1.0 - z*z);
+			
+			xx_I[i] = cos(phi) * r;
+			yy_I[i] = sin(phi) * r;
+			zz_I[i] = z;
+			
+			z = z - dz;
+			phi = phi + dphi;
+		}
+
+		// set coordinates for HVC(RA) neurons
+		// HVC(RA) neurons are sample from uniform distribution on sphere
+		for (int i = 0; i < N_RA; i++)
+		{
+			z = 2*noise_generator->random(1.0) - 1; // generate z in range(-1, 1)
+			phi = noise_generator->random(2.0 * pi); // generate phi in range(0, 2*pi)
+			
+			xx_RA[i] = sin(acos(z)) * cos(phi);
+			yy_RA[i] = sin(acos(z)) * sin(phi);
+			zz_RA[i] = z;		
+		}
+	}
+	
+	if (arrangement == "cube")
+	{
+		// set coordinates for HVC(I) neurons
+		// HVC(I) neurons are sampled uniformly from the cube
+		for (int i = 0; i < N_I; i++)
+		{
+			xx_I[i] = noise_generator->random(1.0);
+			yy_I[i] = noise_generator->random(1.0);
+			zz_I[i] = noise_generator->random(1.0);
+		}
+
+		// set coordinates for HVC(RA) neurons
+		// HVC(RA) neurons are sampled unuformly from the cube
+		for (int i = 0; i < N_RA; i++)
+		{
+			xx_RA[i] = noise_generator->random(1.0);
+			yy_RA[i] = noise_generator->random(1.0);
+			zz_RA[i] = noise_generator->random(1.0);	
+		}
 	}
 }
 
 void NetworkGenerator::initialize_connections()
 {
-	switch (dimensionality)
-	{
-		case 2:	
-		{	
-			// connections for HVC(RA) neurons
-			for (int i = 0; i < N_RA; i++)
-			{
-				for (int j = 0; j < N_I; j++)
-				{
-					double d = distance(xx_RA[i], yy_RA[i], xx_I[j], yy_I[j]); // distance between HVC(RA) and HVC(I)
-				
-					if (noise_generator->random(1) < p_RA2I(d))
-					{
-						double G = this->sample_Ge2i();
-
-						weights_RA_I[i].push_back(G);
-						syn_ID_RA_I[i].push_back(j);
-					}
-				}
-
-			 }
-			// connections for HVC(I) neurons
-
-			for (int i = 0; i < N_I; i++)
-			{
-				for (int j = 0; j < N_RA; j++)
-				{
-					double d = distance(xx_I[i], yy_I[i], xx_RA[j], yy_RA[j]); // distance between HVC(I) and HVC(RA)
-				
-					if (noise_generator->random(1) < p_I2RA(d))
-					{
-						double G = this->sample_Gi2e();
-
-						weights_I_RA[i].push_back(G);
-						syn_ID_I_RA[i].push_back(j);
-					}
-				}
-			}
-			break;
-		}
-		
-		case 3:
+	if (arrangement == "square")
+	{	
+		// connections for HVC(RA) neurons
+		for (int i = 0; i < N_RA; i++)
 		{
-			// connections for HVC(RA) neurons
-			for (int i = 0; i < N_RA; i++)
+			for (int j = 0; j < N_I; j++)
 			{
-				for (int j = 0; j < N_I; j++)
+				double d = distance2d(xx_RA[i], yy_RA[i], xx_I[j], yy_I[j]); // distance between HVC(RA) and HVC(I)
+			
+				if (noise_generator->random(1) < p_RA2I(d))
 				{
-					double d = distance_on_sphere(xx_RA[i], yy_RA[i], zz_RA[i], xx_I[j], yy_I[j], zz_I[j]); // distance between HVC(RA) and HVC(I)
-				
-					if (noise_generator->random(1) < p_RA2I(d))
-					{
-						double G = this->sample_Ge2i();
+					double G = this->sample_Ge2i();
 
-						weights_RA_I[i].push_back(G);
-						syn_ID_RA_I[i].push_back(j);
-					}
-				}
-
-			 }
-			// connections for HVC(I) neurons
-
-			for (int i = 0; i < N_I; i++)
-			{
-				for (int j = 0; j < N_RA; j++)
-				{
-					double d = distance_on_sphere(xx_I[i], yy_I[i], zz_I[i], xx_RA[j], yy_RA[j], zz_RA[j]); // distance between HVC(I) and HVC(RA)
-				
-					if (noise_generator->random(1) < p_I2RA(d))
-					{
-						double G = this->sample_Gi2e();
-
-						weights_I_RA[i].push_back(G);
-						syn_ID_I_RA[i].push_back(j);
-					}
+					weights_RA_I[i].push_back(G);
+					syn_ID_RA_I[i].push_back(j);
 				}
 			}
-			break;
-		}
-		
-		default:
-			std::cerr << "Dimensionality " << dimensionality << " is not supported for setting up connections" << std::endl;
-			break;
+
+		 }
+		// connections for HVC(I) neurons
+
+		for (int i = 0; i < N_I; i++)
+		{
+			for (int j = 0; j < N_RA; j++)
+			{
+				double d = distance2d(xx_I[i], yy_I[i], xx_RA[j], yy_RA[j]); // distance between HVC(I) and HVC(RA)
 			
+				if (noise_generator->random(1) < p_I2RA(d))
+				{
+					double G = this->sample_Gi2e();
+
+					weights_I_RA[i].push_back(G);
+					syn_ID_I_RA[i].push_back(j);
+				}
+			}	
+		}	
 	}
+		
+	if (arrangement == "sphere")
+	{
+		// connections for HVC(RA) neurons
+		for (int i = 0; i < N_RA; i++)
+		{
+			for (int j = 0; j < N_I; j++)
+			{
+				double d = distance_on_sphere(xx_RA[i], yy_RA[i], zz_RA[i], xx_I[j], yy_I[j], zz_I[j]); // distance between HVC(RA) and HVC(I)
+			
+				if (noise_generator->random(1) < p_RA2I(d))
+				{
+					double G = this->sample_Ge2i();
+
+					weights_RA_I[i].push_back(G);
+					syn_ID_RA_I[i].push_back(j);
+				}
+			}
+
+		 }
+		// connections for HVC(I) neurons
+
+		for (int i = 0; i < N_I; i++)
+		{
+			for (int j = 0; j < N_RA; j++)
+			{
+				double d = distance_on_sphere(xx_I[i], yy_I[i], zz_I[i], xx_RA[j], yy_RA[j], zz_RA[j]); // distance between HVC(I) and HVC(RA)
+			
+				if (noise_generator->random(1) < p_I2RA(d))
+				{
+					double G = this->sample_Gi2e();
+
+					weights_I_RA[i].push_back(G);
+					syn_ID_I_RA[i].push_back(j);
+				}
+			}
+		}
+	}
+	
+	if (arrangement == "cube")
+	{
+		// connections for HVC(RA) neurons
+		for (int i = 0; i < N_RA; i++)
+		{
+			for (int j = 0; j < N_I; j++)
+			{
+				double d = distance3d(xx_RA[i], yy_RA[i], zz_RA[i], xx_I[j], yy_I[j], zz_I[j]); // distance between HVC(RA) and HVC(I)
+			
+				if (noise_generator->random(1) < p_RA2I(d))
+				{
+					double G = this->sample_Ge2i();
+
+					weights_RA_I[i].push_back(G);
+					syn_ID_RA_I[i].push_back(j);
+				}
+			}
+
+		 }
+		
+		// connections for HVC(I) neurons
+		for (int i = 0; i < N_I; i++)
+		{
+			for (int j = 0; j < N_RA; j++)
+			{
+				double d = distance3d(xx_I[i], yy_I[i], zz_I[i], xx_RA[j], yy_RA[j], zz_RA[j]); // distance between HVC(I) and HVC(RA)
+			
+				if (noise_generator->random(1) < p_I2RA(d))
+				{
+					double G = this->sample_Gi2e();
+
+					weights_I_RA[i].push_back(G);
+					syn_ID_I_RA[i].push_back(j);
+				}
+			}
+		}
+	}
+		
 }
 
 void NetworkGenerator::initialize_connections_between_HVCRA()
@@ -575,191 +579,162 @@ void NetworkGenerator::initialize_connections_for_replaced_neurons(const std::ve
 	// generate connections for replaced HVC(RA) neurons
 	// HVC(RA) -> HVC(I) connections
 	
-	// first check network dimensionality
-	switch (dimensionality)
-	{
-		case 2:				
-			for (size_t i = 0; i < neurons_to_replace.size(); i++)
+	// check neuron arrangement
+	if (arrangement == "square")
+	{			
+		for (size_t i = 0; i < neurons_to_replace.size(); i++)
+		{
+			for (int j = 0; j < N_I; j++)
 			{
-				for (int j = 0; j < N_I; j++)
-				{
-					double d = distance(xx_RA[neurons_to_replace[i]], yy_RA[neurons_to_replace[i]], xx_I[j], yy_I[j]); // distance between replaced neuron and HVC(I)
-					 
-					 if (noise_generator->random(1) < p_RA2I(d))
-					 {
-						 double G = this->sample_Ge2i();
+				double d = distance2d(xx_RA[neurons_to_replace[i]], yy_RA[neurons_to_replace[i]], xx_I[j], yy_I[j]); // distance between replaced neuron and HVC(I)
+				 
+				 if (noise_generator->random(1) < p_RA2I(d))
+				 {
+					 double G = this->sample_Ge2i();
 
-						 weights_RA_I[neurons_to_replace[i]].push_back(G);
-						 syn_ID_RA_I[neurons_to_replace[i]].push_back(j);
-					 }
-				 }
-
-			}
-			
-			// HVC(I) -> HVC(RA) connections
-			for (int i = 0; i < N_I; i++)
-			{
-				for (size_t j = 0; j < neurons_to_replace.size(); j++)
-				{
-					double d = distance(xx_I[i], yy_I[i], xx_RA[neurons_to_replace[j]], yy_RA[neurons_to_replace[j]]); // distance between HVC(I) and replaced neuron
-					
-					 if (noise_generator->random(1) < p_I2RA(d))
-					 {
-						 double G = this->sample_Gi2e();
-
-						 weights_I_RA[i].push_back(G);
-						 syn_ID_I_RA[i].push_back(neurons_to_replace[j]);
-					 }
+					 weights_RA_I[neurons_to_replace[i]].push_back(G);
+					 syn_ID_RA_I[neurons_to_replace[i]].push_back(j);
 				 }
 			 }
-			 
-			 break;
-			 
-		case 3:
-			for (size_t i = 0; i < neurons_to_replace.size(); i++)
-			{
-				for (int j = 0; j < N_I; j++)
-				{
-					double d = distance_on_sphere(xx_RA[neurons_to_replace[i]], yy_RA[neurons_to_replace[i]], zz_RA[neurons_to_replace[i]], xx_I[j], yy_I[j], zz_I[j]); // distance between replaced neuron and HVC(I)
-					 
-					 if (noise_generator->random(1) < p_RA2I(d))
-					 {
-						 double G = this->sample_Ge2i();
-
-						 weights_RA_I[neurons_to_replace[i]].push_back(G);
-						 syn_ID_RA_I[neurons_to_replace[i]].push_back(j);
-					 }
-				 }
-
-			}
-			
-			// HVC(I) -> HVC(RA) connections
-			for (int i = 0; i < N_I; i++)
-			{
-				for (size_t j = 0; j < neurons_to_replace.size(); j++)
-				{
-					double d = distance_on_sphere(xx_I[i], yy_I[i], zz_I[i], xx_RA[neurons_to_replace[j]], yy_RA[neurons_to_replace[j]], zz_RA[neurons_to_replace[j]]); // distance between HVC(I) and replaced neuron
-					
-					 if (noise_generator->random(1) < p_I2RA(d))
-					 {
-						 double G = this->sample_Gi2e();
-
-						 weights_I_RA[i].push_back(G);
-						 syn_ID_I_RA[i].push_back(neurons_to_replace[j]);
-					 }
-				 }
-			 }
-			break;
+		}
 		
-		default:
-			std::cerr << "Dimensionality " << dimensionality << " is not supported for setting up connections for replaced neurons" << std::endl;
-			break;
-	 
+		// HVC(I) -> HVC(RA) connections
+		for (int i = 0; i < N_I; i++)
+		{
+			for (size_t j = 0; j < neurons_to_replace.size(); j++)
+			{
+				double d = distance2d(xx_I[i], yy_I[i], xx_RA[neurons_to_replace[j]], yy_RA[neurons_to_replace[j]]); // distance between HVC(I) and replaced neuron
+				
+				 if (noise_generator->random(1) < p_I2RA(d))
+				 {
+					 double G = this->sample_Gi2e();
+
+					 weights_I_RA[i].push_back(G);
+					 syn_ID_I_RA[i].push_back(neurons_to_replace[j]);
+				 }
+			 }
+		 }
+	}		 
+		 
+	else if (arrangement == "sphere")
+	{
+		for (size_t i = 0; i < neurons_to_replace.size(); i++)
+		{
+			for (int j = 0; j < N_I; j++)
+			{
+				double d = distance_on_sphere(xx_RA[neurons_to_replace[i]], yy_RA[neurons_to_replace[i]], zz_RA[neurons_to_replace[i]], xx_I[j], yy_I[j], zz_I[j]); // distance between replaced neuron and HVC(I)
+				 
+				 if (noise_generator->random(1) < p_RA2I(d))
+				 {
+					 double G = this->sample_Ge2i();
+
+					 weights_RA_I[neurons_to_replace[i]].push_back(G);
+					 syn_ID_RA_I[neurons_to_replace[i]].push_back(j);
+				 }
+			 }
+
+		}
+		
+		// HVC(I) -> HVC(RA) connections
+		for (int i = 0; i < N_I; i++)
+		{
+			for (size_t j = 0; j < neurons_to_replace.size(); j++)
+			{
+				double d = distance_on_sphere(xx_I[i], yy_I[i], zz_I[i], xx_RA[neurons_to_replace[j]], yy_RA[neurons_to_replace[j]], zz_RA[neurons_to_replace[j]]); // distance between HVC(I) and replaced neuron
+				
+				 if (noise_generator->random(1) < p_I2RA(d))
+				 {
+					 double G = this->sample_Gi2e();
+
+					 weights_I_RA[i].push_back(G);
+					 syn_ID_I_RA[i].push_back(neurons_to_replace[j]);
+				 }
+			 }
+		 }
+	}
+	
+	else if (arrangement == "cube")
+	{
+		for (size_t i = 0; i < neurons_to_replace.size(); i++)
+		{
+			for (int j = 0; j < N_I; j++)
+			{
+				double d = distance3d(xx_RA[neurons_to_replace[i]], yy_RA[neurons_to_replace[i]], zz_RA[neurons_to_replace[i]], xx_I[j], yy_I[j], zz_I[j]); // distance between replaced neuron and HVC(I)
+				 
+				 if (noise_generator->random(1) < p_RA2I(d))
+				 {
+					 double G = this->sample_Ge2i();
+
+					 weights_RA_I[neurons_to_replace[i]].push_back(G);
+					 syn_ID_RA_I[neurons_to_replace[i]].push_back(j);
+				 }
+			 }
+
+		}
+		
+		// HVC(I) -> HVC(RA) connections
+		for (int i = 0; i < N_I; i++)
+		{
+			for (size_t j = 0; j < neurons_to_replace.size(); j++)
+			{
+				double d = distance3d(xx_I[i], yy_I[i], zz_I[i], xx_RA[neurons_to_replace[j]], yy_RA[neurons_to_replace[j]], zz_RA[neurons_to_replace[j]]); // distance between HVC(I) and replaced neuron
+				
+				 if (noise_generator->random(1) < p_I2RA(d))
+				 {
+					 double G = this->sample_Gi2e();
+
+					 weights_I_RA[i].push_back(G);
+					 syn_ID_I_RA[i].push_back(neurons_to_replace[j]);
+				 }
+			 }
+		 }
 	}
 }
 
 
 void NetworkGenerator::initialize_coordinates_for_replaced_neurons(const std::vector<int>& neurons_to_replace)
 {
-	switch (dimensionality)
+	// check neuron arrangement
+	if (arrangement == "square")
 	{
-		case 2:
+		// set coordinates for replaced HVC(RA) neurons
+		// HVC(RA) neurons are sampled randomly from square
+		for (size_t i = 0; i < neurons_to_replace.size(); i++)
 		{
-			std::vector<double> new_xx(neurons_to_replace.size()); // new x-coordinates of replaced neurons
-			std::vector<double> new_yy(neurons_to_replace.size()); // new y-coordinates of replaced neurons
-			
-			double xx; // temporary x-coordinate
-			double yy; // temporary y-coordinate
-
-			bool close; // are neurons too close or not
-
-			
-			// set coordinates for replaced HVC(RA) neurons
-			for (size_t i = 0; i < neurons_to_replace.size(); i++)
-			{
-				do
-				{
-					close = false;
-					xx = 0.5 / (sqrt(N_I)+1) + noise_generator->random(1.0 - 1.0 / (sqrt(N_I)+1));
-					yy = 0.5 / (sqrt(N_I)+1) + noise_generator->random(1.0 - 1.0 / (sqrt(N_I)+1));
-
-					// check distances to all HVC(I) neurons
-
-					for (int j = 0; j < N_I; j++)
-					{
-						if (distance(xx,yy,xx_I[j],yy_I[j]) < MIN_INTERNEURON_DISTANCE)
-						{
-							close = true;
-							break;
-						}
-					}
-
-					// check distances to all HVC(RA) neurons that we had before
-					if (!close)
-						for (int j = 0; j < N_RA; j++)
-						{
-							if (distance(xx, yy, xx_RA[j], yy_RA[j]) < MIN_INTERNEURON_DISTANCE)
-						{
-							close = true;
-							break;
-						}
-
-					}
-				} while(close);
-
-				new_xx[i] = xx;
-				new_yy[i] = yy;
-			}
-			
-			// assign new coordinates to replaced neurons:
-			for (size_t i = 0; i < neurons_to_replace.size(); i++)
-			{
-				xx_RA[neurons_to_replace[i]] = new_xx[i];
-				yy_RA[neurons_to_replace[i]] = new_yy[i];
-			}
-			
-			break;
+				xx_RA[neurons_to_replace[i]] = 0.5 / (sqrt(N_I)+1) + noise_generator->random(1.0 - 1.0 / (sqrt(N_I)+1));
+				yy_RA[neurons_to_replace[i]] = 0.5 / (sqrt(N_I)+1) + noise_generator->random(1.0 - 1.0 / (sqrt(N_I)+1));
 		}
+	}
 		
-		case 3:
+	else if (arrangement == "sphere")
+	{
+		// set coordinates for HVC(RA) neurons
+		// HVC(RA) neurons are sample from uniform distribution on sphere
+		const double pi = 3.14159265358979323846; // value of constant pi
+		
+		double z; // z-coord
+		double phi; // angle phi
+			
+		for (size_t i = 0; i < neurons_to_replace.size(); i++)
 		{
-			std::vector<double> new_xx(neurons_to_replace.size()); // new x-coordinates of replaced neurons
-			std::vector<double> new_yy(neurons_to_replace.size()); // new y-coordinates of replaced neurons
-			std::vector<double> new_zz(neurons_to_replace.size()); // new z-coordinates of replaced neurons
-		
-			// set coordinates for HVC(RA) neurons
-			// HVC(RA) neurons are sample from uniform distribution on sphere
-			const double pi = 3.14159265358979323846; // value of constant pi
+			z = 2*noise_generator->random(1.0) - 1; // generate z in range(-1, 1)
+			phi = noise_generator->random(2.0 * pi); // generate phi in range(0, 2*pi)
 			
-			double z; // z-coord
-			double phi; // angle phi
-			
-			
-			for (size_t i = 0; i < neurons_to_replace.size(); i++)
-			{
-				z = 2*noise_generator->random(1.0) - 1; // generate z in range(-1, 1)
-				phi = noise_generator->random(2.0 * pi); // generate phi in range(0, 2*pi)
-				
-				new_xx[i] = sin(acos(z)) * cos(phi);
-				new_yy[i] = sin(acos(z)) * sin(phi);
-				new_zz[i] = z;		
-			}
-		
-			// assign new coordinates to replaced neurons:
-			for (size_t i = 0; i < neurons_to_replace.size(); i++)
-			{
-				xx_RA[neurons_to_replace[i]] = new_xx[i];
-				yy_RA[neurons_to_replace[i]] = new_yy[i];
-				zz_RA[neurons_to_replace[i]] = new_zz[i];
-			}
-			
-		
-			break;
+			xx_RA[neurons_to_replace[i]] = sin(acos(z)) * cos(phi);
+			yy_RA[neurons_to_replace[i]] = sin(acos(z)) * sin(phi);
+			zz_RA[neurons_to_replace[i]] = z;		
 		}
-		
-		default:
-			std::cerr << "Dimensionality " << dimensionality << " is not supported for setting up coordinates for replaced neurons" << std::endl;
-			break;
+	}
+	else if (arrangement == "cube")
+	{
+		// set coordinates for HVC(RA) neurons
+		// HVC(RA) neurons are sampled unuformly from the cube
+		for (size_t i = 0; i < neurons_to_replace.size(); i++)
+		{
+			xx_RA[neurons_to_replace[i]] = noise_generator->random(1.0);
+			yy_RA[neurons_to_replace[i]] = noise_generator->random(1.0);
+			zz_RA[neurons_to_replace[i]] = noise_generator->random(1.0);	
+		}
 	}
 }
 
@@ -1004,13 +979,10 @@ void NetworkGenerator::write_alterable_network_to_directory(std::string extensio
 	std::string filename_RA_coordinates = outputDirectory + "RA_xy" + extension + ".bin";
 	std::string filename_RA_I = outputDirectory + "RA_I_connections" + extension + ".bin";
 	std::string filename_I_RA = outputDirectory + "I_RA_connections" + extension + ".bin";
-	std::string filePajekFixed = outputDirectory + "fixed" + extension + ".net";
 	
 	this->write_coordinates_RA(filename_RA_coordinates.c_str());
     
     this->write_invariable_synapses(filename_RA_I.c_str(), filename_I_RA.c_str());
-    this->write_pajek_fixed(filePajekFixed.c_str());
-    
 }
 
 void NetworkGenerator::write_invariable_synapses(const char* RA_I, const char* I_RA)

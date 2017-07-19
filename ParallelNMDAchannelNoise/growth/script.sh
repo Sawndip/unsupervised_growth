@@ -3,4 +3,4 @@
 # path to training file
 # path to growth configuration file
 # path to output directory
-mpirun -np 23 ./growth /home/eugene/Output/networks/sphere/ /home/eugene/Output/networks/sphere/training/clustered_training.bin /home/eugene/Output/networks/sphere_170717_hodgkin/ /home/eugene/Output/networks/sphere_170717_hodgkin/
+mpirun -np 23 ./growth /home/eugene/Output/networks/sphere/ /home/eugene/Output/networks/sphere/training/clustered_training.bin /home/eugene/Output/networks/sphereTest/ /home/eugene/Output/networks/sphereTest/

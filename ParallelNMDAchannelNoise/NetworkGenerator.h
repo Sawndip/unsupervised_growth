@@ -76,7 +76,7 @@ public:
 																								   // extension is added to filenames
 	
 	void write_configuration_to_directory(std::string outputDirectory); // write configuration file to directory
-	
+	void write_pajek_fixed(const char* filename); // write fixed synapses to a file for pajek
 	void write_network_from_data_to_directory(double active_threshold, double super_threshold, std::string directory); // write network generated from experimental data to directory
 	void write_training_neurons(const char* filename); // write ids of training HVC(RA) neurons
 	
@@ -117,7 +117,7 @@ private:
     
     int dimensionality; // dimensionality of a network only 1d, 2d and 3d are supported
 	
-	double MIN_INTERNEURON_DISTANCE; // minimum distance between neurons
+	std::string arrangement; // string containing info about spatial arrangement of neurons
 	
 	double A_RA2I; // constant for nearby HVC(RA) -> HVC(I) connections 
 	double SIGMA_RA2I; // spatial scale of probability of connections decay
@@ -168,18 +168,16 @@ private:
     void write_coordinates_I(const char* filename); // write coordinates of HVC(I) neurons
     
 	void write_invariable_synapses(const char* RA_I, const char* I_RA); // write RA to I and I to RA connections      
-	void write_pajek_fixed(const char* filename); // write fixed synapses to a file for pajek
-	void write_pajek_fixed_on_sphere(const char* filename); // write fixed synapses of neurons on sphere to a file for pajek
-   
-    
-    
 };
 
-static double distance(double x1, double y1, double x2, double y2)
+static double distance2d(double x1, double y1, double x2, double y2)
 {
-	double d;
-	d = sqrt((x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2));
-	return d;
+	return sqrt((x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2));
+}
+
+static double distance3d(double x1, double y1, double z1, double x2, double y2, double z2)
+{
+	return sqrt((x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2) + (z1 - z2) * (z1 - z2));
 }
 
 static double distance_on_sphere(double x1, double y1, double z1, double x2, double y2, double z2)

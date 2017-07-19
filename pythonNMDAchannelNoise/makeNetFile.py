@@ -11,10 +11,12 @@ import reading
 import os
 
 dirname = "/home/eugene/Output/networks/sphere_170717_hodgkin/"
+
+#dirname = "/home/eugene/results/noDelays/replacement/sphere/180717_lionx_3/"
 dim = 3
 #dirname = "/home/eugene/Output/networks/140717_huxley/"
 
-trial_number = 9700
+trial_number = 21600
 
 file_xy = os.path.join(dirname, "RA_xy_" + str(trial_number) + "_.bin")
 file_super = os.path.join(dirname, "RA_RA_super_connections_" + str(trial_number) + "_.bin")

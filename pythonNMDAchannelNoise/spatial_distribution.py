@@ -12,7 +12,8 @@ import numpy as np
 from collections import Counter
 import os
 
-dirname = "/home/eugene/Output/networks/sphere_170717_hodgkin/"
+#dirname = "/home/eugene/Output/networks/sphere_170717_hodgkin/"
+dirname = "/home/eugene/results/noDelays/replacement/sphere/180717_lionx_3/"
 dim = 3 # network dimensionality
 
 latest_checkpoint = spatial.find_latest_checkpoint(dirname) 
@@ -186,7 +187,7 @@ ax.hist(distances_between_RA_and_their_I_targets, numBins)
 ax.set_xlabel("Normalized distance")
 ax.set_ylabel("Number of connections")
 ax.set_title("HVC(RA) to HVC(I)")
-ax.set_xlim([0,5])
+ax.set_xlim([0,10])
 
 numBins = 25
 
@@ -196,7 +197,7 @@ ax.hist(distances_between_I_and_their_RA_targets, numBins)
 ax.set_xlabel("Normalized distance")
 ax.set_ylabel("Number of connections")
 ax.set_title("HVC(I) to HVC(RA)")
-ax.set_xlim([0,5])
+ax.set_xlim([0,10])
 
 
 numBins = 35
@@ -206,7 +207,7 @@ ax.hist(distances_between_RA_and_their_RA_targets, numBins)
 ax.set_xlabel("Normalized distance")
 ax.set_ylabel("Number of connections")
 ax.set_title("HVC(RA) to HVC(RA)")
-ax.set_xlim([0,5])
+ax.set_xlim([0,10])
 
 #==============================================================================
 # f4 = plt.figure()

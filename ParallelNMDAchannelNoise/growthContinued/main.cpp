@@ -11,30 +11,35 @@ int main(int argc, char** argv)
 	std::string outputDir; // output directory
     std::string dataDir; // directory with data
     int starting_trial; // trial id from which to start growth
+    
+	int rank; // MPI process rank
 
-    if (argc > 2)
+    MPI_Init(&argc, &argv);
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    
+	if (argc > 2)
     {
         dataDir = argv[1]; // 
         outputDir = argv[2];
         starting_trial = atoi(argv[3]); // 
-        
-        std::cout << "Data directory: " << dataDir << std::endl;
-        std::cout << "Output directory: " << outputDir << std::endl;
-        std::cout << "Starting trial: " << starting_trial << std::endl;
-    }
+      	
+		if (rank == 0)
+		{
+        	std::cout << "Data directory: " << dataDir << std::endl;
+        	std::cout << "Output directory: " << outputDir << std::endl;
+        	std::cout << "Starting trial: " << starting_trial << std::endl;
+    	}
+	}
     else
         std::cerr << "Not enough command line arguments were not provided!" << std::endl;
     
     
     std::string configurationFile = dataDir + "parameters.cfg"; // configuration file
     
-    int rank; // MPI process rank
     
     ConfigurationGrowth growth_cfg;
     ConfigurationNetworkGenerator network_cfg;
     
-    MPI_Init(&argc, &argv);
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     
     network_cfg.read_configuration((dataDir + "network_parameters.cfg").c_str());
 	growth_cfg.read_configuration((dataDir + "growth_parameters.cfg").c_str());
@@ -46,7 +51,7 @@ int main(int argc, char** argv)
 	PoolParallel pool(network_cfg, growth_cfg, outputDir);
 
 
-	int save_freq_short = 20; // save frequency for graph update
+	int save_freq_short = 50; // save frequency for graph update
 	int save_freq_long = 200; // save frequency for network state update
 	bool training = true;
 	

@@ -33,11 +33,8 @@ void ConfigurationNetworkGenerator::read_configuration(const char* filename)
         const Setting& spatial_params_setting = root["spatialParameters"];
 
         // Only output the record if all of the expected fields are present.
-        spatial_params_setting.lookupValue("dimensionality", spatial_params.dimensionality);
+        spatial_params_setting.lookupValue("arrangement", spatial_params.arrangement);
           
-        spatial_params_setting.lookupValue("MIN_INTERNEURON_DISTANCE", spatial_params.MIN_INTERNEURON_DISTANCE);
-        
-        
         spatial_params_setting.lookupValue("A_RA2I", spatial_params.A_RA2I);
         spatial_params_setting.lookupValue("SIGMA_RA2I", spatial_params.SIGMA_RA2I);
         
@@ -60,9 +57,8 @@ void ConfigurationNetworkGenerator::print_configuration() const
     // display all spatial parameters read from file
     std::cout << std::endl << "Spatial parameters read from configuration file: " << std::endl << std::endl;
     
-    std::cout << "dimensionality = " << spatial_params.dimensionality << std::endl;
-    std::cout << "MIN_INTERNEURON_DISTANCE = " << spatial_params.MIN_INTERNEURON_DISTANCE << std::endl << std::endl;
-    
+    std::cout << "arrangement = " << spatial_params.arrangement << std::endl;
+ 
     std::cout << "A_RA2I = " << spatial_params.A_RA2I << std::endl;
     std::cout << "SIGMA_RA2I = " << spatial_params.SIGMA_RA2I << std::endl;
     std::cout << "B_I2RA = " << spatial_params.B_I2RA << std::endl;
@@ -81,9 +77,8 @@ void ConfigurationNetworkGenerator::write_configuration(const char* filename) co
     // write spatial parameters
     out << "spatialParameters = " << std::endl;
     out << "{" << std::endl;
-    out << "\tdimensionality = " << spatial_params.dimensionality << ";" << std::endl;
-    out << "\tMIN_INTERNEURON_DISTANCE = " << std::fixed << std::setprecision(6) << spatial_params.MIN_INTERNEURON_DISTANCE << ";" << std::endl << std::endl;
-    
+    out << "\tarrangement = \"" << spatial_params.arrangement << "\";" << std::endl;
+   
     out << "\tA_RA2I = " << spatial_params.A_RA2I << ";" << std::endl;
     out << "\tSIGMA_RA2I = " << spatial_params.SIGMA_RA2I << ";" << std::endl;
     out << "\tB_I2RA = " << spatial_params.B_I2RA << ";" << std::endl;
