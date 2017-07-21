@@ -4,19 +4,21 @@ Created on Tue Feb 14 16:19:13 2017
 
 @author: jingroup
 
-Script creates .net text file for pajek from binary files with neuronal coordinates
+Script creates super.net text file for pajek from binary files with neuronal coordinates
 of HVC(RA) neurons and synapses betweeen them
 """
 import reading
 import os
+import space
+#dirname = "/home/eugene/Output/networks/sphere_170717_hodgkin/"
 
-dirname = "/home/eugene/Output/networks/sphere_170717_hodgkin/"
+dirname = "/home/eugene/results/noDelays/replacement/sphere/180717_lionx_4/"
+arrangement = "sphere"
+dim = space.num_coordinates[arrangement]
 
-#dirname = "/home/eugene/results/noDelays/replacement/sphere/180717_lionx_3/"
-dim = 3
 #dirname = "/home/eugene/Output/networks/140717_huxley/"
 
-trial_number = 21600
+trial_number = 21000
 
 file_xy = os.path.join(dirname, "RA_xy_" + str(trial_number) + "_.bin")
 file_super = os.path.join(dirname, "RA_RA_super_connections_" + str(trial_number) + "_.bin")
@@ -41,14 +43,11 @@ with open(file_pajek, 'w') as f:
     f.write("*Vertices {0}\n".format(N_RA))
     
     if dim == 2:
-        SIDE = 100.0 # side of square modeling HVC
-        
-    
         for i in range(N_RA):
             if i in training_neurons:    
-                f.write('{0} "{1}" {2} {3} ic Green\n'.format(i+1, i, coord[i][0] / SIDE, coord[i][1] / SIDE))
+                f.write('{0} "{1}" {2} {3} ic Green\n'.format(i+1, i, coord[i][0], coord[i][1]))
             else:    
-                f.write('{0} "{1}" {2} {3} ic Yellow\n'.format(i+1, i, coord[i][0] / SIDE, coord[i][1] / SIDE))
+                f.write('{0} "{1}" {2} {3} ic Yellow\n'.format(i+1, i, coord[i][0], coord[i][1]))
             
     if dim == 3:
         for i in range(N_RA):

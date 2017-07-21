@@ -10,10 +10,11 @@ int main(int argc, char** argv)
 {
     
     
-    std::string dataDir = "/mnt/hodgkin_home/eugene/results/noDelays/replacement/dispersed/190617_lionx_2/"; // directory with data 
-    std::string outputDir = "/mnt/hodgkin_home/eugene/results/noDelays/replacement/dispersed/matureTest/190617_lionx_2/"; // directory with output
+    //std::string dataDir = "/home/eugene/Output/networks/sphere_170717_hodgkin/"; // directory with data 
+    std::string dataDir = "/home/eugene/results/delays/5ms/sphere/190717_lionx_1/"; // directory with data 
+    std::string outputDir = "/home/eugene/results/delays/5ms/sphere/matureTest/190717_lionx_1/"; // directory with output
     
-    int starting_trial = 181000; // trial number defining network state
+    int starting_trial = 16000; // trial number defining network state
     
    
     int rank; // MPI process rank
@@ -39,7 +40,7 @@ int main(int argc, char** argv)
     
     double start_time = MPI_Wtime();
     
-    int num_trials = 20; // number to trials to perform
+    int num_trials = 50; // number to trials to perform
 
     pool.test_grown_chain(num_trials, dataDir, starting_trial, outputDir);
 	

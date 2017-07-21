@@ -263,7 +263,10 @@ void PoolParallel::continue_chain_growth(std::string dataDir, int starting_trial
     
     this->gather_data();
     
-    networkGen.write_alterable_network_to_directory(trial_extension + "NEW", dataDir);
+    
+    if (MPI_rank == 0)
+		networkGen.write_alterable_network_to_directory(trial_extension + "NEW", dataDir);
+		
     
     this->write_supersynapses(fileSuperGraphNew.c_str());
     this->write_active_synapses(fileActiveGraphNew.c_str());

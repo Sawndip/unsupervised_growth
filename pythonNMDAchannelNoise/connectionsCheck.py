@@ -9,24 +9,22 @@ Script checks supersynapses and active connections
 
 import reading
 import numpy as np
+import reading
 
-filename_before_active = "/home/eugene/Output/networks/gabaMaturation100217/RA_RA_active_connections_before_neuron_addition.bin"
-filename_after_active = "/home/eugene/Output/networks/gabaMaturation100217/RA_RA_active_connections_after_neuron_addition.bin"
-
-(N_RA_before, targets_ID_before_active, targets_G_before_active) = reading.read_connections(filename_before_active)
-(N_RA_after, targets_ID_after_active, targets_G_after_active) = reading.read_connections(filename_after_active)
-
-print targets_ID_before_active == targets_ID_after_active[:N_RA_before]
-print targets_G_before_active == targets_G_after_active[:N_RA_before]
+directory = "/home/eugene/Output/networks/sphere_170717_hodgkin/"
+trial_number = 25000 # starting point
+dim = 3 # dimensionality 
 
 
-filename_before_super = "/home/eugene/Output/networks/gabaMaturation100217/RA_RA_super_connections_before_neuron_addition.bin"
-filename_after_super = "/home/eugene/Output/networks/gabaMaturation100217/RA_RA_super_connections_after_neuron_addition.bin"
+filename = directory + "weights_" + str(trial_number) + "_.bin"
 
+(N_RA, trial_number, weights) = reading.read_weights(filename)
 
-(N_RA_before, targets_ID_before_super, targets_G_before_super) = reading.read_connections(filename_before_super)
-(N_RA_after, targets_ID_after_super, targets_G_after_super) = reading.read_connections(filename_after_super)
+print np.where(weights[63] > 0.025)
+print weights[63][82]
+print weights[63][168]
+print weights[63][171]
+print weights[63][181]
 
-print targets_ID_before_super == targets_ID_after_super[:N_RA_before]
-print targets_G_before_super == targets_G_after_super[:N_RA_before]
-
+print weights[63][17]
+print weights[63][278]

@@ -20,9 +20,13 @@ import matplotlib.pyplot as plt
 import numpy as np
 from collections import Counter
 import os
+import space
 
 dirname = "/home/eugene/Output/networks/sphere_170717_hodgkin/"
-dim = 3 # network dimensionality
+arrangement = "sphere" # spatial arrangement of neurons
+
+dim = space.num_coordinates[arrangement] # number of coordinates to define neuronal location in space
+distance = space.distance_function[arrangement] # distance function for neuronal arrangement
 
 latest_checkpoint = spatial.find_latest_checkpoint(dirname) 
 
@@ -34,16 +38,6 @@ I_xy = os.path.join(dirname, "I_xy.bin")
 RA2I = os.path.join(dirname, "RA_I_connections_" + str(latest_checkpoint) + "_.bin")
 I2RA = os.path.join(dirname, "I_RA_connections_" + str(latest_checkpoint) + "_.bin")
 
-
-SQUARE_SIDE = 100
-SIDE = SQUARE_SIDE * math.sqrt(2)
-R = 1.0 # radius of sphere
-
-def distance_on_sphere(v1, v2, R):
-    """
-    Computes distance between two points on sphere of radius R
-    """
-    return np.arccos(np.dot(v1, v2)) / R
 
 coord_I= reading.read_coordinates(dim, I_xy)
 coord_RA = reading.read_coordinates(dim, RA_xy)
@@ -62,10 +56,7 @@ distances_between_all_I.fill(1e6)
 
 for i in xrange(N_I):
     for j in xrange(i+1, N_I):
-        if dim == 2:
-            distances_between_all_I[i][j] = np.linalg.norm(coord_I[i]-coord_I[j]) / SIDE
-        if dim == 3:
-            distances_between_all_I[i][j] = distance_on_sphere(coord_I[i], coord_I[j], R)
+        distances_between_all_I[i][j] = distance(coord_I[i], coord_I[j])
 
 distances_between_all_I[np.tril_indices(N_I, -1)] = distances_between_all_I.T[np.tril_indices(N_I, -1)]
 
@@ -88,10 +79,7 @@ distances_between_RA_and_their_I_targets = []
 for i in xrange(N_RA):
     if len(RA_targets[i]) > 1:
         for target_ind in RA_targets[i]:
-            if dim == 2:     
-                distances_between_RA_and_their_I_targets.append(np.linalg.norm(coord_RA[i]-coord_I[target_ind]) / (SIDE*distance_between_interneurons))
-            if dim == 3:
-                distances_between_RA_and_their_I_targets.append(distance_on_sphere(coord_RA[i], coord_I[target_ind], R) / distance_between_interneurons)
+            distances_between_RA_and_their_I_targets.append(distance(coord_RA[i], coord_I[target_ind]) / distance_between_interneurons)
 
 # Here we calculate mean distance between I and their RA targets
 
@@ -100,10 +88,7 @@ distances_between_I_and_their_RA_targets = []
 for i in xrange(N_I):
     if len(I_targets[i]) > 1:
         for target_ind in I_targets[i]:
-            if dim == 2:     
-                distances_between_I_and_their_RA_targets.append(np.linalg.norm(coord_I[i]-coord_RA[target_ind])/(SIDE*distance_between_interneurons))
-            if dim == 3:
-                distances_between_I_and_their_RA_targets.append(distance_on_sphere(coord_I[i], coord_RA[target_ind], R) / distance_between_interneurons)
+            distances_between_I_and_their_RA_targets.append(distance(coord_I[i], coord_RA[target_ind]) / distance_between_interneurons)
        
 
 # let's count number of input I connections

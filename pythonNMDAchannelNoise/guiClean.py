@@ -22,7 +22,7 @@ TRIAL_DURATION = 1000
 
 #outdir = "/home/eugene/results/delays/5ms/clustered/100717_lionx_6/"
 #outdir = "/home/eugene/Output/networks/sphere_170717_hodgkin/"
-outdir = "/home/eugene/results/noDelays/replacement/sphere/180717_lionx_3/"
+outdir = "/home/eugene/results/delays/5ms/sphere/190717_lionx_3/"
 
 filename_weights = os.path.join(outdir, "weights.bin")
 filename_weight_statistics = os.path.join(outdir, "weight_statistics.bin")

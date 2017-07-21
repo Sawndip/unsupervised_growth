@@ -11,10 +11,14 @@ import matplotlib.pyplot as plt
 import numpy as np
 from collections import Counter
 import os
+import space
 
-#dirname = "/home/eugene/Output/networks/sphere_170717_hodgkin/"
-dirname = "/home/eugene/results/noDelays/replacement/sphere/180717_lionx_3/"
-dim = 3 # network dimensionality
+#dirname = "/home/eugene/Output/networks/sphere_180717_huxley/"
+dirname = "/home/eugene/results/noDelays/replacement/sphere/180717_lionx_2/"
+arrangement = "sphere" # spatial arrangement of neurons
+
+distance = space.distance_function[arrangement] # define distance function for current arrangement
+dim = space.num_coordinates[arrangement] # number of coordinates to define neuronal location in space
 
 latest_checkpoint = spatial.find_latest_checkpoint(dirname) 
 
@@ -27,16 +31,6 @@ RA2I = os.path.join(dirname, "RA_I_connections_" + str(latest_checkpoint) + "_.b
 I2RA = os.path.join(dirname, "I_RA_connections_" + str(latest_checkpoint) + "_.bin")
 RARA = os.path.join(dirname, "RA_RA_super_connections_" + str(latest_checkpoint) + "_.bin")
 
-
-SQUARE_SIDE = 100
-SIDE = SQUARE_SIDE * math.sqrt(2)
-R = 1.0 # radius of sphere
-
-def distance_on_sphere(v1, v2, R):
-    """
-    Computes distance between two points on sphere of radius R
-    """
-    return np.arccos(np.dot(v1, v2)) / R
 
 coord_I= reading.read_coordinates(dim, I_xy)
 coord_RA = reading.read_coordinates(dim, RA_xy)
@@ -56,10 +50,7 @@ distances_between_all_I.fill(1e6)
 
 for i in xrange(N_I):
     for j in xrange(i+1, N_I):
-        if dim == 2:
-            distances_between_all_I[i][j] = np.linalg.norm(coord_I[i]-coord_I[j]) / SIDE
-        if dim == 3:
-            distances_between_all_I[i][j] = distance_on_sphere(coord_I[i], coord_I[j], R)
+        distances_between_all_I[i][j] = distance(coord_I[i], coord_I[j])
 
 distances_between_all_I[np.tril_indices(N_I, -1)] = distances_between_all_I.T[np.tril_indices(N_I, -1)]
 
@@ -78,11 +69,8 @@ distances_between_RA_and_their_I_targets = []
 for i in xrange(N_RA):
     if len(RA_targets[i]) > 1:
         for target_ind in RA_targets[i]:
-            if dim == 2:     
-                distances_between_RA_and_their_I_targets.append(np.linalg.norm(coord_RA[i]-coord_I[target_ind]) / (SIDE*distance_between_interneurons))
-            if dim == 3:
-                distances_between_RA_and_their_I_targets.append(distance_on_sphere(coord_RA[i], coord_I[target_ind], R) / distance_between_interneurons)
-
+            distances_between_RA_and_their_I_targets.append(distance(coord_RA[i], coord_I[target_ind]) / distance_between_interneurons)
+         
 # Here we calculate distances between I and their RA targets
 
 distances_between_I_and_their_RA_targets = []
@@ -90,22 +78,16 @@ distances_between_I_and_their_RA_targets = []
 for i in xrange(N_I):
     if len(I_targets[i]) > 1:
         for target_ind in I_targets[i]:
-            if dim == 2:     
-                distances_between_I_and_their_RA_targets.append(np.linalg.norm(coord_I[i]-coord_RA[target_ind])/(SIDE*distance_between_interneurons))
-            if dim == 3:
-                distances_between_I_and_their_RA_targets.append(distance_on_sphere(coord_I[i], coord_RA[target_ind], R) / distance_between_interneurons)
-       
+            distances_between_I_and_their_RA_targets.append(distance(coord_I[i], coord_RA[target_ind]) / distance_between_interneurons)
+            
 # Here we calculate distances between HVC(RA) neurons and their super targets
 distances_between_RA_and_their_RA_targets = []
 
 for i in xrange(N_RA):
     if len(RA_super_targets[i]) > 1:
         for target_ind in RA_super_targets[i]:
-            if dim == 2:     
-                distances_between_RA_and_their_RA_targets.append(np.linalg.norm(coord_RA[i]-coord_RA[target_ind]) / (SIDE*distance_between_interneurons))
-            if dim == 3:
-                distances_between_RA_and_their_RA_targets.append(distance_on_sphere(coord_RA[i], coord_RA[target_ind], R) / distance_between_interneurons)
-
+            distances_between_RA_and_their_RA_targets.append(distance(coord_RA[i],coord_RA[target_ind]) / distance_between_interneurons)
+            
     
 print "Mean distance for RA to I connections normalized by distance between interneurons: ", np.mean(distances_between_RA_and_their_I_targets)
 print "Standard deviation for distances from RA to I: ", np.std(distances_between_RA_and_their_I_targets)
@@ -184,7 +166,7 @@ numBins = 30
 f1 = plt.figure()
 ax = f1.add_subplot(311)
 ax.hist(distances_between_RA_and_their_I_targets, numBins)
-ax.set_xlabel("Normalized distance")
+#ax.set_xlabel("Normalized distance")
 ax.set_ylabel("Number of connections")
 ax.set_title("HVC(RA) to HVC(I)")
 ax.set_xlim([0,10])
@@ -194,7 +176,7 @@ numBins = 25
 
 ax = f1.add_subplot(312)
 ax.hist(distances_between_I_and_their_RA_targets, numBins)
-ax.set_xlabel("Normalized distance")
+#ax.set_xlabel("Normalized distance")
 ax.set_ylabel("Number of connections")
 ax.set_title("HVC(I) to HVC(RA)")
 ax.set_xlim([0,10])
