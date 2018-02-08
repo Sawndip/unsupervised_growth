@@ -13,26 +13,22 @@ import matplotlib.pyplot as plt
 
 import numpy as np
 
-filenameStates = "/home/eugene/Output/networks/test230217/maturation_time_sequence.bin"
-filenameWeights = "/home/eugene/Output/networks/test230217/weightsTimeSequence.bin"
+filenameStates = "/home/eugene/Output/growthTest/neuron_states.bin"
+filenameWeights = "/home/eugene/Output/growthTest/weights_time.bin"
 
-(target, t, remodeled, mature, gaba_potential, firing_rate) = reading.read_maturation_time_sequence(filenameStates)
-(source, target, t, weights) = reading.read_synaptic_weights_time_sequence(filenameWeights)
+(t, remodeled, gaba_potential, firing_rate) = reading.read_maturation_time_sequence(filenameStates)
+(t, weights) = reading.read_synaptic_weights_time_sequence(filenameWeights)
 
-print source
-print target
-#print weights
 #print t
 #print remodeled
 #print mature
 #print gaba_potential
 
-num_target = len(target)
-num_source = len(source)
+num_neurons = 20
 
 x = list(t)
 x.append(t[-1] + t[1] - t[0])
-y = range(num_target + 1)
+y = range(num_neurons + 1)
 
 print y
 
@@ -50,26 +46,26 @@ plt.title("Reverse Gaba potential")
 plt.axis([X.min(), X.max(), Y.min(), Y.max()])
 cbar = plt.colorbar()
 
-plt.yticks(range(len(target)), target)
+#plt.yticks(range(len(num_neurons)), target)
 plt.xlabel("time (# trial)")
 plt.ylabel("neuron id")
 
 plt.figure()
 
-plt.pcolor(X, Y, firing_rate, cmap='plasma', vmin=0, vmax=1)   
+plt.pcolor(X, Y, firing_rate, cmap='plasma', vmin=0, vmax=0.2)   
 plt.title("Firing rate")
     
 plt.axis([X.min(), X.max(), Y.min(), Y.max()])
 cbar = plt.colorbar()
 
-plt.yticks(range(len(target)), target)
+#plt.yticks(range(len(target)), target)
 plt.xlabel("time (# trial)")
 plt.ylabel("neuron id")
 
  
 f2 = plt.figure()
 
-ax1 = f2.add_subplot(121)
+ax1 = f2.add_subplot(111)
 ax1.spy(remodeled)
 ax1.set_title("Remodeled")
 ax1.set_aspect('auto', 'box')
@@ -78,12 +74,6 @@ ticks =  ax1.get_xticks()
 #plt.xticks(ticks[1:-2], xticklabels)
 ax1.xaxis.tick_bottom()
 
-ax2 = f2.add_subplot(122)
-ax2.spy(mature)
-ax2.set_title("Mature")
-ax2.set_aspect('auto', 'box')
-ax2.invert_yaxis()
-ax2.xaxis.tick_bottom()
 
 #plt.xticks(ticks[1:-2], xticklabels)
 
@@ -91,19 +81,18 @@ ax2.xaxis.tick_bottom()
 
 # plot how specific synaptic weight changes
 
+print weights.shape
+print len(t)
+
 f3 = plt.figure()
 
 ax = f3.add_subplot(111)
 
-source_neuron = 0 # real id of source neuron
-target_neuron = 25 # real id of target neuron
+source_id = 0 # real id of source neuron
+target_id = 16 # real id of target neuron
 
-ind_source = source.index(source_neuron) # index of source neuron in the list
-ind_target = target.index(target_neuron) # index of target neuron in the list
-
-
-ax.set_title("Synaptic weight {0} -> {1} vs. time".format(source_neuron, target_neuron))
-ax.plot(t, weights[ind_source][ind_target])
+ax.set_title("Synaptic weight {0} -> {1} vs. time".format(source_id, target_id))
+ax.plot(t, weights[:,source_id,target_id])
 ax.set_xlabel("t (# trial)")
 ax.set_ylabel("w")
 
@@ -126,3 +115,4 @@ plt.show()
 # 
 # 
 #==============================================================================
+

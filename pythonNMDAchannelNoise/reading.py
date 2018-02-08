@@ -25,85 +25,95 @@ def read_connections(filename):
     """
     with open(filename, 'rb') as file:
         data = file.read()
-    file.close()
-    #print len(data)
     
-    N_RA = struct.unpack("<i", data[:SIZE_OF_INT])[0]
-    
-    #print N_RA     
-    
-    targets_ID = []
-    targets_G = []
-    #targets_RA_I_ID = []
-    #targets_RA_I_G = []    
-    ind = SIZE_OF_INT    
-    
-    for i in range(N_RA):
-        neurons_ID = struct.unpack("<i", data[ind:(ind+SIZE_OF_INT)])[0]
-        number_of_targets = struct.unpack("<i", data[(ind+SIZE_OF_INT):(ind+2*SIZE_OF_INT)])[0]
-        temp_ID = []
-        temp_G = []    
+        N = struct.unpack("<i", data[:SIZE_OF_INT])[0]
         
-        for j in range(number_of_targets):
-            ind_targets_ID = ind + 2 * SIZE_OF_INT + j * (SIZE_OF_INT + SIZE_OF_DOUBLE)
-            ind_targets_G = ind_targets_ID + SIZE_OF_INT
+        #print N     
+        
+        targets_ID = []
+        weights = []
+        syn_lengths = []
+        axonal_delays = []
+        
+        ind = SIZE_OF_INT    
+        
+        for i in range(N):
+            neurons_ID = struct.unpack("<i", data[ind:(ind+SIZE_OF_INT)])[0]
+            number_of_targets = struct.unpack("<i", data[(ind+SIZE_OF_INT):(ind+2*SIZE_OF_INT)])[0]
             
-            #print ind_targets_ID
-            ID = struct.unpack("<i", data[ind_targets_ID:(ind_targets_ID + SIZE_OF_INT)])[0]
-            #print ID
-            G = struct.unpack("<d", data[ind_targets_G:(ind_targets_G + SIZE_OF_DOUBLE)])[0]
-            #print G            
-            temp_ID.append(ID)
-            temp_G.append(G)
-        
-        targets_ID.append(temp_ID)
-        targets_G.append(temp_G)
-        ind += 2 * SIZE_OF_INT + number_of_targets * (SIZE_OF_INT + SIZE_OF_DOUBLE)
-
-    return (N_RA, targets_ID, targets_G)
+            temp_ID = []
+            temp_G = []    
+            temp_lengths = []    
+            temp_delays = []    
+            
+            ind += 2*SIZE_OF_INT            
+            
+            for j in range(number_of_targets):
+                ID = struct.unpack("<i", data[ind:(ind + SIZE_OF_INT)])[0]
+                #print ID
+                G = struct.unpack("<d", data[(ind + SIZE_OF_INT):(ind + SIZE_OF_INT + SIZE_OF_DOUBLE)])[0]
+                length = struct.unpack("<d", data[(ind + SIZE_OF_INT + SIZE_OF_DOUBLE):(ind + SIZE_OF_INT + 2*SIZE_OF_DOUBLE)])[0]
+                delay = struct.unpack("<d", data[(ind + SIZE_OF_INT + 2*SIZE_OF_DOUBLE):(ind + SIZE_OF_INT + 3*SIZE_OF_DOUBLE)])[0]
+                                                
+                #print G            
+                temp_ID.append(ID)
+                temp_G.append(G)
+                temp_lengths.append(length)
+                temp_delays.append(delay)
+            
+                ind += SIZE_OF_INT + 3*SIZE_OF_DOUBLE
+            
+            targets_ID.append(temp_ID)
+            weights.append(temp_G)
+            syn_lengths.append(temp_lengths)
+            axonal_delays.append(temp_delays)
+            
+            
+        return (N, targets_ID, weights, syn_lengths, axonal_delays)
     
-def read_coordinates(dim, filename):
+def read_coordinates(filename):
     """
     Read coordinates of neurons from binary file
     """
     with open(filename, 'rb') as file:
-            data = file.read()
-    file.close()
-    
-    N = struct.unpack('<i', data[:SIZE_OF_INT])[0] # get number of neurons
-    
+        data = file.read()
    
-    ind = SIZE_OF_INT # position in file    
-    
-    if dim == 2:    
-         coord = np.empty(shape=(N,2), dtype=np.float32) # coordinates
-         coord.fill(np.nan)
-         
-         for i in range(N):
-             coord[i][0] = struct.unpack('<d', data[ind:(ind + SIZE_OF_DOUBLE)])[0]
-             coord[i][1] = struct.unpack('<d', data[(ind + SIZE_OF_DOUBLE):(ind + 2*SIZE_OF_DOUBLE)])[0]
+        N = struct.unpack('<i', data[:SIZE_OF_INT])[0] # get number of neurons
+        dimensionality = struct.unpack('<i', data[SIZE_OF_INT:2*SIZE_OF_INT])[0] # get number of neurons
+        model_interneuron_distance = struct.unpack('<i', data[2*SIZE_OF_INT:(2*SIZE_OF_INT+SIZE_OF_DOUBLE)])[0] # get average distance between interneurons in the model
+        
+       
+        ind = 2*SIZE_OF_INT + SIZE_OF_DOUBLE # position in file    
+        
+        if dimensionality == 2:    
+             coord = np.empty(shape=(N,2), dtype=np.float32) # coordinates
+             coord.fill(np.nan)
+             
+             for i in range(N):
+                 coord[i][0] = struct.unpack('<d', data[ind:(ind + SIZE_OF_DOUBLE)])[0]
+                 coord[i][1] = struct.unpack('<d', data[(ind + SIZE_OF_DOUBLE):(ind + 2*SIZE_OF_DOUBLE)])[0]
+                
+                 ind += 2 * SIZE_OF_DOUBLE
             
-             ind += 2 * SIZE_OF_DOUBLE
-        
-         return coord
-        
-    if dim == 3:    
-         coord = np.empty(shape=(N,3), dtype=np.float32) # coordinates
-         coord.fill(np.nan)
-    
-         for i in range(N):
-             coord[i][0] = struct.unpack('<d', data[ind:(ind + SIZE_OF_DOUBLE)])[0]
-             coord[i][1] = struct.unpack('<d', data[(ind + SIZE_OF_DOUBLE):(ind + 2*SIZE_OF_DOUBLE)])[0]
-             coord[i][2] = struct.unpack('<d', data[(ind + 2*SIZE_OF_DOUBLE):(ind + 3*SIZE_OF_DOUBLE)])[0]
+             return coord
             
+        if dimensionality == 3:    
+             coord = np.empty(shape=(N,3), dtype=np.float32) # coordinates
+             coord.fill(np.nan)
+        
+             for i in range(N):
+                 coord[i][0] = struct.unpack('<d', data[ind:(ind + SIZE_OF_DOUBLE)])[0]
+                 coord[i][1] = struct.unpack('<d', data[(ind + SIZE_OF_DOUBLE):(ind + 2*SIZE_OF_DOUBLE)])[0]
+                 coord[i][2] = struct.unpack('<d', data[(ind + 2*SIZE_OF_DOUBLE):(ind + 3*SIZE_OF_DOUBLE)])[0]
+                
+                
+                 ind += 3 * SIZE_OF_DOUBLE
             
-             ind += 3 * SIZE_OF_DOUBLE
-        
-         return coord
-        
-    else:
-        print "Dimensionality %s is not supported!",dim
-        return -1
+             return coord
+            
+        else:
+            print "Dimensionality %s is not supported!",dimensionality
+            return -1
     
 
 def read_global_index_array(filename):
@@ -127,25 +137,116 @@ def read_weights(filename):
     """
     with open(filename, 'rb') as file:
         data = file.read()
-    file.close()        
-    N_RA = struct.unpack('<i', data[:SIZE_OF_INT])[0]
-    trial_number = struct.unpack('<i', data[SIZE_OF_INT:2*SIZE_OF_INT])[0]
-    weights = np.zeros((N_RA, N_RA), np.float32)
-    
-    pos = 2*SIZE_OF_INT     
-    
-    #print "N_RA = ", N_RA
-    #print "trial_number = ", trial_number
-    
-    #print "num bytes = ", len(data[2*SIZE_OF_INT:]) 
-    #print "num_datapoints = ",len(data[2*SIZE_OF_INT:]) / SIZE_OF_DOUBLE    
-    
-    for i in range(N_RA):
-        for j in range(N_RA):
-            weights[i][j] = struct.unpack('<d', data[pos:(pos + SIZE_OF_DOUBLE)])[0]
-            pos += SIZE_OF_DOUBLE
-    
-    return (N_RA, trial_number, weights)  
+           
+        N_RA = struct.unpack('<i', data[:SIZE_OF_INT])[0]
+        trial_number = struct.unpack('<i', data[SIZE_OF_INT:2*SIZE_OF_INT])[0]
+        weights = np.zeros((N_RA, N_RA), np.float32)
+        
+        pos = 2*SIZE_OF_INT     
+        
+        #print "N_RA = ", N_RA
+        #print "trial_number = ", trial_number
+        
+        #print "num bytes = ", len(data[2*SIZE_OF_INT:]) 
+        #print "num_datapoints = ",len(data[2*SIZE_OF_INT:]) / SIZE_OF_DOUBLE    
+        
+        for i in range(N_RA):
+            for j in range(N_RA):
+                weights[i][j] = struct.unpack('<d', data[pos:(pos + SIZE_OF_DOUBLE)])[0]
+                pos += SIZE_OF_DOUBLE
+        
+        return (N_RA, trial_number, weights)  
+
+def read_remodeled_indicators(filename):
+    """
+    Read axon-remodeling indicators of HVC-RA neurons
+    """
+    with open(filename, 'rb') as file:
+        data = file.read()
+           
+        N = struct.unpack('<i', data[:SIZE_OF_INT])[0]
+        trial_number = struct.unpack('<i', data[SIZE_OF_INT:2*SIZE_OF_INT])[0]
+        
+        remodeled_indicators = np.zeros(N, np.int32)
+        
+        ind = 2*SIZE_OF_INT     
+        
+        for i in range(N):
+            remodeled_indicators[i] = struct.unpack('<i', data[ind:(ind + SIZE_OF_INT)])[0]
+            ind += SIZE_OF_INT
+        
+        return (N, trial_number, remodeled_indicators) 
+
+def read_replacement_history(filename):
+    """
+    Read replacement history of HVC-RA neurons
+    """
+    with open(filename, 'rb') as file:
+        data = file.read()
+           
+        N = struct.unpack('<i', data[:SIZE_OF_INT])[0]
+        trial_number = struct.unpack('<i', data[SIZE_OF_INT:2*SIZE_OF_INT])[0]
+        
+        replacement_history = np.zeros(N, np.int32)
+        
+        ind = 2*SIZE_OF_INT     
+        
+        for i in range(N):
+            replacement_history[i] = struct.unpack('<i', data[ind:(ind + SIZE_OF_INT)])[0]
+            ind += SIZE_OF_INT
+        
+        return (N, trial_number, replacement_history) 
+
+def read_activity_history(filename):
+    """
+    Read activity history of HVC-RA neurons
+    """
+    with open(filename, 'rb') as file:
+        data = file.read()
+           
+        N = struct.unpack('<i', data[:SIZE_OF_INT])[0]
+        rate_window = struct.unpack('<i', data[SIZE_OF_INT:2*SIZE_OF_INT])[0]
+        trial_number = struct.unpack('<i', data[2*SIZE_OF_INT:3*SIZE_OF_INT])[0]
+        
+        activity_history = np.zeros((N, rate_window), np.int32)
+        
+        ind = 3*SIZE_OF_INT     
+        
+        for i in range(N):
+            for j in range(rate_window):
+                activity_history[i][j] = struct.unpack('<i', data[ind:(ind + SIZE_OF_INT)])[0]
+                ind += SIZE_OF_INT
+        
+        return (N, trial_number, activity_history)  
+
+def read_axonal_delays(filename):
+    """
+    Read axonal delays between neurons
+    """
+    with open(filename, 'rb') as file:
+        data = file.read()
+           
+        N = struct.unpack('<i', data[:SIZE_OF_INT])[0]
+        trial_number = struct.unpack('<i', data[SIZE_OF_INT:2*SIZE_OF_INT])[0]
+        axonal_delays = [[] for i in range(N)]
+        
+        pos = 2*SIZE_OF_INT     
+        
+        #print "N_RA = ", N_RA
+        #print "trial_number = ", trial_number
+        
+        #print "num bytes = ", len(data[2*SIZE_OF_INT:]) 
+        #print "num_datapoints = ",len(data[2*SIZE_OF_INT:]) / SIZE_OF_DOUBLE    
+        
+        for i in range(N):
+            num_targets = struct.unpack('<i', data[pos:(pos+SIZE_OF_INT)])[0]
+            pos += SIZE_OF_INT
+            
+            for j in range(num_targets):
+                axonal_delays[i].append(struct.unpack('<d', data[pos:(pos + SIZE_OF_DOUBLE)])[0])
+                pos += SIZE_OF_DOUBLE
+        
+        return (N, trial_number, axonal_delays)  
     
 def read_hhi(filename):
     """
@@ -258,6 +359,48 @@ def read_hh2(fileName):
     return (t, Vs, Is, n, h, Vd, Id, r, c, Ca, Gexc_d, Ginh_d, Gexc_s, Ginh_s, Ei, flag, Nsoma, Ndend)
 
 
+def read_hh2_buffer_full(filename):
+    """
+    Reads full output of HH2_buffer neuron
+    """
+    with open(filename, mode = "rb") as f:
+        data = f.read()
+        
+        # calculate number of datapoints
+        num_datapoints = len(data) / (10 * SIZE_OF_DOUBLE)
+        
+        t = np.empty(num_datapoints, np.float32)
+        Vs = np.empty(num_datapoints, np.float32)
+        Vd = np.empty(num_datapoints, np.float32)
+        Gexc_d = np.empty(num_datapoints, np.float32)
+        Ginh_d = np.empty(num_datapoints, np.float32)
+        
+        n = np.empty(num_datapoints, np.float32)
+        h = np.empty(num_datapoints, np.float32)
+        r = np.empty(num_datapoints, np.float32)
+        c = np.empty(num_datapoints, np.float32)
+        Ca = np.empty(num_datapoints, np.float32)
+        
+        print num_datapoints
+        
+        start_ind = 0
+        
+        for i in range(num_datapoints):
+            t[i] = struct.unpack("<d", data[start_ind:(start_ind+SIZE_OF_DOUBLE)])[0]
+            Vs[i] = struct.unpack("<d", data[(start_ind+SIZE_OF_DOUBLE):(start_ind+2*SIZE_OF_DOUBLE)])[0]
+            Vd[i] = struct.unpack("<d", data[(start_ind+2*SIZE_OF_DOUBLE):(start_ind+3*SIZE_OF_DOUBLE)])[0]
+            Gexc_d[i] = struct.unpack("<d", data[(start_ind+3*SIZE_OF_DOUBLE):(start_ind+4*SIZE_OF_DOUBLE)])[0]
+            Ginh_d[i] = struct.unpack("<d", data[(start_ind+4*SIZE_OF_DOUBLE):(start_ind+5*SIZE_OF_DOUBLE)])[0]
+        
+            n[i] = struct.unpack("<d", data[(start_ind+5*SIZE_OF_DOUBLE):(start_ind+6*SIZE_OF_DOUBLE)])[0]
+            h[i] = struct.unpack("<d", data[(start_ind+6*SIZE_OF_DOUBLE):(start_ind+7*SIZE_OF_DOUBLE)])[0]
+            r[i] = struct.unpack("<d", data[(start_ind+7*SIZE_OF_DOUBLE):(start_ind+8*SIZE_OF_DOUBLE)])[0]
+            c[i] = struct.unpack("<d", data[(start_ind+8*SIZE_OF_DOUBLE):(start_ind+9*SIZE_OF_DOUBLE)])[0]
+            Ca[i] = struct.unpack("<d", data[(start_ind+9*SIZE_OF_DOUBLE):(start_ind+10*SIZE_OF_DOUBLE)])[0]
+        
+            start_ind += 10*SIZE_OF_DOUBLE
+            
+        return t, Vs, Vd, Gexc_d, Ginh_d, n, h, r, c, Ca
 
 def get_RA2RA_graph(filename):
     """
@@ -369,41 +512,32 @@ def read_maturation_time_sequence(filename):
     """
     with open(filename, "rb") as file:
         data = file.read()
-        file.close()
-
-    num_target = struct.unpack("<i", data[:SIZE_OF_INT])[0] # number of targets     
-    
-    target = [] # target neurons
-    
-    ind = SIZE_OF_INT    
-    
-    for i in xrange(num_target):
-        target.append(struct.unpack("<i", data[ind:(ind + SIZE_OF_INT)])[0])
-        ind += SIZE_OF_INT
-    
-    t = [] # time in trial numbers    
-    remodeled = [[] for i in xrange(num_target)] # indicator for neuron to be remodeled
-    mature = [[] for i in xrange(num_target)] # idicator for neuron to be mature
-    gaba_potential = [[] for i in xrange(num_target)] # reverse GABA potential    
-    firing_rate = [[] for i in xrange(num_target)] # neuron firing rate
-    
-    num_datapoints = (len(data) - SIZE_OF_INT) / (SIZE_OF_INT + num_target * (2*SIZE_OF_INT + 2*SIZE_OF_DOUBLE)) # number of datapoints in file
-    
-    for i in xrange(num_datapoints):
-        t.append(struct.unpack("<i", data[ind:(ind + SIZE_OF_INT)])[0])
-
-        for j in xrange(num_target):        
-            gaba_potential[j].append(struct.unpack("<d", data[(ind + SIZE_OF_INT):(ind + SIZE_OF_INT + SIZE_OF_DOUBLE)])[0])
-            firing_rate[j].append(struct.unpack("<d", data[(ind + SIZE_OF_INT + SIZE_OF_DOUBLE):(ind + SIZE_OF_INT + 2*SIZE_OF_DOUBLE)])[0])
-            
-            remodeled[j].append(struct.unpack("<i", data[(ind + SIZE_OF_INT + 2*SIZE_OF_DOUBLE):(ind + 2*SIZE_OF_DOUBLE + 2*SIZE_OF_INT)])[0])
-            mature[j].append(struct.unpack("<i", data[(ind + 2*SIZE_OF_DOUBLE + 2*SIZE_OF_INT):(ind + 2*SIZE_OF_DOUBLE + 3*SIZE_OF_INT)])[0])
-           
-            ind += 2*SIZE_OF_INT + 2*SIZE_OF_DOUBLE
+       
+        num_neurons = struct.unpack("<i", data[:SIZE_OF_INT])[0] # number of neurons     
         
-        ind += SIZE_OF_INT
+        ind = SIZE_OF_INT    
+        
+        t = [] # time in trial numbers    
+        remodeled = [[] for i in xrange(num_neurons)] # indicator for neuron to be remodeled
+        gaba_potential = [[] for i in xrange(num_neurons)] # reverse GABA potential    
+        firing_rate = [[] for i in xrange(num_neurons)] # neuron firing rate
+        
+        num_datapoints = (len(data) - SIZE_OF_INT) / (SIZE_OF_INT + num_neurons * (1*SIZE_OF_INT + 2*SIZE_OF_DOUBLE)) # number of datapoints in file
+        
+        for i in xrange(num_datapoints):
+            t.append(struct.unpack("<i", data[ind:(ind + SIZE_OF_INT)])[0])
     
-    return (target, t, remodeled, mature, gaba_potential, firing_rate)
+            for j in xrange(num_neurons):        
+                remodeled[j].append(struct.unpack("<i", data[(ind + SIZE_OF_INT ):(ind + 2*SIZE_OF_INT)])[0])
+                
+                gaba_potential[j].append(struct.unpack("<d", data[(ind + 2*SIZE_OF_INT):(ind + 2*SIZE_OF_INT + SIZE_OF_DOUBLE)])[0])
+                firing_rate[j].append(struct.unpack("<d", data[(ind + 2*SIZE_OF_INT + SIZE_OF_DOUBLE):(ind + 2*SIZE_OF_INT + 2*SIZE_OF_DOUBLE)])[0])
+                
+                ind += SIZE_OF_INT + 2*SIZE_OF_DOUBLE
+            
+            ind += SIZE_OF_INT
+        
+        return (t, remodeled, gaba_potential, firing_rate)
         
 
 def read_synaptic_weights_time_sequence(filename):
@@ -412,49 +546,29 @@ def read_synaptic_weights_time_sequence(filename):
     """
     with open(filename, "rb") as file:
         data = file.read()
-        file.close()
+       
+        num_neurons = struct.unpack("<i", data[:SIZE_OF_INT])[0] # number of neurons
+        
+        ind = SIZE_OF_INT    
+            
+        num_datapoints = (len(data) - SIZE_OF_INT) \
+                                    / (num_neurons * num_neurons * SIZE_OF_DOUBLE + SIZE_OF_INT)
     
-    num_source = struct.unpack("<i", data[:SIZE_OF_INT])[0] # number of source neurons
-    num_target = struct.unpack("<i", data[SIZE_OF_INT:2*SIZE_OF_INT])[0] # number of target neurons
-    
-    source = [] # source neuron id
-    target = [] # target neuron id
-
-    ind = 2*SIZE_OF_INT    
-    
-    # read id of source neurons
-    for i in xrange(num_source):
-        source.append(struct.unpack("<i", data[ind:(ind + SIZE_OF_INT)])[0])
+        t = []    
+        weights = np.empty((num_datapoints, num_neurons, num_neurons), np.float32)
         
-        ind += SIZE_OF_INT
-        
-    # read id of target neurons
-    for i in xrange(num_target):
-        target.append(struct.unpack("<i", data[ind:(ind + SIZE_OF_INT)])[0])
-        
-        ind += SIZE_OF_INT
-        
-    num_datapoints = (len(data) - 2*SIZE_OF_INT - SIZE_OF_INT * (num_source + num_target)) \
-                                / (num_source * num_target * SIZE_OF_DOUBLE + SIZE_OF_INT)
-
-    t = []    
-    weights = [[] for i in xrange(num_source)]
-    
-    for i in xrange(num_source):
-        for j in xrange(num_target):
-            weights[i].append([])
-        
-    for k in xrange(num_datapoints):    
-        t.append(struct.unpack("<i", data[ind:(ind + SIZE_OF_INT)])[0])
-        
-        for i in xrange(num_source):
-            for j in xrange(num_target):        
-                weights[i][j].append(struct.unpack("<d", data[(ind + SIZE_OF_INT):(ind + SIZE_OF_INT + SIZE_OF_DOUBLE)])[0])
-                
-                ind += SIZE_OF_DOUBLE
-        ind += SIZE_OF_INT
-        
-    return source, target, t, weights
+            
+        for k in xrange(num_datapoints):    
+            t.append(struct.unpack("<i", data[ind:(ind + SIZE_OF_INT)])[0])
+            
+            for i in xrange(num_neurons):
+                for j in xrange(num_neurons):        
+                    weights[k][i][j] = struct.unpack("<d", data[(ind + SIZE_OF_INT):(ind + SIZE_OF_INT + SIZE_OF_DOUBLE)])[0]
+                    
+                    ind += SIZE_OF_DOUBLE
+            ind += SIZE_OF_INT
+            
+        return t, weights
 
 def read_weight_statistics(filename):
     """
@@ -509,16 +623,29 @@ def read_num_synapses(filename):
    
     return (trial_number, num_active, num_super)
 
-def read_sim_info(filename):
+def read_synapses(filename):
+    """
+    Read active or super
+    """
     with open(filename, "rb") as file:
         data = file.read()
-        file.close()
-    
-    trial_duration = struct.unpack("<d", data[:SIZE_OF_DOUBLE])[0]
-    synapses_trials_update = struct.unpack("<i", data[SIZE_OF_DOUBLE:(SIZE_OF_DOUBLE+SIZE_OF_INT)])[0]
-    weights_trials_update = struct.unpack("<i", data[(SIZE_OF_DOUBLE+SIZE_OF_INT):(SIZE_OF_DOUBLE+2*SIZE_OF_INT)])[0] 
-   
-    return (trial_duration, synapses_trials_update, weights_trials_update)
+        
+        N = struct.unpack("<i", data[:SIZE_OF_INT])[0] # number of neurons
+        trial_number = struct.unpack("<i", data[SIZE_OF_INT:2*SIZE_OF_INT])[0] # trial number
+        
+        targets = [[] for i in range(N)]
+        
+        ind = 2*SIZE_OF_INT        
+        
+        for i in range(N):
+            num_targets = struct.unpack("<i", data[ind:(ind+SIZE_OF_INT)])[0] # number of targets for neuron
+            ind += SIZE_OF_INT
+            
+            for j in range(num_targets):
+                targets[i].append(struct.unpack("<i", data[ind:(ind+SIZE_OF_INT)])[0])
+                ind += SIZE_OF_INT
+                
+        return (N, trial_number, targets)
    
 def read_synaptic_info(filename):
     with open(filename, "rb") as file:
@@ -711,25 +838,6 @@ def read_training_neurons(filename):
         training_neurons[i] = struct.unpack("<i", data[(i+1)*SIZE_OF_INT:(i+2)*SIZE_OF_INT])[0]
 
     return training_neurons
-    
-
-def read_replacement_history(filename):
-    """
-    Read the time of the previous replacement for each HVC(RA) neuron in the network
-    """
-    with open(filename, "rb") as file:
-        data = file.read()
-        file.close()
-
-    N_RA = struct.unpack("<i", data[:SIZE_OF_INT])[0]
-    trial_number = struct.unpack("<i", data[SIZE_OF_INT:2*SIZE_OF_INT])[0]  
-    
-    time_from_previous_replacement = np.empty(N_RA, np.int32)
-    
-    for i in range(N_RA):
-        time_from_previous_replacement[i] = struct.unpack("<i", data[(i+2)*SIZE_OF_INT:(i+3)*SIZE_OF_INT])[0]
-
-    return time_from_previous_replacement
     
 def read_replaced_neurons(filename):
     """
