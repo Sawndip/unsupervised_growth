@@ -80,7 +80,7 @@ def read_coordinates(filename):
    
         N = struct.unpack('<i', data[:SIZE_OF_INT])[0] # get number of neurons
         dimensionality = struct.unpack('<i', data[SIZE_OF_INT:2*SIZE_OF_INT])[0] # get number of neurons
-        model_interneuron_distance = struct.unpack('<i', data[2*SIZE_OF_INT:(2*SIZE_OF_INT+SIZE_OF_DOUBLE)])[0] # get average distance between interneurons in the model
+        model_interneuron_distance = struct.unpack('<d', data[2*SIZE_OF_INT:(2*SIZE_OF_INT+SIZE_OF_DOUBLE)])[0] # get average distance between interneurons in the model
         
        
         ind = 2*SIZE_OF_INT + SIZE_OF_DOUBLE # position in file    
@@ -156,7 +156,27 @@ def read_weights(filename):
                 pos += SIZE_OF_DOUBLE
         
         return (N_RA, trial_number, weights)  
-
+        
+def read_mature_indicators(filename):
+    """
+    Read maturation indicators of HVC-RA neurons
+    """
+    with open(filename, 'rb') as file:
+        data = file.read()
+           
+        N = struct.unpack('<i', data[:SIZE_OF_INT])[0]
+        trial_number = struct.unpack('<i', data[SIZE_OF_INT:2*SIZE_OF_INT])[0]
+        
+        mature_indicators = np.zeros(N, np.int32)
+        
+        ind = 2*SIZE_OF_INT     
+        
+        for i in range(N):
+            mature_indicators[i] = struct.unpack('<i', data[ind:(ind + SIZE_OF_INT)])[0]
+            ind += SIZE_OF_INT
+        
+        return (N, trial_number, mature_indicators) 
+        
 def read_remodeled_indicators(filename):
     """
     Read axon-remodeling indicators of HVC-RA neurons
@@ -247,7 +267,53 @@ def read_axonal_delays(filename):
                 pos += SIZE_OF_DOUBLE
         
         return (N, trial_number, axonal_delays)  
-    
+
+def read_jitter(filename):
+    """
+    Read results of test chain simulation with jitter
+    """
+    with open(filename, 'rb') as file:
+        data = file.read()
+           
+        N = struct.unpack('<i', data[:SIZE_OF_INT])[0]
+        num_test_trials = struct.unpack('<i', data[SIZE_OF_INT:2*SIZE_OF_INT])[0]
+        
+        probability_soma_spike = np.empty(N, np.float32)        
+        average_num_soma_spikes_in_trial = np.empty(N, np.float32)        
+        mean_first_soma_spike_time = np.empty(N, np.float32)        
+        std_first_soma_spike_time = np.empty(N, np.float32)        
+        
+        probability_dend_spike = np.empty(N, np.float32)        
+        average_num_dend_spikes_in_trial = np.empty(N, np.float32)        
+        mean_first_dend_spike_time = np.empty(N, np.float32)        
+        std_first_dend_spike_time = np.empty(N, np.float32)        
+                
+        
+        pos = 2*SIZE_OF_INT     
+        
+        #print "N_RA = ", N_RA
+        #print "trial_number = ", trial_number
+        
+        #print "num bytes = ", len(data[2*SIZE_OF_INT:]) 
+        #print "num_datapoints = ",len(data[2*SIZE_OF_INT:]) / SIZE_OF_DOUBLE    
+        
+        for i in range(N):
+            probability_soma_spike[i] = struct.unpack('<d', data[pos:(pos+SIZE_OF_DOUBLE)])[0]
+            average_num_soma_spikes_in_trial[i] = struct.unpack('<d', data[(pos+SIZE_OF_DOUBLE):(pos+2*SIZE_OF_DOUBLE)])[0]
+            mean_first_soma_spike_time[i] = struct.unpack('<d', data[(pos+2*SIZE_OF_DOUBLE):(pos+3*SIZE_OF_DOUBLE)])[0]
+            std_first_soma_spike_time[i] = struct.unpack('<d', data[(pos+3*SIZE_OF_DOUBLE):(pos+4*SIZE_OF_DOUBLE)])[0]
+            
+            probability_dend_spike[i] = struct.unpack('<d', data[(pos+4*SIZE_OF_DOUBLE):(pos+5*SIZE_OF_DOUBLE)])[0]
+            average_num_dend_spikes_in_trial[i] = struct.unpack('<d', data[(pos+5*SIZE_OF_DOUBLE):(pos+6*SIZE_OF_DOUBLE)])[0]
+            mean_first_dend_spike_time[i] = struct.unpack('<d', data[(pos+6*SIZE_OF_DOUBLE):(pos+7*SIZE_OF_DOUBLE)])[0]
+            std_first_dend_spike_time[i] = struct.unpack('<d', data[(pos+7*SIZE_OF_DOUBLE):(pos+8*SIZE_OF_DOUBLE)])[0]
+        
+            pos += 8*SIZE_OF_DOUBLE
+            
+        return (N, num_test_trials, \
+                    probability_soma_spike, average_num_soma_spikes_in_trial, mean_first_soma_spike_time, std_first_soma_spike_time, \
+                    probability_dend_spike, average_num_dend_spikes_in_trial, mean_first_dend_spike_time, std_first_dend_spike_time)  
+
 def read_hhi(filename):
     """
     Functions reads binary file with HHI_final neuron data
@@ -869,3 +935,93 @@ def read_replaced_neurons(filename):
         ind += (2+num_replaced)*SIZE_OF_INT
         
     return replacement_time, replaced_neurons
+    
+    
+ 
+def read_fI_HVCRA(filename):
+    """
+    Function reads data from file for fI curve of HVC(RA) neuron
+    """    
+    with open(filename, mode = "rb") as file:
+        data = file.read()
+
+        num_points = struct.unpack("<i", data[:SIZE_OF_INT])[0]
+        ampl_step = struct.unpack("<d", data[SIZE_OF_INT:(SIZE_OF_INT+SIZE_OF_DOUBLE)])[0]
+        
+        ampl = [float(i) * ampl_step for i in range(num_points)]
+        ampl = np.array(ampl)
+        
+        num_spikes = np.empty(num_points, np.int32)
+        num_bursts = np.empty(num_points, np.int32)
+        
+        start_ind = SIZE_OF_INT + SIZE_OF_DOUBLE
+        
+        for i in range(num_points):    
+            num_spikes[i] = struct.unpack("<i", data[start_ind:(start_ind+SIZE_OF_INT)])[0]
+            num_bursts[i] = struct.unpack("<i", data[(start_ind+SIZE_OF_INT):(start_ind+2*SIZE_OF_INT)])[0]
+            
+            start_ind += 2*SIZE_OF_INT
+        
+        return ampl, num_spikes, num_bursts
+
+def read_conductance_response(filename):
+    """
+    Function reads time of response of HVC-RA neuron to excitatory conductance pulse
+    """
+    with open(filename, mode = "rb") as file:
+        data = file.read()
+
+        num_points = struct.unpack("<i", data[:SIZE_OF_INT])[0]
+        G_step = struct.unpack("<d", data[SIZE_OF_INT:(SIZE_OF_INT+SIZE_OF_DOUBLE)])[0]
+        
+        G = [float(i) * G_step for i in range(num_points)]
+        G = np.array(G)
+        
+        burst_onset_times = np.empty(num_points, np.float32)
+        spike_times = np.empty(num_points, np.float32)
+        
+        start_ind = SIZE_OF_INT + SIZE_OF_DOUBLE
+        
+        for i in range(num_points):    
+            burst_onset_times[i] = struct.unpack("<d", data[start_ind:(start_ind+SIZE_OF_DOUBLE)])[0]
+            spike_times[i] = struct.unpack("<d", data[(start_ind+SIZE_OF_DOUBLE):(start_ind+2*SIZE_OF_DOUBLE)])[0]
+            
+            start_ind += 2*SIZE_OF_DOUBLE
+        
+        return G, burst_onset_times, spike_times
+
+def read_inhAndExc_test(filename):
+    """
+    Read results of inhibitory and excitatory inputs test
+    """
+    with open(filename, "rb") as file:
+        data = file.read()
+        
+        N = struct.unpack("<i", data[:SIZE_OF_INT])[0]
+        num_trials = struct.unpack("<i", data[SIZE_OF_INT:2*SIZE_OF_INT])[0]
+        
+        probability_for_relevant_spike = np.empty(N, np.float32)
+        probability_for_nonrelevant_spike = np.empty(N, np.float32)
+        
+        mean_relevant_spike_time = np.empty(N, np.float32)
+        std_relevant_spike_time = np.empty(N, np.float32)
+        
+        mean_spike_time = np.empty(N, np.float32)
+        std_spike_time = np.empty(N, np.float32)
+        
+        ind = 2*SIZE_OF_INT
+        
+        for i in range(N): 
+            probability_for_relevant_spike[i] = struct.unpack("<d", data[ind:(ind+SIZE_OF_DOUBLE)])[0]
+            mean_relevant_spike_time[i] = struct.unpack("<d", data[(ind+SIZE_OF_DOUBLE):(ind+2*SIZE_OF_DOUBLE)])[0]
+            std_relevant_spike_time[i] = struct.unpack("<d", data[(ind+2*SIZE_OF_DOUBLE):(ind+3*SIZE_OF_DOUBLE)])[0]
+            
+            probability_for_nonrelevant_spike[i] = struct.unpack("<d", data[(ind+3*SIZE_OF_DOUBLE):(ind+4*SIZE_OF_DOUBLE)])[0]
+            mean_spike_time[i] = struct.unpack("<d", data[(ind+4*SIZE_OF_DOUBLE):(ind+5*SIZE_OF_DOUBLE)])[0]
+            std_spike_time[i] = struct.unpack("<d", data[(ind+5*SIZE_OF_DOUBLE):(ind+6*SIZE_OF_DOUBLE)])[0]
+            
+            
+            ind += 6*SIZE_OF_DOUBLE
+            
+    return probability_for_relevant_spike, mean_relevant_spike_time, std_relevant_spike_time, \
+            probability_for_nonrelevant_spike, mean_spike_time, std_spike_time

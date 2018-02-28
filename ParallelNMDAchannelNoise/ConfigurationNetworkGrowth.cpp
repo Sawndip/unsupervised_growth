@@ -74,6 +74,18 @@ void ConfigurationNetworkGrowth::read_configuration(const char* filename)
         maturation_params_setting.lookupValue("GNA_MATURE", maturation_params.GNA_MATURE);
         maturation_params_setting.lookupValue("GNA_IMMATURE", maturation_params.GNA_IMMATURE);
         
+        maturation_params_setting.lookupValue("GCA_MATURE", maturation_params.GCA_MATURE);
+        maturation_params_setting.lookupValue("GCA_IMMATURE", maturation_params.GCA_IMMATURE);
+        
+        maturation_params_setting.lookupValue("GCAK_MATURE", maturation_params.GCAK_MATURE);
+        maturation_params_setting.lookupValue("GCAK_IMMATURE", maturation_params.GCAK_IMMATURE);
+        
+        maturation_params_setting.lookupValue("GSL_MATURE", maturation_params.GSL_MATURE);
+        maturation_params_setting.lookupValue("GSL_IMMATURE", maturation_params.GSL_IMMATURE);
+        
+        maturation_params_setting.lookupValue("GDL_MATURE", maturation_params.GDL_MATURE);
+        maturation_params_setting.lookupValue("GDL_IMMATURE", maturation_params.GDL_IMMATURE);
+        
         maturation_params_setting.lookupValue("RC_MATURE", maturation_params.RC_MATURE);
         maturation_params_setting.lookupValue("RC_IMMATURE", maturation_params.RC_IMMATURE);
         
@@ -158,6 +170,18 @@ void ConfigurationNetworkGrowth::print_configuration() const
     std::cout << "GNA_MATURE = " << maturation_params.GNA_MATURE << std::endl;
     std::cout << "GNA_IMMATURE = " << maturation_params.GNA_IMMATURE << std::endl << std::endl;
     
+    std::cout << "GCA_MATURE = " << maturation_params.GCA_MATURE << std::endl;
+    std::cout << "GCA_IMMATURE = " << maturation_params.GCA_IMMATURE << std::endl << std::endl;
+    
+    std::cout << "GCAK_MATURE = " << maturation_params.GCAK_MATURE << std::endl;
+    std::cout << "GCAL_IMMATURE = " << maturation_params.GCAK_IMMATURE << std::endl << std::endl;
+    
+    std::cout << "GSL_MATURE = " << maturation_params.GSL_MATURE << std::endl;
+    std::cout << "GSL_IMMATURE = " << maturation_params.GSL_IMMATURE << std::endl << std::endl;
+    
+    std::cout << "GDL_MATURE = " << maturation_params.GDL_MATURE << std::endl;
+    std::cout << "GDL_IMMATURE = " << maturation_params.GDL_IMMATURE << std::endl << std::endl;
+    
     std::cout << "RC_MATURE = " << maturation_params.RC_MATURE << std::endl;
     std::cout << "RC_IMMATURE = " << maturation_params.RC_IMMATURE << std::endl << std::endl;
     
@@ -228,6 +252,18 @@ void ConfigurationNetworkGrowth::write_configuration(const char* filename) const
     
     out << "\tGNA_MATURE = " << maturation_params.GNA_MATURE << ";" << std::endl;
     out << "\tGNA_IMMATURE = " << maturation_params.GNA_IMMATURE << ";" << std::endl << std::endl;
+    
+    out << "\tGCA_MATURE = " << maturation_params.GCA_MATURE << ";" << std::endl;
+    out << "\tGCA_IMMATURE = " << maturation_params.GCA_IMMATURE << ";" << std::endl << std::endl;
+    
+    out << "\tGCAK_MATURE = " << maturation_params.GCAK_MATURE << ";" << std::endl;
+    out << "\tGCAK_IMMATURE = " << maturation_params.GCAK_IMMATURE << ";" << std::endl << std::endl;
+    
+    out << "\tGSL_MATURE = " << maturation_params.GSL_MATURE << ";" << std::endl;
+    out << "\tGSL_IMMATURE = " << maturation_params.GSL_IMMATURE << ";" << std::endl << std::endl;
+    
+    out << "\tGDL_MATURE = " << maturation_params.GDL_MATURE << ";" << std::endl;
+    out << "\tGDL_IMMATURE = " << maturation_params.GDL_IMMATURE << ";" << std::endl << std::endl;
     
     out << "\tRC_MATURE = " << maturation_params.RC_MATURE << ";" << std::endl;
     out << "\tRC_IMMATURE = " << maturation_params.RC_IMMATURE << ";" << std::endl << std::endl;

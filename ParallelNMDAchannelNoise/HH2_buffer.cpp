@@ -20,25 +20,6 @@ const double HH2_buffer::Gd_noise_exc = 0.045;
 const double HH2_buffer::lambda_exc = 100.0;
 const double HH2_buffer::lambda_inh = 100.0;
 
-// neuron model parameters
-const double HH2_buffer::cm = 1;
-//const double HH2_buffer::Rc = 1; // original 55
-const double HH2_buffer::As = 5000; // soma surface area in micro meters squared
-const double HH2_buffer::GsL = 0.1; 
-//const double HH2_buffer::GsNa = 40; // original 60
-//const double HH2_buffer::GsK = 16; // original 8
-//const double HH2_buffer::EsL = -80; // original -80
-const double HH2_buffer::EsNa = 55;
-const double HH2_buffer::EsK = -90;
-//const double HH2_buffer::Ad = 1000; // original 10000
-const double HH2_buffer::GdL = 0.1; 
-const double HH2_buffer::GdCa = 55; 
-const double HH2_buffer::GdCaK = 150; 
-//const double HH2_buffer::EdL = -80; // original -80
-const double HH2_buffer::EdCa = 120;
-const double HH2_buffer::EdK = -90;
-const double HH2_buffer::tExc = 5;
-const double HH2_buffer::tInh = 5;
 
 // thresholds
 const double HH2_buffer::threshold_spike = -30;
@@ -73,6 +54,7 @@ HH2_buffer::HH2_buffer() : _mu_soma(0.0), _sigma_soma(0.0), _mu_dend(0.0), _sigm
     _buffer_counter = 0;
     
     // set initial values
+    this->set_original_model_parameters();
 	this->set_to_rest();
 }
 
@@ -272,6 +254,34 @@ int HH2_buffer::check_bad_values()
 		
 	return 0;
 	
+}
+
+void HH2_buffer::set_original_model_parameters()
+{
+	cm = 1.0;
+
+	As = 5000.0; 
+	Ad = 10000.0;
+
+	Rc = 55.0;
+
+	GsK = 8.0;
+	GsNa = 60.0;	
+	GdCa = 55; 
+	GdCaK = 150;
+	GsL = 0.1; 
+	GdL = 0.1; 
+
+	EdCa = 120.0;
+	EdK = -90.0;
+	EsNa = 55.0;
+	EsK = -90.0;
+	EsL = -80.0; 
+	EdL = -80.0;
+	_Egaba = -80.0;
+	
+	tExc = 5.0;
+	tInh = 5.0;
 }
 
 void HH2_buffer::set_noise_generator(Poisson_noise* g)

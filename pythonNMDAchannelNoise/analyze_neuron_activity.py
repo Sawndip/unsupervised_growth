@@ -12,9 +12,67 @@ import os
 import numpy as np
 import utils
 
+trialStep = 50
 
-dirname = "/home/eugene/Output/networks/chainGrowth/testGrowthDelays/"
-trial_number = 450
+def plot_neuron_activity(neurons, training_neurons, firing_rate, probability_to_spike, dirname, trial_number):
+    """
+    Plots firing rate, probability to spike, input weights of neurons in the array
+    """
+    num_neurons_to_plot = len(neurons)    
+    
+    f, axarr = plt.subplots(num_neurons_to_plot, sharex=True)
+    for i in range(num_neurons_to_plot):
+        axarr[i].plot(time, firing_rate[neurons[i]], label='neuron {0}'.format(neurons[i]))
+        
+    axarr[0].set_xlim([0, trial_number + 10])
+    
+    # add a big axes, hide frame
+    f.add_subplot(111, frameon=False)
+    # hide tick and tick label of the big axes
+    plt.tick_params(labelcolor='none', top='off', bottom='off', left='off', right='off')
+    plt.grid(False)
+    plt.xlabel("Time in trial numbers")
+    plt.ylabel("Firing rate (# of spikes per trial)")
+    
+    f, axarr = plt.subplots(num_neurons_to_plot, sharex=True)
+    for i in range(num_neurons_to_plot):
+        axarr[i].plot(time, probability_to_spike[neurons[i]], label='neuron {0}'.format(neurons[i]))
+        #axarr[i].plot(time, fire_indicators[active_neurons_not_training[i]], label='neuron {0}'.format(active_neurons_not_training[i]))
+        axarr[i].legend(loc=2)
+        axarr[i].set_ylim([-0.1,1.1])
+    axarr[0].set_xlim([0, trial_number + 10])
+
+    # add a big axes, hide frame
+    f.add_subplot(111, frameon=False)
+    # hide tick and tick label of the big axes
+    plt.tick_params(labelcolor='none', top='off', bottom='off', left='off', right='off')
+    plt.grid(False)
+    plt.xlabel("Time in trial numbers")
+    plt.ylabel("Probability to spike")
+    
+    #input_weights = utils.get_source_input_weight_time_sequence(dirname, trial_number, trialStep, training_neurons, neurons)
+    input_weights = utils.get_total_input_weight_time_sequence(dirname, trial_number, trialStep, neurons)
+    
+    time_for_weights = [i*trialStep for i in range(input_weights.shape[1])]
+    
+    f, axarr = plt.subplots(num_neurons_to_plot, sharex=True)
+    for i in range(num_neurons_to_plot):
+        axarr[i].plot(time_for_weights, input_weights[i], label='neuron {0}'.format(neurons[i]))
+        #axarr[i].plot(time, fire_indicators[active_neurons_not_training[i]], label='neuron {0}'.format(active_neurons_not_training[i]))
+        axarr[i].legend(loc=2)
+        #axarr[i].set_ylim([-0.1,1.1])
+    axarr[0].set_xlim([0, trial_number + 10])
+    
+    # add a big axes, hide frame
+    f.add_subplot(111, frameon=False)
+    # hide tick and tick label of the big axes
+    plt.tick_params(labelcolor='none', top='off', bottom='off', left='off', right='off')
+    plt.grid(False)
+    plt.xlabel("Time in trial numbers")
+    plt.ylabel("Input weights from training neurons")
+
+dirname = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/events2/"
+trial_number = 3200
 fileActivityHistory = os.path.join(dirname, "activity_history_" + str(trial_number) + ".bin")
 fileTraining = os.path.join(dirname, "training_neurons.bin")
 
@@ -106,69 +164,27 @@ active_neurons_not_training = [i for i in active_neurons if i not in training_ne
 #print training_neurons
 print active_neurons_not_training
 
+neurons_to_plot = [448,498]
+max_num_neurons_to_plot = 10
+
+
+if len(neurons_to_plot) > 0:
+    plot_neuron_activity(neurons_to_plot, training_neurons, firing_rate, probability_to_spike, dirname, trial_number)
+else:
+     if ( len(active_neurons_not_training) > 0 ):
+        if ( len(active_neurons_not_training) >= max_num_neurons_to_plot ):
+            num_neurons_to_plot = max_num_neurons_to_plot
+        else:
+            num_neurons_to_plot = len(active_neurons_not_training)
+        
+        print "Neurons plotted: ",active_neurons_not_training[:num_neurons_to_plot]
+    
+        
 #print activity_history[:][2496]
 #print activity_history[4][:]
 
-max_num_neurons_to_plot = 10
 
-if ( len(active_neurons_not_training) > 0 ):
-    if ( len(active_neurons_not_training) >= max_num_neurons_to_plot ):
-        num_neurons_to_plot = max_num_neurons_to_plot
-    else:
-        num_neurons_to_plot = len(active_neurons_not_training)
-    
-    print "Neurons plotted: ",active_neurons_not_training[:num_neurons_to_plot]
 
-    f, axarr = plt.subplots(num_neurons_to_plot, sharex=True)
-    for i in range(num_neurons_to_plot):
-        axarr[i].plot(time, firing_rate[active_neurons_not_training[i]], label='neuron {0}'.format(active_neurons_not_training[i]))
-        
-    axarr[0].set_xlim([0, trial_number + 10])
+   
     
-    # add a big axes, hide frame
-    f.add_subplot(111, frameon=False)
-    # hide tick and tick label of the big axes
-    plt.tick_params(labelcolor='none', top='off', bottom='off', left='off', right='off')
-    plt.grid(False)
-    plt.xlabel("Time in trial numbers")
-    plt.ylabel("Firing rate (# of spikes per trial)")
-    
-    f, axarr = plt.subplots(num_neurons_to_plot, sharex=True)
-    for i in range(num_neurons_to_plot):
-        axarr[i].plot(time, probability_to_spike[active_neurons_not_training[i]], label='neuron {0}'.format(active_neurons_not_training[i]))
-        #axarr[i].plot(time, fire_indicators[active_neurons_not_training[i]], label='neuron {0}'.format(active_neurons_not_training[i]))
-        axarr[i].legend(loc=2)
-        axarr[i].set_ylim([-0.1,1.1])
-    axarr[0].set_xlim([0, trial_number + 10])
-    
-    # add a big axes, hide frame
-    f.add_subplot(111, frameon=False)
-    # hide tick and tick label of the big axes
-    plt.tick_params(labelcolor='none', top='off', bottom='off', left='off', right='off')
-    plt.grid(False)
-    plt.xlabel("Time in trial numbers")
-    plt.ylabel("Probability to spike")
-    
-    trialStep = 50
-    
-    input_weights = utils.get_input_weight_time_sequence(dirname, trial_number, trialStep, training_neurons, active_neurons_not_training[:num_neurons_to_plot])
-    
-    time_for_weights = [i*trialStep for i in range(input_weights.shape[1])]
-    
-    f, axarr = plt.subplots(num_neurons_to_plot, sharex=True)
-    for i in range(num_neurons_to_plot):
-        axarr[i].plot(time_for_weights, input_weights[i], label='neuron {0}'.format(active_neurons_not_training[i]))
-        #axarr[i].plot(time, fire_indicators[active_neurons_not_training[i]], label='neuron {0}'.format(active_neurons_not_training[i]))
-        axarr[i].legend(loc=2)
-        #axarr[i].set_ylim([-0.1,1.1])
-    axarr[0].set_xlim([0, trial_number + 10])
-    
-    # add a big axes, hide frame
-    f.add_subplot(111, frameon=False)
-    # hide tick and tick label of the big axes
-    plt.tick_params(labelcolor='none', top='off', bottom='off', left='off', right='off')
-    plt.grid(False)
-    plt.xlabel("Time in trial numbers")
-    plt.ylabel("Input weights from training neurons")
-    
-    plt.show()
+plt.show()

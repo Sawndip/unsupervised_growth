@@ -50,6 +50,18 @@ struct MaturationParameters
     
     double GNA_MATURE; // sodium somatic conductance for mature neurons
     double GNA_IMMATURE; // sodium somatic conductance for newborn neurons
+    
+    double GCA_MATURE; // calcium dendritic conductance for mature neurons
+    double GCA_IMMATURE; // calcium dendritic conductance for newborn neurons
+
+    double GCAK_MATURE; // calcium-dependent potassium dendritic conductance for mature neurons
+    double GCAK_IMMATURE; // calcium-dependent potassium dendritic conductance for newborn neurons
+
+	double GSL_MATURE; // somatic leak conductance for mature neurons
+    double GSL_IMMATURE; // somatic leak conductance for newborn neurons
+
+	double GDL_MATURE; // dendritic leak conductance for mature neurons
+    double GDL_IMMATURE; // dendritic leak conductance for newborn neurons
 
     double RC_MATURE; // coupling resistance for mature neurons
     double RC_IMMATURE; // coupling resistance for newborn neurons
@@ -58,9 +70,11 @@ struct MaturationParameters
 
     int RATE_WINDOW_LONG; // time window in which "average" firing rate for a long period is measured
     
-    MaturationParameters() : E_REST_MATURE(-80.0), E_REST_IMMATURE(-65.0), E_GABA_MATURE(-80.0), E_GABA_IMMATURE(-55.0),
-							 AD_MATURE(10000.0), AD_IMMATURE(1000.0), GK_MATURE(8.0), GK_IMMATURE(16.0), 
-							 GNA_MATURE(60.0), GNA_IMMATURE(40.0), RC_MATURE(55.0), RC_IMMATURE(1.0), 
+    MaturationParameters() : E_REST_MATURE(-80.0), E_REST_IMMATURE(-80.0), E_GABA_MATURE(-80.0), E_GABA_IMMATURE(-55.0),
+							 AD_MATURE(10000.0), AD_IMMATURE(1000.0), GK_MATURE(8.0), GK_IMMATURE(8.0), 
+							 GNA_MATURE(60.0), GNA_IMMATURE(60.0), GCA_MATURE(55.0), GCA_IMMATURE(0.0),
+							 GCAK_MATURE(150.0), GCAK_IMMATURE(0.0), GSL_MATURE(0.1), GSL_IMMATURE(0.1),
+							 GDL_MATURE(0.1), GDL_IMMATURE(0.1), RC_MATURE(55.0), RC_IMMATURE(5.5), 
 							 DEATH_RATE_THRESHOLD(0.01), RATE_WINDOW_LONG(2000)
 							 {};
 };

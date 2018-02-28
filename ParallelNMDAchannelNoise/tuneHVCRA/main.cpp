@@ -10,22 +10,34 @@ using namespace std::placeholders;
 
 // target neuron model parameters
 double E_GABA_MATURE = -80.000000;
-double E_GABA_IMMATURE = -55.000000;
+double E_GABA_IMMATURE = -55.000000; // was -55.0
 
 double E_REST_MATURE = -80.000000;
-double E_REST_IMMATURE = -65.000000;
+double E_REST_IMMATURE = -80.000000; // was -65.0
 
 double AD_MATURE = 10000.000000;
 double AD_IMMATURE = 1000.000000;
 
 double GK_MATURE = 8.000000;
-double GK_IMMATURE = 16.000000;
+double GK_IMMATURE = 6.000000; // was 16.0
 
 double GNA_MATURE = 60.000000;
-double GNA_IMMATURE = 40.000000;
+double GNA_IMMATURE = 20.000000; // was 40.0
 
 double RC_MATURE = 55.000000;
-double RC_IMMATURE = 1.000000;
+double RC_IMMATURE = 5.5000; // was 1.0
+
+double GCA_MATURE = 55.0;
+double GCA_IMMATURE = 0.0;
+
+double GCAK_MATURE = 150.0;
+double GCAK_IMMATURE = 0.0;
+
+double GSL_MATURE = 0.1;
+double GSL_IMMATURE = 0.1;
+
+double GDL_MATURE = 0.1;
+double GDL_IMMATURE = 0.1;
 
 double age = 0.0;
 
@@ -35,6 +47,10 @@ double Gk = GK_MATURE + (GK_IMMATURE - GK_MATURE) * exp(-age);
 double GNa = GNA_MATURE + (GNA_IMMATURE - GNA_MATURE) * exp(-age);
 double Ad = AD_MATURE + (AD_IMMATURE - AD_MATURE) * exp(-age);
 double Rc = RC_MATURE + (RC_IMMATURE - RC_MATURE) * exp(-age);
+double GCa = GCA_MATURE + (GCA_IMMATURE - GCA_MATURE) * exp(-age);
+double GCaK = GCAK_MATURE + (GCAK_IMMATURE - GCAK_MATURE) * exp(-age);
+double GsL = GSL_MATURE + (GSL_IMMATURE - GSL_MATURE) * exp(-age);
+double GdL = GDL_MATURE + (GDL_IMMATURE - GDL_MATURE) * exp(-age);
 	
 double I(double ampl, double start, double t)
 {
@@ -119,10 +135,17 @@ void calculate_fI(int N, double ampl_step, bool injection_to_soma, std::string d
 		
 		neuron->set_Ei(gaba_potential);
 		neuron->set_Erest(rest_potential);
+		
 		neuron->set_Gk(Gk);
 		neuron->set_GNa(GNa);
+		neuron->set_GCa(GCa);
+		neuron->set_GCaK(GCaK);
+		neuron->set_GsL(GsL);
+		neuron->set_GdL(GdL);
+		
 		neuron->set_Ad(Ad);
 		neuron->set_Rc(Rc);
+		
 		
 		
 		std::string filename_neuron;
@@ -193,10 +216,16 @@ void calculate_conductance_response(int N, double G_step, std::string dirname)
 		
 		neuron->set_Ei(gaba_potential);
 		neuron->set_Erest(rest_potential);
-		neuron->set_Gk(Gk);
-		neuron->set_GNa(GNa);
+		
 		neuron->set_Ad(Ad);
 		neuron->set_Rc(Rc);
+		
+		neuron->set_Gk(Gk);
+		neuron->set_GNa(GNa);
+		neuron->set_GCa(GCa);
+		neuron->set_GCaK(GCaK);
+		neuron->set_GsL(GsL);
+		neuron->set_GdL(GdL);
 		
 		
 		neuron->set_noise_generator(&noise_generator);
@@ -251,16 +280,21 @@ void calculate_conductance_response(int N, double G_step, std::string dirname)
 
 int main(int argc, char **argv)
 {
-	std::string dirname = "/home/eugene/Output/tuneHVCRA/age0/";
+	std::string dirname = "/mnt/hodgkin_home/eugene/Output/tuneHVCRA/passiveDendrite/NaKchange/Na20K6/";
 	
 	int N = 50;
 	double ampl_step = 0.025;
+	
 	
 	
 	std::cout << "E_GABA = " << gaba_potential << "\n"
 			  << "E_REST = " << rest_potential << "\n"
 			  << "G_K = "    << Gk             << "\n"
 			  << "G_NA = "   << GNa            << "\n"
+			  << "G_CA = "   << GCa            << "\n"
+			  << "G_CAK = "  << GCaK           << "\n"
+			  << "G_SL = "   << GsL            << "\n"
+			  << "G_DL = "   << GdL            << "\n"
 			  << "Ad = "     << Ad             << "\n"
 			  << "Rc = "     << Rc             << std::endl;
 	

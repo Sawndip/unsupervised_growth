@@ -39,7 +39,7 @@ int main(int argc, char **argv)
 		
 		int N_RA = 1000;
 		int N_I = 200;
-		int N_TR = 50;
+		int N_TR = 10;
 	
 		
 		// generate network topology

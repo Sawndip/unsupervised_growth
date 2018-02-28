@@ -16,13 +16,27 @@ import math
 
 N = 1000 # number of neurons
 
-fileDend = "/home/eugene/Output/networks/chainGrowth/testGrowthDelays/spike_times_dend_50.bin"
-fileSoma = "/home/eugene/Output/networks/chainGrowth/testGrowthDelays/spike_times_soma_50.bin"
+#fileDend = "/home/eugene/Output/networks/chainGrowth/testGrowthDelays6/spike_times_dend_1900.bin"
+#fileSoma = "/home/eugene/Output/networks/chainGrowth/testGrowthDelays6/spike_times_soma_1900.bin"
+
+fileDend = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/events2/spike_times_dend_2450.bin"
+fileSoma = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/events2/spike_times_soma_2450.bin"
+
+
+#fileDend = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/test1/test_spike_times_dend_10.bin"
+#fileSoma = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/test1/test_spike_times_soma_10.bin"
+
 
 TRIAL_DURATION = 500
 
 (trial_number, simulation_time, spike_times_dend, neuron_fired_dend) = reading.read_time_info(fileDend)
 (trial_number, simulation_time, spike_times_soma, neuron_fired_soma) = reading.read_time_info(fileSoma)
+
+print "Number of spiked neurons: ",len(spike_times_soma)
+
+for spikes, neuron_id in zip(spike_times_soma, neuron_fired_soma):
+    if len(spikes) > 6:
+        print "Neuron {0} produced {1} spikes".format(neuron_id[0], len(spikes))
 
 #print "Dedritic spikes: ", neuron_fired_dend
 #print "Dendritic spike times: ", spike_times_dend

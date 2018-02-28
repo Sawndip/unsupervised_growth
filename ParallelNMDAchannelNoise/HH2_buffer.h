@@ -40,14 +40,22 @@ public:
 	std::vector<double> get_Vd(); // get voltage of dendritic compartment
     
     // set functions
+    void set_original_model_parameters(); // set neuron model parameters as in original model (mature HVC-RA)
+    
     void set_c(double c); // set gating variable for Ca dependent K current
     void set_inh_conductance(double G); // set dendritic inhibitory conductance
 	void set_Ei(double E){_Egaba = E;}; // set GABA reverse potential
 	void set_Erest(double E){EsL = E; EdL = E;}; // set resting potential for somatic and dendritic compartments
 	void set_Rc(double R){Rc = R;}; // set coupling resistance between somatic and dendritic compartments
 	void set_Ad(double A){Ad = A;}; // set dednritic area
+	
+	void set_GCa(double G){GdCa = G;}; // set dendritic Ca conductance
+	void set_GCaK(double G){GdCaK = G;}; // set dendritic Ca-dependent potassium conductance
 	void set_Gk(double G){GsK = G;}; // set somatic potassium conductance
 	void set_GNa(double G){GsNa = G;}; // set somatic sodium conductance
+	void set_GsL(double G){GsL = G;}; // set somatic leak conductance
+	void set_GdL(double G){GdL = G;}; // set dendritic leak conductance
+	
 	
 	
 	void reset_time(); // reset time of neuron to zero
@@ -91,24 +99,24 @@ protected:
 	
 	// model parameters
 
-	const static double cm;	//	membrane capacitance
+	double cm;	//	membrane capacitance
 	double Rc;	// resistance of coupling between soma and dendrite
-	const static double As;	//	soma's membrane area
-	const static double GsL;	//	soma's leak conductance
+	double As;	//	soma's membrane area
+	double GsL;	//	soma's leak conductance
 	double GsNa;	//	soma's sodium channel conductance
 	double GsK;	//	soma's potassium channel conductance
 	double EsL;	//	soma's leaky reversal potential
-	const static double EsNa;	//	soma's sodium reversal potential
-	const static double EsK;	//	soma's potassium reversal potential
+	double EsNa;	//	soma's sodium reversal potential
+	double EsK;	//	soma's potassium reversal potential
 	double Ad;	//	dendrite's membrane area
-	const static double GdL;	//	dendrite's leak conductance
-	const static double GdCa;	//	dendrite's calcium channel conductance
-	const static double GdCaK;	//	dendrite's potassium channel conductance driven by calcium concentration
+	double GdL;	//	dendrite's leak conductance
+	double GdCa;	//	dendrite's calcium channel conductance
+	double GdCaK;	//	dendrite's potassium channel conductance driven by calcium concentration
 	double EdL;	//	dendrite's leaky reversal potential
-	const static double EdCa;	//	dendrite's calcium reversal potential
-	const static double EdK;	//	dendrite's potassium reversal potential
-	const static double tExc;	//	time constant for excitatory conductance
-	const static double tInh;	//	time constant for inhibitory conductance
+	double EdCa;	//	dendrite's calcium reversal potential
+	double EdK;	//	dendrite's potassium reversal potential
+	double tExc;	//	time constant for excitatory conductance
+	double tInh;	//	time constant for inhibitory conductance
 
 	// dynamic variables
 	double _time; // time array

@@ -10,7 +10,7 @@
 int main(int argc, char** argv)
 {
 	
-	int num_groups = 10; // number of groups with different kick strength
+	int num_groups = 20; // number of groups with different kick strength
 	int num_neurons_in_group = 10; // number of neurons in groups
 	int num_neurons = num_groups * num_neurons_in_group; // total number of HVC-RA neurons
 	
@@ -26,12 +26,13 @@ int main(int argc, char** argv)
 	std::vector<bool> b_spiked(num_neurons); // indicators that neuron already spiked
 	
 	// increment in strength of inhibitory kick
-	double dG_kick = 0.5;
+	double dG_kick = 5.0;
+	double G_start = 0.0;
 	
 	// populate arrays with kicks
 	for (int i = 0; i < num_groups; i++)
 		for (int j = 0; j < num_neurons_in_group; j++)
-			G_kick[i*num_neurons_in_group + j] = dG_kick * static_cast<double>(i);
+			G_kick[i*num_neurons_in_group + j] = G_start + dG_kick * static_cast<double>(i);
 	
 	double trial_duration = 200; // trial duration in ms
 	double timestep = 0.02; // timestep in neuron dynamics
@@ -40,9 +41,9 @@ int main(int argc, char** argv)
 	
 	// noise parameters
 	double white_noise_mean_soma = 0;
-	double white_noise_std_soma = 0.015; // 0.01
+	double white_noise_std_soma = 0.1; // 0.01
 	double white_noise_mean_dend = 0;
-	double white_noise_std_dend = 0.035; // 0.025
+	double white_noise_std_dend = 0.15; // 0.025
 	
 	Poisson_noise noise_generator;
 	unsigned seed = 1991;
@@ -50,38 +51,59 @@ int main(int argc, char** argv)
 	noise_generator.set_seed(seed);
 	
 	double E_GABA_MATURE = -80.000000;
-	double E_GABA_IMMATURE = -55.000000;
+	double E_GABA_IMMATURE = -55.000000; // was -55.0
 
 	double E_REST_MATURE = -80.000000;
-	double E_REST_IMMATURE = -65.000000;
+	double E_REST_IMMATURE = -80.000000; // was -65.0
 
 	double AD_MATURE = 10000.000000;
 	double AD_IMMATURE = 1000.000000;
 
 	double GK_MATURE = 8.000000;
-	double GK_IMMATURE = 16.000000;
+	double GK_IMMATURE = 8.000000; // was 16.0
 
 	double GNA_MATURE = 60.000000;
-	double GNA_IMMATURE = 40.000000;
+	double GNA_IMMATURE = 60.000000; // was 40.0
 
 	double RC_MATURE = 55.000000;
-	double RC_IMMATURE = 1.000000;
+	double RC_IMMATURE = 5.500000; // was 1.0
+
+	double GCA_MATURE = 55.0;
+	double GCA_IMMATURE = 0.0;
+
+	double GCAK_MATURE = 150.0;
+	double GCAK_IMMATURE = 0.0;
+
+	double GSL_MATURE = 0.1;
+	double GSL_IMMATURE = 0.1;
+
+	double GDL_MATURE = 0.1;
+	double GDL_IMMATURE = 0.1;
 
 	double age = 0.0;
-	
+
 	double gaba_potential = E_GABA_MATURE + (E_GABA_IMMATURE - E_GABA_MATURE) * exp(-age);
 	double rest_potential = E_REST_MATURE + (E_REST_IMMATURE - E_REST_MATURE) * exp(-age);
 	double Gk = GK_MATURE + (GK_IMMATURE - GK_MATURE) * exp(-age);
 	double GNa = GNA_MATURE + (GNA_IMMATURE - GNA_MATURE) * exp(-age);
 	double Ad = AD_MATURE + (AD_IMMATURE - AD_MATURE) * exp(-age);
 	double Rc = RC_MATURE + (RC_IMMATURE - RC_MATURE) * exp(-age);
+	double GCa = GCA_MATURE + (GCA_IMMATURE - GCA_MATURE) * exp(-age);
+	double GCaK = GCAK_MATURE + (GCAK_IMMATURE - GCAK_MATURE) * exp(-age);
+	double GsL = GSL_MATURE + (GSL_IMMATURE - GSL_MATURE) * exp(-age);
+	double GdL = GDL_MATURE + (GDL_IMMATURE - GDL_MATURE) * exp(-age);
 	
 	std::cout << "E_GABA = " << gaba_potential << "\n"
 			  << "E_REST = " << rest_potential << "\n"
 			  << "G_K = "    << Gk             << "\n"
 			  << "G_NA = "   << GNa            << "\n"
+			  << "G_CA = "   << GCa            << "\n"
+			  << "G_CAK = "  << GCaK           << "\n"
+			  << "G_SL = "   << GsL            << "\n"
+			  << "G_DL = "   << GdL            << "\n"
 			  << "Ad = "     << Ad             << "\n"
 			  << "Rc = "     << Rc             << std::endl;
+	
 	
 	// prepare neurons for simulations
 	for (size_t i = 0; i < neurons.size(); i++)
@@ -95,6 +117,10 @@ int main(int argc, char** argv)
 		neurons[i].set_Erest(rest_potential);
 		neurons[i].set_Gk(Gk);
 		neurons[i].set_GNa(GNa);
+		neurons[i].set_GCa(GCa);
+		neurons[i].set_GCaK(GCaK);
+		neurons[i].set_GsL(GsL);
+		neurons[i].set_GdL(GdL);
 		neurons[i].set_Ad(Ad);
 		neurons[i].set_Rc(Rc);
 	}
@@ -103,8 +129,7 @@ int main(int argc, char** argv)
 	
 	
 	
-	
-	int num_trials = 50;
+	int num_trials = 10;
 	
 	
 	
@@ -114,15 +139,16 @@ int main(int argc, char** argv)
 		
 		if (i == num_trials - 1)
 		{
-			for (int j = 0; j < num_groups; j++)
+			for (int j = 0; j < num_neurons; j++)
 			{
-				// record from the first neuron in each group
-				int neuron_id = j * num_neurons_in_group;
+				// record from all neurons
+				int neuron_id = j;
+				int inside_group_id = j % num_neurons_in_group;
 				
 				std::stringstream sstream;
 				sstream << std::fixed << std::setprecision(2) << G_kick[neuron_id];
 				
-				std::string filename = dirname + "Ginh_" + sstream.str() + ".bin";
+				std::string filename = dirname + "Ginh_" + sstream.str() + "_" + std::to_string(inside_group_id) + ".bin";
 				
 				// if file already exists, delete it
 				struct stat buf;
@@ -132,6 +158,25 @@ int main(int argc, char** argv)
 					
 				neurons[neuron_id].set_recording_full(filename);	
 			}
+			
+			//~ for (int j = 0; j < num_groups; j++)
+			//~ {
+				//~ // record from the first neuron in each group
+				//~ int neuron_id = j * num_neurons_in_group;
+				//~ 
+				//~ std::stringstream sstream;
+				//~ sstream << std::fixed << std::setprecision(2) << G_kick[neuron_id];
+				//~ 
+				//~ std::string filename = dirname + "Ginh_" + sstream.str() + ".bin";
+				//~ 
+				//~ // if file already exists, delete it
+				//~ struct stat buf;
+				//~ 
+				//~ if ( stat(filename.c_str(), &buf) == 0 )
+					//~ std::remove(filename.c_str());
+					//~ 
+				//~ neurons[neuron_id].set_recording_full(filename);	
+			//~ }
 		}
 		
 		std::fill(b_spiked.begin(), b_spiked.end(), false);

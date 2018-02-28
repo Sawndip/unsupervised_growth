@@ -9,6 +9,7 @@ Script read and writes training neurons
 
 import reading
 import struct
+import numpy as np
 
 
 def write_training_neurons(training_neurons, filename):
@@ -24,10 +25,13 @@ def write_training_neurons(training_neurons, filename):
 
 if __name__ == "__main__":
     
-    filename = "/home/eugene/Output/networks/sphere/training_neurons.bin"
+    filename = "/home/eugene/Output/networks/chainGrowth/test/training_neurons_delay2.0.bin"
+    N_RA = 1000
+    N_TR = 20    
     
-    training_neurons = [131, 95, 277, 179]
+    training_neurons = np.random.choice(N_RA, N_TR, replace=False)
     
+    print "Training neurons: ",training_neurons
     write_training_neurons(training_neurons, filename)    
     
     training_neurons_read = reading.read_training_neurons(filename)

@@ -1,0 +1,821 @@
+#!/usr/bin/env python2
+# -*- coding: utf-8 -*-
+"""
+Created on Wed Jan 24 17:17:05 2018
+
+@author: jingroup
+
+script plots differences between neuron models
+"""
+import reading
+import matplotlib.pyplot as plt
+import numpy as np
+import os
+
+G_L = 0.1
+spike_threshold = -30
+
+def calculate_spike_properties(t, V, spike_threshold):
+    """
+    Calculate spike_height, spike width and inter-spike interval for voltage-time data
+    
+    spike_height is difference between peak of membrane potential in the first spike and the lowest potential after
+    first spike
+    
+    spike width is width of the first spike at half spike amplitude
+    
+    inter-spike interval is distance between peaks of first two spikes
+    
+    """
+    
+    # find locations of spikes
+    t_threshold_crossing = t[np.diff(V >= spike_threshold)]
+
+    #print len(t_threshold_crossing)
+    #print t_threshold_crossing
+
+    if len(t_threshold_crossing) > 1:
+        Vmax_first = np.max(V[(t > t_threshold_crossing[0]) & (t <= t_threshold_crossing[1])])
+        Vmin_first = np.min(V[(t > t_threshold_crossing[1]) & (t <= t_threshold_crossing[1] + 3)])
+        
+        tind = np.argmax(V[(t > t_threshold_crossing[0]) & (t <= t_threshold_crossing[1])])
+        
+        tmax_first = t[(t > t_threshold_crossing[0]) & (t <= t_threshold_crossing[1])][tind]
+        
+        spike_amplitude = Vmax_first - Vmin_first
+        half_spike_height = (Vmax_first + Vmin_first) / 2.
+        
+        # find crossing at half spike height
+        t_hs_crossing = t[np.diff(V >= half_spike_height)]
+        
+        spike_width = t_hs_crossing[1] - t_hs_crossing[0]
+    else:
+        spike_width = -1
+        spike_amplitude = -1
+        
+    if len(t_threshold_crossing) > 3:
+        # find peak of second spike
+        
+        tind = np.argmax(V[(t > t_threshold_crossing[2]) & (t <= t_threshold_crossing[3])])
+        
+        tmax_second = t[(t > t_threshold_crossing[2]) & (t <= t_threshold_crossing[3])][tind]
+        
+        interspike_interval = tmax_second - tmax_first
+    else:
+        interspike_interval = -1
+        
+    return spike_amplitude, spike_width, interspike_interval
+
+def get_spike_properties_in_response_to_conductance_peak(dirname, spike_threshold):
+    """
+    Calculate spike width and inter-spike intervals for all files with responses to
+    excitatory conductance kick
+    """
+    files = os.listdir(dirname)
+    
+    Gkick = []
+    spike_amplitudes = []
+    spike_widths = []
+    interspike_intervals = []
+    
+    for f in files:
+        if ("RA" in f) and (not "_dend_" in f) and (not "_soma_" in f):
+            print f
+            t, Vs, Vd, Gexc_d, Ginh_d, n,\
+                 h, r, c, Ca = reading.read_hh2_buffer_full(os.path.join(dirname, f))
+    
+            spike_amplitude, spike_width, interspike_interval = calculate_spike_properties(t, Vs, spike_threshold)
+            
+            Gkick.append(np.max(Gexc_d) / G_L)
+            spike_amplitudes.append(spike_amplitude)
+            spike_widths.append(spike_width)
+            interspike_intervals.append(interspike_interval)
+    
+    Gkick, spike_amplitudes, spike_widths, interspike_intervals = zip(*sorted(zip(Gkick, spike_amplitudes, spike_widths, interspike_intervals)))
+    
+    return Gkick, spike_amplitudes, spike_widths, interspike_intervals
+
+#==============================================================================
+# ########################
+# # different Ad
+# ########################
+# file_original_soma = "/mnt/hodgkin_home/eugene/Output/tuneHVCRA/passiveDendrite/AdChange/Ad10000/fI_soma.bin"
+# file_original_dend = "/mnt/hodgkin_home/eugene/Output/tuneHVCRA/passiveDendrite/AdChange/Ad10000/fI_dend.bin"
+# 
+# file_soma_1 = "/mnt/hodgkin_home/eugene/Output/tuneHVCRA/passiveDendrite/AdChange/Ad5000/fI_soma.bin"
+# file_dend_1 = "/mnt/hodgkin_home/eugene/Output/tuneHVCRA/passiveDendrite/AdChange/Ad5000/fI_dend.bin"
+# 
+# file_soma_2 = "/mnt/hodgkin_home/eugene/Output/tuneHVCRA/passiveDendrite/AdChange/Ad2000/fI_soma.bin"
+# file_dend_2 = "/mnt/hodgkin_home/eugene/Output/tuneHVCRA/passiveDendrite/AdChange/Ad2000/fI_dend.bin"
+# 
+# file_soma_3 = "/mnt/hodgkin_home/eugene/Output/tuneHVCRA/passiveDendrite/AdChange/Ad1000/fI_soma.bin"
+# file_dend_3 = "/mnt/hodgkin_home/eugene/Output/tuneHVCRA/passiveDendrite/AdChange/Ad1000/fI_dend.bin"
+# 
+# file_soma_4 = "/mnt/hodgkin_home/eugene/Output/tuneHVCRA/passiveDendrite/AdChange/Ad500/fI_soma.bin"
+# file_dend_4 = "/mnt/hodgkin_home/eugene/Output/tuneHVCRA/passiveDendrite/AdChange/Ad500/fI_dend.bin"
+# 
+# 
+# label_original = "Ad = 10000 $\mu m^2$"
+# label_1 = "Ad = 5000 $\mu m^2$"
+# label_2 = "Ad = 2000 $\mu m^2$"
+# label_3 = "Ad = 1000 $\mu m^2$"
+# label_4 = "Ad = 500 $\mu m^2$"
+# 
+# ampl_soma_original, num_spikes_soma_original, _, = reading.read_fI_HVCRA(file_original_soma)
+# ampl_dend_original, num_spikes_dend_original, _, = reading.read_fI_HVCRA(file_original_dend)
+# 
+# ampl_soma_1, num_spikes_soma_1, _, = reading.read_fI_HVCRA(file_soma_1)
+# ampl_dend_1, num_spikes_dend_1, _, = reading.read_fI_HVCRA(file_dend_1)
+# 
+# ampl_soma_2, num_spikes_soma_2, _, = reading.read_fI_HVCRA(file_soma_2)
+# ampl_dend_2, num_spikes_dend_2, _, = reading.read_fI_HVCRA(file_dend_2)
+# 
+# ampl_soma_3, num_spikes_soma_3, _, = reading.read_fI_HVCRA(file_soma_3)
+# ampl_dend_3, num_spikes_dend_3, _, = reading.read_fI_HVCRA(file_dend_3)
+# 
+# ampl_soma_4, num_spikes_soma_4, _, = reading.read_fI_HVCRA(file_soma_4)
+# ampl_dend_4, num_spikes_dend_4, _, = reading.read_fI_HVCRA(file_dend_4)
+# 
+# 
+# plt.figure()
+# 
+# plt.plot(ampl_soma_original, num_spikes_soma_original, '-bo', label=label_original)
+# plt.plot(ampl_soma_1, num_spikes_soma_1, '-ro', label=label_1)
+# plt.plot(ampl_soma_2, num_spikes_soma_2, '-co', label=label_2)
+# plt.plot(ampl_soma_3, num_spikes_soma_3, '-go', label=label_3)
+# plt.plot(ampl_soma_4, num_spikes_soma_4, '-mo', label=label_4)
+# 
+# 
+# plt.xlabel('I (nA)')
+# plt.ylabel('# of spikes')
+# plt.title('Injection to soma')
+# plt.legend()
+# 
+# plt.figure()
+# 
+# plt.plot(ampl_dend_original, num_spikes_dend_original, '-bo', label=label_original)
+# plt.plot(ampl_dend_1, num_spikes_dend_1, '-ro', label=label_1)
+# plt.plot(ampl_dend_2, num_spikes_dend_2, '-co', label=label_2)
+# plt.plot(ampl_dend_3, num_spikes_dend_3, '-go', label=label_3)
+# plt.plot(ampl_dend_4, num_spikes_dend_4, '-mo', label=label_4)
+# 
+# plt.xlabel('I (nA)')
+# plt.ylabel('# of spikes')
+# plt.title('Injection to dend')
+# plt.legend()
+# 
+# 
+# ########################
+# # different Rc
+# ########################
+# file_original_soma = "/mnt/hodgkin_home/eugene/Output/tuneHVCRA/passiveDendrite/RcChange/Rc55/fI_soma.bin"
+# file_original_dend = "/mnt/hodgkin_home/eugene/Output/tuneHVCRA/passiveDendrite/RcChange/Rc55/fI_dend.bin"
+# 
+# file_soma_1 = "/mnt/hodgkin_home/eugene/Output/tuneHVCRA/passiveDendrite/RcChange/Rc27.5/fI_soma.bin"
+# file_dend_1 = "/mnt/hodgkin_home/eugene/Output/tuneHVCRA/passiveDendrite/RcChange/Rc27.5/fI_dend.bin"
+# 
+# file_soma_2 = "/mnt/hodgkin_home/eugene/Output/tuneHVCRA/passiveDendrite/RcChange/Rc11/fI_soma.bin"
+# file_dend_2 = "/mnt/hodgkin_home/eugene/Output/tuneHVCRA/passiveDendrite/RcChange/Rc11/fI_dend.bin"
+# 
+# file_soma_3 = "/mnt/hodgkin_home/eugene/Output/tuneHVCRA/passiveDendrite/RcChange/Rc5.5/fI_soma.bin"
+# file_dend_3 = "/mnt/hodgkin_home/eugene/Output/tuneHVCRA/passiveDendrite/RcChange/Rc5.5/fI_dend.bin"
+# 
+# file_soma_4 = "/mnt/hodgkin_home/eugene/Output/tuneHVCRA/passiveDendrite/RcChange/Rc2.25/fI_soma.bin"
+# file_dend_4 = "/mnt/hodgkin_home/eugene/Output/tuneHVCRA/passiveDendrite/RcChange/Rc2.25/fI_dend.bin"
+# 
+# 
+# label_original = "Rc = 55 $M \Omega$"
+# label_1 = "Rc = 22 $M \Omega$"
+# label_2 = "Rc = 11 $M \Omega$"
+# label_3 = "Rc = 5.5 $M \Omega$"
+# label_4 = "Rc = 2.25 $M \Omega$"
+# 
+# ampl_soma_original, num_spikes_soma_original, _, = reading.read_fI_HVCRA(file_original_soma)
+# ampl_dend_original, num_spikes_dend_original, _, = reading.read_fI_HVCRA(file_original_dend)
+# 
+# ampl_soma_1, num_spikes_soma_1, _, = reading.read_fI_HVCRA(file_soma_1)
+# ampl_dend_1, num_spikes_dend_1, _, = reading.read_fI_HVCRA(file_dend_1)
+# 
+# ampl_soma_2, num_spikes_soma_2, _, = reading.read_fI_HVCRA(file_soma_2)
+# ampl_dend_2, num_spikes_dend_2, _, = reading.read_fI_HVCRA(file_dend_2)
+# 
+# ampl_soma_3, num_spikes_soma_3, _, = reading.read_fI_HVCRA(file_soma_3)
+# ampl_dend_3, num_spikes_dend_3, _, = reading.read_fI_HVCRA(file_dend_3)
+# 
+# ampl_soma_4, num_spikes_soma_4, _, = reading.read_fI_HVCRA(file_soma_4)
+# ampl_dend_4, num_spikes_dend_4, _, = reading.read_fI_HVCRA(file_dend_4)
+# 
+# 
+# plt.figure()
+# 
+# plt.plot(ampl_soma_original, num_spikes_soma_original, '-bo', label=label_original)
+# plt.plot(ampl_soma_1, num_spikes_soma_1, '-ro', label=label_1)
+# plt.plot(ampl_soma_2, num_spikes_soma_2, '-co', label=label_2)
+# plt.plot(ampl_soma_3, num_spikes_soma_3, '-go', label=label_3)
+# plt.plot(ampl_soma_4, num_spikes_soma_4, '-mo', label=label_4)
+# 
+# 
+# plt.xlabel('I (nA)')
+# plt.ylabel('# of spikes')
+# plt.title('Injection to soma')
+# plt.legend()
+# 
+# plt.figure()
+# 
+# plt.plot(ampl_dend_original, num_spikes_dend_original, '-bo', label=label_original)
+# plt.plot(ampl_dend_1, num_spikes_dend_1, '-ro', label=label_1)
+# plt.plot(ampl_dend_2, num_spikes_dend_2, '-co', label=label_2)
+# plt.plot(ampl_dend_3, num_spikes_dend_3, '-go', label=label_3)
+# plt.plot(ampl_dend_4, num_spikes_dend_4, '-mo', label=label_4)
+# 
+# plt.xlabel('I (nA)')
+# plt.ylabel('# of spikes')
+# plt.title('Injection to dend')
+# plt.legend()
+# 
+# ########################
+# # different Ad and Rc
+# ########################
+# file_original_soma = "/mnt/hodgkin_home/eugene/Output/tuneHVCRA/passiveDendrite/AdRcChange/Ad10000Rc55/fI_soma.bin"
+# file_original_dend = "/mnt/hodgkin_home/eugene/Output/tuneHVCRA/passiveDendrite/AdRcChange/Ad10000Rc55/fI_dend.bin"
+# 
+# file_soma_1 = "/mnt/hodgkin_home/eugene/Output/tuneHVCRA/passiveDendrite/AdRcChange/Ad5000Rc27.5/fI_soma.bin"
+# file_dend_1 = "/mnt/hodgkin_home/eugene/Output/tuneHVCRA/passiveDendrite/AdRcChange/Ad5000Rc27.5/fI_dend.bin"
+# 
+# file_soma_2 = "/mnt/hodgkin_home/eugene/Output/tuneHVCRA/passiveDendrite/AdRcChange/Ad2000Rc11/fI_soma.bin"
+# file_dend_2 = "/mnt/hodgkin_home/eugene/Output/tuneHVCRA/passiveDendrite/AdRcChange/Ad2000Rc11/fI_dend.bin"
+# 
+# file_soma_3 = "/mnt/hodgkin_home/eugene/Output/tuneHVCRA/passiveDendrite/AdRcChange/Ad1000Rc5.5/fI_soma.bin"
+# file_dend_3 = "/mnt/hodgkin_home/eugene/Output/tuneHVCRA/passiveDendrite/AdRcChange/Ad1000Rc5.5/fI_dend.bin"
+# 
+# file_soma_4 = "/mnt/hodgkin_home/eugene/Output/tuneHVCRA/passiveDendrite/AdRcChange/Ad500Rc2.25/fI_soma.bin"
+# file_dend_4 = "/mnt/hodgkin_home/eugene/Output/tuneHVCRA/passiveDendrite/AdRcChange/Ad500Rc2.25/fI_dend.bin"
+# 
+# 
+# label_original = "Ad = 10000 $\mu m^2$; Rc = 55 $M \Omega$"
+# label_1 = "Ad = 5000 $\mu m^2$; Rc = 27.5 $M \Omega$"
+# label_2 = "Ad = 2000 $\mu m^2$; Rc = 11 $M \Omega$"
+# label_3 = "Ad = 1000 $\mu m^2$; Rc = 5.5 $M \Omega$"
+# label_4 = "Ad = 500 $\mu m^2$; Rc = 2.25 $M \Omega$"
+# 
+# ampl_soma_original, num_spikes_soma_original, _, = reading.read_fI_HVCRA(file_original_soma)
+# ampl_dend_original, num_spikes_dend_original, _, = reading.read_fI_HVCRA(file_original_dend)
+# 
+# ampl_soma_1, num_spikes_soma_1, _, = reading.read_fI_HVCRA(file_soma_1)
+# ampl_dend_1, num_spikes_dend_1, _, = reading.read_fI_HVCRA(file_dend_1)
+# 
+# ampl_soma_2, num_spikes_soma_2, _, = reading.read_fI_HVCRA(file_soma_2)
+# ampl_dend_2, num_spikes_dend_2, _, = reading.read_fI_HVCRA(file_dend_2)
+# 
+# ampl_soma_3, num_spikes_soma_3, _, = reading.read_fI_HVCRA(file_soma_3)
+# ampl_dend_3, num_spikes_dend_3, _, = reading.read_fI_HVCRA(file_dend_3)
+# 
+# ampl_soma_4, num_spikes_soma_4, _, = reading.read_fI_HVCRA(file_soma_4)
+# ampl_dend_4, num_spikes_dend_4, _, = reading.read_fI_HVCRA(file_dend_4)
+# 
+# 
+# plt.figure()
+# 
+# plt.plot(ampl_soma_original, num_spikes_soma_original, '-bo', label=label_original)
+# plt.plot(ampl_soma_1, num_spikes_soma_1, '-ro', label=label_1)
+# plt.plot(ampl_soma_2, num_spikes_soma_2, '-co', label=label_2)
+# plt.plot(ampl_soma_3, num_spikes_soma_3, '-go', label=label_3)
+# plt.plot(ampl_soma_4, num_spikes_soma_4, '-mo', label=label_4)
+# 
+# 
+# plt.xlabel('I (nA)')
+# plt.ylabel('# of spikes')
+# plt.title('Injection to soma')
+# plt.legend()
+# 
+# plt.figure()
+# 
+# plt.plot(ampl_dend_original, num_spikes_dend_original, '-bo', label=label_original)
+# plt.plot(ampl_dend_1, num_spikes_dend_1, '-ro', label=label_1)
+# plt.plot(ampl_dend_2, num_spikes_dend_2, '-co', label=label_2)
+# plt.plot(ampl_dend_3, num_spikes_dend_3, '-go', label=label_3)
+# plt.plot(ampl_dend_4, num_spikes_dend_4, '-mo', label=label_4)
+# 
+# plt.xlabel('I (nA)')
+# plt.ylabel('# of spikes')
+# plt.title('Injection to dend')
+# plt.legend()
+# 
+# 
+#==============================================================================
+
+#==============================================================================
+# ########################
+# # different Ad
+# ########################
+# file_original_soma = "/home/eugene/Output/tuneHVCRA/AdChange/Ad10000/fI_soma.bin"
+# file_original_dend = "/home/eugene/Output/tuneHVCRA/AdChange/Ad10000/fI_dend.bin"
+# 
+# file_soma_1 = "/home/eugene/Output/tuneHVCRA/AdChange/Ad500/fI_soma.bin"
+# file_dend_1 = "/home/eugene/Output/tuneHVCRA/AdChange/Ad500/fI_dend.bin"
+# 
+# file_soma_2 = "/home/eugene/Output/tuneHVCRA/AdChange/Ad1000/fI_soma.bin"
+# file_dend_2 = "/home/eugene/Output/tuneHVCRA/AdChange/Ad1000/fI_dend.bin"
+# 
+# file_soma_3 = "/home/eugene/Output/tuneHVCRA/AdChange/Ad2000/fI_soma.bin"
+# file_dend_3 = "/home/eugene/Output/tuneHVCRA/AdChange/Ad2000/fI_dend.bin"
+# 
+# file_soma_4 = "/home/eugene/Output/tuneHVCRA/AdChange/Ad50000/fI_soma.bin"
+# file_dend_4 = "/home/eugene/Output/tuneHVCRA/AdChange/Ad50000/fI_dend.bin"
+# 
+# 
+# label_original = "Ad = 10000 $\mu m^2$; original"
+# label_1 = "Ad = 500 $\mu m^2$"
+# label_2 = "Ad = 1000 $\mu m^2$"
+# label_3 = "Ad = 2000 $\mu m^2$"
+# label_4 = "Ad = 50000 $\mu m^2$"
+# 
+# ampl_soma_original, num_spikes_soma_original, _, = reading.read_fI_HVCRA(file_original_soma)
+# ampl_dend_original, num_spikes_dend_original, _, = reading.read_fI_HVCRA(file_original_dend)
+# 
+# ampl_soma_1, num_spikes_soma_1, _, = reading.read_fI_HVCRA(file_soma_1)
+# ampl_dend_1, num_spikes_dend_1, _, = reading.read_fI_HVCRA(file_dend_1)
+# 
+# ampl_soma_2, num_spikes_soma_2, _, = reading.read_fI_HVCRA(file_soma_2)
+# ampl_dend_2, num_spikes_dend_2, _, = reading.read_fI_HVCRA(file_dend_2)
+# 
+# ampl_soma_3, num_spikes_soma_3, _, = reading.read_fI_HVCRA(file_soma_3)
+# ampl_dend_3, num_spikes_dend_3, _, = reading.read_fI_HVCRA(file_dend_3)
+# 
+# ampl_soma_4, num_spikes_soma_4, _, = reading.read_fI_HVCRA(file_soma_4)
+# ampl_dend_4, num_spikes_dend_4, _, = reading.read_fI_HVCRA(file_dend_4)
+# 
+# 
+# plt.figure()
+# 
+# plt.plot(ampl_soma_original, num_spikes_soma_original, '-bo', label=label_original)
+# plt.plot(ampl_soma_1, num_spikes_soma_1, '-ro', label=label_1)
+# plt.plot(ampl_soma_2, num_spikes_soma_2, '-co', label=label_2)
+# plt.plot(ampl_soma_3, num_spikes_soma_3, '-go', label=label_3)
+# plt.plot(ampl_soma_4, num_spikes_soma_4, '-mo', label=label_4)
+# 
+# 
+# plt.xlabel('I (nA)')
+# plt.ylabel('# of spikes')
+# plt.title('Injection to soma')
+# plt.legend()
+# 
+# plt.figure()
+# 
+# plt.plot(ampl_dend_original, num_spikes_dend_original, '-bo', label=label_original)
+# plt.plot(ampl_dend_1, num_spikes_dend_1, '-ro', label=label_1)
+# plt.plot(ampl_dend_2, num_spikes_dend_2, '-co', label=label_2)
+# plt.plot(ampl_dend_3, num_spikes_dend_3, '-go', label=label_3)
+# plt.plot(ampl_dend_4, num_spikes_dend_4, '-mo', label=label_4)
+# 
+# plt.xlabel('I (nA)')
+# plt.ylabel('# of spikes')
+# plt.title('Injection to dend')
+# plt.legend()
+#==============================================================================
+
+#==============================================================================
+# ######################
+# ##### different Gk
+# ######################
+# 
+# file_original_soma = "/home/eugene/Output/tuneHVCRA/KChange/Gk8/fI_soma.bin"
+# file_original_dend = "/home/eugene/Output/tuneHVCRA/KChange/Gk8/fI_dend.bin"
+# 
+# file_soma_1 = "/home/eugene/Output/tuneHVCRA/KChange/Gk6/fI_soma.bin"
+# file_dend_1 = "/home/eugene/Output/tuneHVCRA/KChange/Gk6/fI_dend.bin"
+# 
+# file_soma_2 = "/home/eugene/Output/tuneHVCRA/KChange/Gk16/fI_soma.bin"
+# file_dend_2 = "/home/eugene/Output/tuneHVCRA/KChange/Gk16/fI_dend.bin"
+# 
+# file_soma_3 = "/home/eugene/Output/tuneHVCRA/KChange/Gk20/fI_soma.bin"
+# file_dend_3 = "/home/eugene/Output/tuneHVCRA/KChange/Gk20/fI_dend.bin"
+# 
+# file_soma_4 = "/home/eugene/Output/tuneHVCRA/KChange/Gk32/fI_soma.bin"
+# file_dend_4 = "/home/eugene/Output/tuneHVCRA/KChange/Gk32/fI_dend.bin"
+# 
+# 
+# label_original = "$G_K = 8 mS/cm^2$"
+# label_1 = "$G_K = 6 mS/cm^2$"
+# label_2 = "$G_K = 16 mS/cm^2$"
+# label_3 = "$G_K = 20 mS/cm^2$"
+# label_4 = "$G_K = 32 mS/cm^2$"
+# 
+# ampl_soma_original, num_spikes_soma_original, _, = reading.read_fI_HVCRA(file_original_soma)
+# ampl_dend_original, num_spikes_dend_original, _, = reading.read_fI_HVCRA(file_original_dend)
+# 
+# ampl_soma_1, num_spikes_soma_1, _, = reading.read_fI_HVCRA(file_soma_1)
+# ampl_dend_1, num_spikes_dend_1, _, = reading.read_fI_HVCRA(file_dend_1)
+# 
+# ampl_soma_2, num_spikes_soma_2, _, = reading.read_fI_HVCRA(file_soma_2)
+# ampl_dend_2, num_spikes_dend_2, _, = reading.read_fI_HVCRA(file_dend_2)
+# 
+# ampl_soma_3, num_spikes_soma_3, _, = reading.read_fI_HVCRA(file_soma_3)
+# ampl_dend_3, num_spikes_dend_3, _, = reading.read_fI_HVCRA(file_dend_3)
+# 
+# ampl_soma_4, num_spikes_soma_4, _, = reading.read_fI_HVCRA(file_soma_4)
+# ampl_dend_4, num_spikes_dend_4, _, = reading.read_fI_HVCRA(file_dend_4)
+# 
+# 
+# plt.figure()
+# 
+# plt.plot(ampl_soma_original, num_spikes_soma_original, '-bo', label=label_original)
+# plt.plot(ampl_soma_1, num_spikes_soma_1, '-ro', label=label_1)
+# plt.plot(ampl_soma_2, num_spikes_soma_2, '-co', label=label_2)
+# plt.plot(ampl_soma_3, num_spikes_soma_3, '-go', label=label_3)
+# plt.plot(ampl_soma_4, num_spikes_soma_4, '-mo', label=label_4)
+# 
+# 
+# plt.xlabel('I (nA)')
+# plt.ylabel('# of spikes')
+# plt.title('Injection to soma')
+# plt.legend()
+# 
+# plt.figure()
+# 
+# plt.plot(ampl_dend_original, num_spikes_dend_original, '-bo', label=label_original)
+# plt.plot(ampl_dend_1, num_spikes_dend_1, '-ro', label=label_1)
+# plt.plot(ampl_dend_2, num_spikes_dend_2, '-co', label=label_2)
+# plt.plot(ampl_dend_3, num_spikes_dend_3, '-go', label=label_3)
+# plt.plot(ampl_dend_4, num_spikes_dend_4, '-mo', label=label_4)
+# 
+# plt.xlabel('I (nA)')
+# plt.ylabel('# of spikes')
+# plt.title('Injection to dend')
+# plt.legend()
+#==============================================================================
+
+
+
+
+
+#==============================================================================
+# ######################
+# ##### different Gk. Spike properties
+# ######################
+# 
+# dir_original = "/home/eugene/Output/tuneHVCRA/KChange/Gk8/"
+# 
+# dir_1 = "/home/eugene/Output/tuneHVCRA/KChange/Gk6/"
+# dir_2 = "/home/eugene/Output/tuneHVCRA/KChange/Gk16/"
+# dir_3 = "/home/eugene/Output/tuneHVCRA/KChange/Gk20/"
+# dir_4 = "/home/eugene/Output/tuneHVCRA/KChange/Gk32/"
+# 
+# 
+# 
+# label_original = "$G_K = 8 mS/cm^2$"
+# label_1 = "$G_K = 6 mS/cm^2$"
+# label_2 = "$G_K = 16 mS/cm^2$"
+# label_3 = "$G_K = 20 mS/cm^2$"
+# label_4 = "$G_K = 32 mS/cm^2$"
+# 
+# Gkick_original, spike_amplitude_original, spike_width_original, interspike_interval_original = \
+#                 get_spike_properties_in_response_to_conductance_peak(dir_original, spike_threshold)
+#                 
+# Gkick_1, spike_amplitude_1, spike_width_1, interspike_interval_1 = \
+#                 get_spike_properties_in_response_to_conductance_peak(dir_1, spike_threshold)
+#                 
+# Gkick_2, spike_amplitude_2, spike_width_2, interspike_interval_2 = \
+#                 get_spike_properties_in_response_to_conductance_peak(dir_2, spike_threshold)               
+# 
+# Gkick_3, spike_amplitude_3, spike_width_3, interspike_interval_3 = \
+#                 get_spike_properties_in_response_to_conductance_peak(dir_3, spike_threshold)
+# 
+# Gkick_4, spike_amplitude_4, spike_width_4, interspike_interval_4 = \
+#                 get_spike_properties_in_response_to_conductance_peak(dir_4, spike_threshold)
+# 
+# 
+# plt.figure()
+# 
+# f = plt.figure()
+# 
+# ax1 = f.add_subplot(311)
+# 
+# ax1.plot(Gkick_original, spike_amplitude_original, '-bo', label=label_original)
+# ax1.plot(Gkick_1, spike_amplitude_1, '-ro', label=label_1)
+# ax1.plot(Gkick_2, spike_amplitude_2, '-co', label=label_2)
+# ax1.plot(Gkick_3, spike_amplitude_3, '-go', label=label_3)
+# ax1.plot(Gkick_4, spike_amplitude_4, '-mo', label=label_4)
+# 
+# ax1.set_ylabel("spike amplitude (mV)")
+# ax1.legend()
+# 
+# ax2 = f.add_subplot(312)
+# 
+# ax2.plot(Gkick_original, spike_width_original, '-bo', label=label_original)
+# ax2.plot(Gkick_1, spike_width_1, '-ro', label=label_1)
+# ax2.plot(Gkick_2, spike_width_2, '-co', label=label_2)
+# ax2.plot(Gkick_3, spike_width_3, '-go', label=label_3)
+# ax2.plot(Gkick_4, spike_width_4, '-mo', label=label_4)
+# 
+# ax2.set_ylabel("spike width (ms)")
+# ax2.legend()
+# 
+# ax3 = f.add_subplot(313)
+# 
+# ax3.plot(Gkick_original, interspike_interval_original, '-bo', label=label_original)
+# ax3.plot(Gkick_1, interspike_interval_1, '-ro', label=label_1)
+# ax3.plot(Gkick_2, interspike_interval_2, '-co', label=label_2)
+# ax3.plot(Gkick_3, interspike_interval_3, '-go', label=label_3)
+# ax3.plot(Gkick_4, interspike_interval_4, '-mo', label=label_4)
+# 
+# ax3.set_ylabel("ISI (ms)")
+# ax3.set_xlabel("Gkick ($G_L$)")
+# ax3.legend()
+# 
+#==============================================================================
+
+######################
+##### different GNa and GK
+######################
+
+file_original_soma = "/mnt/hodgkin_home/eugene/Output/tuneHVCRA/passiveDendrite/NaKchange/Na60K8/fI_soma.bin"
+file_original_dend = "/mnt/hodgkin_home/eugene/Output/tuneHVCRA/passiveDendrite/NaKchange/Na60K8/fI_soma.bin"
+
+file_soma_1 = "/mnt/hodgkin_home/eugene/Output/tuneHVCRA/passiveDendrite/NaKchange/Na40K8/fI_soma.bin"
+file_dend_1 = "/mnt/hodgkin_home/eugene/Output/tuneHVCRA/passiveDendrite/NaKchange/Na40K8/fI_soma.bin"
+
+file_soma_2 = "/mnt/hodgkin_home/eugene/Output/tuneHVCRA/passiveDendrite/NaKchange/Na20K8/fI_soma.bin"
+file_dend_2 = "/mnt/hodgkin_home/eugene/Output/tuneHVCRA/passiveDendrite/NaKchange/Na20K8/fI_soma.bin"
+
+file_soma_3 = "/mnt/hodgkin_home/eugene/Output/tuneHVCRA/passiveDendrite/NaKchange/Na60K4/fI_soma.bin"
+file_dend_3 = "/mnt/hodgkin_home/eugene/Output/tuneHVCRA/passiveDendrite/NaKchange/Na60K4/fI_soma.bin"
+
+file_soma_4 = "/mnt/hodgkin_home/eugene/Output/tuneHVCRA/passiveDendrite/NaKchange/Na20K4/fI_soma.bin"
+file_dend_4 = "/mnt/hodgkin_home/eugene/Output/tuneHVCRA/passiveDendrite/NaKchange/Na20K4/fI_soma.bin"
+
+
+label_original = "$G_{Na} = 60 mS/cm^2$; $G_{K} = 8 mS/cm^2$"
+label_1 = "$G_{Na} = 40 mS/cm^2$; $G_{K} = 8 mS/cm^2$"
+label_2 = "$G_{Na} = 20 mS/cm^2$; $G_{K} = 8 mS/cm^2$"
+label_3 = "$G_{Na} = 60 mS/cm^2$; $G_{K} = 4 mS/cm^2$"
+label_4 = "$G_{Na} = 20 mS/cm^2$; $G_{K} = 4 mS/cm^2$"
+
+ampl_soma_original, num_spikes_soma_original, _, = reading.read_fI_HVCRA(file_original_soma)
+ampl_dend_original, num_spikes_dend_original, _, = reading.read_fI_HVCRA(file_original_dend)
+
+ampl_soma_1, num_spikes_soma_1, _, = reading.read_fI_HVCRA(file_soma_1)
+ampl_dend_1, num_spikes_dend_1, _, = reading.read_fI_HVCRA(file_dend_1)
+
+ampl_soma_2, num_spikes_soma_2, _, = reading.read_fI_HVCRA(file_soma_2)
+ampl_dend_2, num_spikes_dend_2, _, = reading.read_fI_HVCRA(file_dend_2)
+
+ampl_soma_3, num_spikes_soma_3, _, = reading.read_fI_HVCRA(file_soma_3)
+ampl_dend_3, num_spikes_dend_3, _, = reading.read_fI_HVCRA(file_dend_3)
+
+ampl_soma_4, num_spikes_soma_4, _, = reading.read_fI_HVCRA(file_soma_4)
+ampl_dend_4, num_spikes_dend_4, _, = reading.read_fI_HVCRA(file_dend_4)
+
+
+plt.figure()
+
+plt.plot(ampl_soma_original, num_spikes_soma_original, '-bo', label=label_original)
+plt.plot(ampl_soma_1, num_spikes_soma_1, '-ro', label=label_1)
+plt.plot(ampl_soma_2, num_spikes_soma_2, '-co', label=label_2)
+plt.plot(ampl_soma_3, num_spikes_soma_3, '-go', label=label_3)
+plt.plot(ampl_soma_4, num_spikes_soma_4, '-mo', label=label_4)
+
+
+plt.xlabel('I (nA)')
+plt.ylabel('# of spikes')
+plt.title('Injection to soma')
+plt.legend()
+
+plt.figure()
+
+plt.plot(ampl_dend_original, num_spikes_dend_original, '-bo', label=label_original)
+plt.plot(ampl_dend_1, num_spikes_dend_1, '-ro', label=label_1)
+plt.plot(ampl_dend_2, num_spikes_dend_2, '-co', label=label_2)
+plt.plot(ampl_dend_3, num_spikes_dend_3, '-go', label=label_3)
+plt.plot(ampl_dend_4, num_spikes_dend_4, '-mo', label=label_4)
+
+plt.xlabel('I (nA)')
+plt.ylabel('# of spikes')
+plt.title('Injection to dend')
+plt.legend()
+
+#==============================================================================
+# ######################
+# ##### different GNa
+# ######################
+# 
+# file_original_soma = "/home/eugene/Output/tuneHVCRA/NaChange/GNa60/fI_soma.bin"
+# file_original_dend = "/home/eugene/Output/tuneHVCRA/NaChange/GNa60/fI_dend.bin"
+# 
+# file_soma_1 = "/home/eugene/Output/tuneHVCRA/NaChange/GNa50/fI_soma.bin"
+# file_dend_1 = "/home/eugene/Output/tuneHVCRA/NaChange/GNa50/fI_dend.bin"
+# 
+# file_soma_2 = "/home/eugene/Output/tuneHVCRA/NaChange/GNa40/fI_soma.bin"
+# file_dend_2 = "/home/eugene/Output/tuneHVCRA/NaChange/GNa40/fI_dend.bin"
+# 
+# file_soma_3 = "/home/eugene/Output/tuneHVCRA/NaChange/GNa30/fI_soma.bin"
+# file_dend_3 = "/home/eugene/Output/tuneHVCRA/NaChange/GNa30/fI_dend.bin"
+# 
+# file_soma_4 = "/home/eugene/Output/tuneHVCRA/NaChange/GNa20/fI_soma.bin"
+# file_dend_4 = "/home/eugene/Output/tuneHVCRA/NaChange/GNa20/fI_dend.bin"
+# 
+# 
+# label_original = "$G_{Na} = 60 mS/cm^2$"
+# label_1 = "$G_{Na} = 50 mS/cm^2$"
+# label_2 = "$G_{Na} = 40 mS/cm^2$"
+# label_3 = "$G_{Na} = 30 mS/cm^2$"
+# label_4 = "$G_{Na} = 20 mS/cm^2$"
+# 
+# ampl_soma_original, num_spikes_soma_original, _, = reading.read_fI_HVCRA(file_original_soma)
+# ampl_dend_original, num_spikes_dend_original, _, = reading.read_fI_HVCRA(file_original_dend)
+# 
+# ampl_soma_1, num_spikes_soma_1, _, = reading.read_fI_HVCRA(file_soma_1)
+# ampl_dend_1, num_spikes_dend_1, _, = reading.read_fI_HVCRA(file_dend_1)
+# 
+# ampl_soma_2, num_spikes_soma_2, _, = reading.read_fI_HVCRA(file_soma_2)
+# ampl_dend_2, num_spikes_dend_2, _, = reading.read_fI_HVCRA(file_dend_2)
+# 
+# ampl_soma_3, num_spikes_soma_3, _, = reading.read_fI_HVCRA(file_soma_3)
+# ampl_dend_3, num_spikes_dend_3, _, = reading.read_fI_HVCRA(file_dend_3)
+# 
+# ampl_soma_4, num_spikes_soma_4, _, = reading.read_fI_HVCRA(file_soma_4)
+# ampl_dend_4, num_spikes_dend_4, _, = reading.read_fI_HVCRA(file_dend_4)
+# 
+# 
+# plt.figure()
+# 
+# plt.plot(ampl_soma_original, num_spikes_soma_original, '-bo', label=label_original)
+# plt.plot(ampl_soma_1, num_spikes_soma_1, '-ro', label=label_1)
+# plt.plot(ampl_soma_2, num_spikes_soma_2, '-co', label=label_2)
+# plt.plot(ampl_soma_3, num_spikes_soma_3, '-go', label=label_3)
+# plt.plot(ampl_soma_4, num_spikes_soma_4, '-mo', label=label_4)
+# 
+# 
+# plt.xlabel('I (nA)')
+# plt.ylabel('# of spikes')
+# plt.title('Injection to soma')
+# plt.legend()
+# 
+# plt.figure()
+# 
+# plt.plot(ampl_dend_original, num_spikes_dend_original, '-bo', label=label_original)
+# plt.plot(ampl_dend_1, num_spikes_dend_1, '-ro', label=label_1)
+# plt.plot(ampl_dend_2, num_spikes_dend_2, '-co', label=label_2)
+# plt.plot(ampl_dend_3, num_spikes_dend_3, '-go', label=label_3)
+# plt.plot(ampl_dend_4, num_spikes_dend_4, '-mo', label=label_4)
+# 
+# plt.xlabel('I (nA)')
+# plt.ylabel('# of spikes')
+# plt.title('Injection to dend')
+# plt.legend()
+#==============================================================================
+
+
+
+#==============================================================================
+# ######################
+# ##### different GNa. Spike properties
+# ######################
+# 
+# dir_original = "/home/eugene/Output/tuneHVCRA/NaChange/GNa60/"
+# 
+# dir_1 = "/home/eugene/Output/tuneHVCRA/NaChange/GNa50/"
+# dir_2 = "/home/eugene/Output/tuneHVCRA/NaChange/GNa40/"
+# dir_3 = "/home/eugene/Output/tuneHVCRA/NaChange/GNa30/"
+# dir_4 = "/home/eugene/Output/tuneHVCRA/NaChange/GNa20/"
+# 
+# 
+# 
+# label_original = "$G_{Na} = 60 mS/cm^2$"
+# label_1 = "$G_{Na} = 50 mS/cm^2$"
+# label_2 = "$G_{Na} = 40 mS/cm^2$"
+# label_3 = "$G_{Na} = 30 mS/cm^2$"
+# label_4 = "$G_{Na} = 20 mS/cm^2$"
+# 
+# Gkick_original, spike_amplitude_original, spike_width_original, interspike_interval_original = \
+#                 get_spike_properties_in_response_to_conductance_peak(dir_original, spike_threshold)
+#                 
+# Gkick_1, spike_amplitude_1, spike_width_1, interspike_interval_1 = \
+#                 get_spike_properties_in_response_to_conductance_peak(dir_1, spike_threshold)
+#                 
+# Gkick_2, spike_amplitude_2, spike_width_2, interspike_interval_2 = \
+#                 get_spike_properties_in_response_to_conductance_peak(dir_2, spike_threshold)               
+# 
+# Gkick_3, spike_amplitude_3, spike_width_3, interspike_interval_3 = \
+#                 get_spike_properties_in_response_to_conductance_peak(dir_3, spike_threshold)
+# 
+# Gkick_4, spike_amplitude_4, spike_width_4, interspike_interval_4 = \
+#                 get_spike_properties_in_response_to_conductance_peak(dir_4, spike_threshold)
+# 
+# 
+# plt.figure()
+# 
+# f = plt.figure()
+# 
+# ax1 = f.add_subplot(311)
+# 
+# ax1.plot(Gkick_original, spike_amplitude_original, '-bo', label=label_original)
+# ax1.plot(Gkick_1, spike_amplitude_1, '-ro', label=label_1)
+# ax1.plot(Gkick_2, spike_amplitude_2, '-co', label=label_2)
+# ax1.plot(Gkick_3, spike_amplitude_3, '-go', label=label_3)
+# ax1.plot(Gkick_4, spike_amplitude_4, '-mo', label=label_4)
+# 
+# ax1.set_ylabel("spike amplitude (mV)")
+# ax1.legend()
+# 
+# ax2 = f.add_subplot(312)
+# 
+# ax2.plot(Gkick_original, spike_width_original, '-bo', label=label_original)
+# ax2.plot(Gkick_1, spike_width_1, '-ro', label=label_1)
+# ax2.plot(Gkick_2, spike_width_2, '-co', label=label_2)
+# ax2.plot(Gkick_3, spike_width_3, '-go', label=label_3)
+# ax2.plot(Gkick_4, spike_width_4, '-mo', label=label_4)
+# 
+# ax2.set_ylabel("spike width (ms)")
+# ax2.legend()
+# 
+# ax3 = f.add_subplot(313)
+# 
+# ax3.plot(Gkick_original, interspike_interval_original, '-bo', label=label_original)
+# ax3.plot(Gkick_1, interspike_interval_1, '-ro', label=label_1)
+# ax3.plot(Gkick_2, interspike_interval_2, '-co', label=label_2)
+# ax3.plot(Gkick_3, interspike_interval_3, '-go', label=label_3)
+# ax3.plot(Gkick_4, interspike_interval_4, '-mo', label=label_4)
+# 
+# ax3.set_ylabel("ISI (ms)")
+# ax3.set_xlabel("Gkick ($G_L$)")
+# ax3.legend()
+#==============================================================================
+
+
+
+#==============================================================================
+# ######################
+# ##### different GNa
+# ######################
+# 
+# file_original_soma = "/home/eugene/Output/tuneHVCRA/ElChange/El-80/fI_soma.bin"
+# file_original_dend = "/home/eugene/Output/tuneHVCRA/ElChange/El-80/fI_dend.bin"
+# 
+# file_soma_1 = "/home/eugene/Output/tuneHVCRA/ElChange/El-70/fI_soma.bin"
+# file_dend_1 = "/home/eugene/Output/tuneHVCRA/ElChange/El-70/fI_dend.bin"
+# 
+# file_soma_2 = "/home/eugene/Output/tuneHVCRA/ElChange/El-65/fI_soma.bin"
+# file_dend_2 = "/home/eugene/Output/tuneHVCRA/ElChange/El-65/fI_dend.bin"
+# 
+# file_soma_3 = "/home/eugene/Output/tuneHVCRA/ElChange/El-60/fI_soma.bin"
+# file_dend_3 = "/home/eugene/Output/tuneHVCRA/ElChange/El-60/fI_dend.bin"
+# 
+# file_soma_4 = "/home/eugene/Output/tuneHVCRA/ElChange/El-50/fI_soma.bin"
+# file_dend_4 = "/home/eugene/Output/tuneHVCRA/ElChange/El-50/fI_dend.bin"
+# 
+# 
+# label_original = "$E_L = -80 mV$"
+# label_1 = "$E_L = -70 mV$"
+# label_2 = "$E_L = -65 mV$"
+# label_3 = "$E_L = -60 mV$"
+# label_4 = "$E_L = -50 mV$"
+# 
+# ampl_soma_original, num_spikes_soma_original, _, = reading.read_fI_HVCRA(file_original_soma)
+# ampl_dend_original, num_spikes_dend_original, _, = reading.read_fI_HVCRA(file_original_dend)
+# 
+# ampl_soma_1, num_spikes_soma_1, _, = reading.read_fI_HVCRA(file_soma_1)
+# ampl_dend_1, num_spikes_dend_1, _, = reading.read_fI_HVCRA(file_dend_1)
+# 
+# ampl_soma_2, num_spikes_soma_2, _, = reading.read_fI_HVCRA(file_soma_2)
+# ampl_dend_2, num_spikes_dend_2, _, = reading.read_fI_HVCRA(file_dend_2)
+# 
+# ampl_soma_3, num_spikes_soma_3, _, = reading.read_fI_HVCRA(file_soma_3)
+# ampl_dend_3, num_spikes_dend_3, _, = reading.read_fI_HVCRA(file_dend_3)
+# 
+# ampl_soma_4, num_spikes_soma_4, _, = reading.read_fI_HVCRA(file_soma_4)
+# ampl_dend_4, num_spikes_dend_4, _, = reading.read_fI_HVCRA(file_dend_4)
+# 
+# 
+# plt.figure()
+# 
+# plt.plot(ampl_soma_original, num_spikes_soma_original, '-bo', label=label_original)
+# plt.plot(ampl_soma_1, num_spikes_soma_1, '-ro', label=label_1)
+# plt.plot(ampl_soma_2, num_spikes_soma_2, '-co', label=label_2)
+# plt.plot(ampl_soma_3, num_spikes_soma_3, '-go', label=label_3)
+# plt.plot(ampl_soma_4, num_spikes_soma_4, '-mo', label=label_4)
+# 
+# 
+# plt.xlabel('I (nA)')
+# plt.ylabel('# of spikes')
+# plt.title('Injection to soma')
+# plt.legend()
+# 
+# plt.figure()
+# 
+# plt.plot(ampl_dend_original, num_spikes_dend_original, '-bo', label=label_original)
+# plt.plot(ampl_dend_1, num_spikes_dend_1, '-ro', label=label_1)
+# plt.plot(ampl_dend_2, num_spikes_dend_2, '-co', label=label_2)
+# plt.plot(ampl_dend_3, num_spikes_dend_3, '-go', label=label_3)
+# plt.plot(ampl_dend_4, num_spikes_dend_4, '-mo', label=label_4)
+# 
+# plt.xlabel('I (nA)')
+# plt.ylabel('# of spikes')
+# plt.title('Injection to dend')
+# plt.legend()
+# 
+# 
+# 
+# 
+#==============================================================================
+plt.show()

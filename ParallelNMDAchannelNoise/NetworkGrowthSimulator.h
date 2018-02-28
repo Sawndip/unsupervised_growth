@@ -50,16 +50,20 @@ public:
 	void continue_chain_growth(std::string dataDir, int starting_trial, bool training, int save_freq_short, int save_freq_long); // continue chain growth using network state defined by files in 
 																						// directory dataDir from trial starting_trial
 
+	void test_inhAndExc_response(const struct ConnectionParameters &con_par,
+													const struct NoiseParameters &n_par,
+													std::string networkDirectory, std::string fileTraining,
+													std::string outputDirectory); // test neuron responses to inhibitory and excitatory inputs
+
+
 	void test_chain_recovery(std::string dataDir, int starting_trial,
 				double fraction, bool training, int save_freq_short, int save_freq_long); // make lesion by killing fraction of chain neurons. Then continue growth to see how network recovers
 				
-    void test_grown_chain(int num_trials, std::string dataDir, int starting_trial, std::string outputDir); // test grown synfire chain. All data files should 
-                                                                            // be located in directory dataDir; network state is taken from trials starting_trial
-                                                                            // output goes to directory outputDir
-
-    void test_random_chain(int num_layers, int num_trials); // test chain with ideal synfire chain connections. Neurons in the chain are wired ignoring
-                                                            // any inhibibory structure
-    void test_ideal_chain(int num_layers, int num_trials); // run testing trial with ideal chain connections
+	void test_chain(std::string networkDirectory,  int starting_trial, int num_trials, std::string outputDirectory); 
+															// test grown chain
+															// data should reside in directory networkDirectory; network state corresponds to trial starting_trial
+															// num_trials simulations are made; 
+															// somatic, dendritic, interneuron spikes, and jitter are written to directory outputDirectory
 
 	void initialize_network();
 
@@ -237,18 +241,32 @@ protected:
         vector<int> num_trials_after_replacement_global;
 
 
-		// developmental GABA switch
-		//void update_Ei(); // update GABA reverse potential after trial
-		
+		////////////////
+		//// Network testing
+		////////////////////
+		void calculate_and_write_inhAndExc(const std::vector<std::vector<double>> &spike_times,
+											  const std::vector<std::vector<double>> &relevant_spike_times,
+											  const std::vector<std::vector<int>> &num_somatic_spikes_in_trials,
+											  const std::vector<std::vector<int>> &num_relevant_spikes_in_trials,
+											  const char *filename); // calculate and write results of inhibitory and excitatory inputs test
+											  
+		void calculate_and_write_jitter(int num_trials, const std::vector<std::vector<double>> &first_soma_spike_times,
+											  const std::vector<std::vector<double>> &first_dend_spike_times,
+											  const std::vector<std::vector<int>> &num_somatic_spikes_in_trials,
+											  const std::vector<std::vector<int>> &num_dendritic_spikes_in_trials,
+											  std::string outputDirectory); // calculate jitter and write it to a file in directory
 		///////////////////////////////////
 		//// Maturation
 		///////////////////////////////////
 		
         void update_neuron_properties(); // update all neuron properties based on their age
+        void set_neuron_properties_sudden_maturation(); // set neuron properties according to mature indicators
         void set_neuron_properties(); // set neuron properties according to values in local arrays
         void set_training_neurons_mature(); // set mature parameters for training  HVC-RA neurons
 		void set_all_neurons_immature(); // set immature parameters for all HVC-RA neurons
-        
+		void set_neuron_mature(int local_id); // set neuron with local_id mature
+		void set_neuron_immature(int local_id); // set neuron witl local_id immature
+		
         // current
 		void set_training_current(double t); // set current to training neurons. t - current injection time.
         void set_training_current(); // set current to training neurons
@@ -257,19 +275,29 @@ protected:
 	    void initialize_generator(); // initialize generator for processes
         
         // trials
+        void trial_no_stdp(double training_kick_time); // trial with no stdp, used for testing grown chains 
 	    void trial_somatic_stdp_no_delays(bool training); // single trial with STDP rule based on somatic spikes. No axonal delays
+	    
+	    void trial_event_pre_dend_post_delays_sudden_maturation(bool training); // singe trial with STDP rule; somatic spikes are presynaptic
+																				// events; dendritic spikes - postsynaptic. All somatic spikes
+																				// occured within certain window are considered as a single event
+																				
 	    void trial_soma_pre_dend_post_stdp_no_delays(bool training); // single trial with STDP rule with somatic spikes as presynaptic
 																	 // events and dendritic spikes as postsynaptic. No axonal delays
 		
 		void trial_soma_pre_dend_post_stdp_delays(bool training); // single trial with STDP rule with somatic spikes as presynaptic
 																	 // events and dendritic spikes as postsynaptic. With axonal delays
 		
-																	 
+		void trial_soma_pre_dend_post_stdp_delays_sudden_maturation(bool training); // single trial with STDP rule with somatic spikes as presynaptic
+																	 // events and dendritic spikes as postsynaptic. With axonal delays
+																	 // Neurons instantaneously change properties to mature once they fire robustly
+												 
 	    void trial_burst_stdp(int training); // make one trial with STDP rules applied to dendritic bursts
 		void mature_trial(); // simulation trial without STDP rules
         void test_mature_chain(int num_trials); // test of mature network
 	    
         void randomize_after_trial(); // set all neurons to the resting state
+        void reset_after_chain_test(); // reset trial after chain test: neuron time is set to zero; neuron parameters to initial values
         void reset_after_trial(); // continue the network activity by reset all neurons
         void reset_after_trial_soma_pre_dend_post_no_delays(); // resest network after trial with no axonal delays
         void reset_after_trial_soma_pre_dend_post_delays(); // resest network after trial with axonal delays
@@ -280,11 +308,20 @@ protected:
         void LTP_burst(double &w, double t); // long-term potentiation for burst STDP rule
         void LTD(double &w, double t); // long-term depression STDP rule
 		void LTP(double &w, double t); // long-term potentiation STDP rule
+		
 		void potentiation_decay(); // apply potentiation decay to all RA-RA synapses
+		void potentiation_decay_sudden_maturation(); // apply potentiation decay to all RA-RA synapses with immature targets.
+													 // if target neuron is mature, active synapse doesn't decay 
+		
 		void update_synapse(int i, int j); // update synapse from neuron i to neuron j
-		void update_all_synapses(); // update synapses between RA neurons and apply potentiation decay
+		
+		void update_all_synapses(); // update synapses between RA neurons potentiation decay
+		void update_all_synapses_sudden_maturation(); // update synapses that contact immature targets 
+		
 		void axon_remodeling(int i); // remove all targets from neuron i except for supersynapses
-
+		
+		void rescale_synapses_to_mature(int neuron_id); // rescale all synapses to neuron that got mature
+		void rescale_inhibition_to_mature(int neuron_id); // rescale inhibitory synapses to mature neurons
         // neurogenesis support
         void add_new_neurons(int N); // add N immature neurons to network
         void replace_neurons(); // replace all neurons specified by replace arrays
@@ -308,6 +345,9 @@ protected:
 	    void resample_weights(); // resample synaptic weights for HVC-RA -> HVC-I and HVC-I -> HVC-RA synapses
 								 // based on parameters in connection_params structure
 	    
+	    
+	    void create_second_layer(); // connect training neurons to all pool neurons
+		void set_active_synapse_weights(double G); // set all active synapse weights to G
 	    // coordinates and connections
 	    
 	    
@@ -358,6 +398,7 @@ protected:
 
         // reading data from files
         void read_remodeled_indicators(const char *filename); // read axon-remodeling indicators for HVC-RA neurons
+        void read_mature_indicators(const char *filename); // read maturation indicators for HVC-RA neurons
         void read_super_synapses(const char* filename); // read supersynapses from the file
         void read_active_synapses(const char* filename); // read active synapses from the file
         //void read_maturation_info(const char* filename); // read maturation information from the file
@@ -400,6 +441,7 @@ protected:
         //void write_time_info(const char* filename); // write simulation time information
         void write_replacement_history(const char* filename); // write when HVC-RA neurons were replaced previous times 
         void write_remodeled_indicators(const char *filename); // write axon-remodeling indicators for HVC-RA neurons
+        void write_mature_indicators(const char *filename); // write maturation indicators for HVC-RA neurons
 		void write_axonal_delays(const std::vector<std::vector<double>> &axonal_delays, const char *filename); // write axonal time delays between neurons
         
         void set_recording(const std::vector<int> &RA_neurons, const std::vector<int> &I_neurons,
@@ -428,11 +470,35 @@ protected:
         
         void write_full_network_state(std::string fileEnding, std::string outputDirectory); // write full state of growth simulation to a directory
         void write_graph_network_state(std::string outputDirectory); // write state of growth simulation needed for gui application to a directory
-
+		void write_chain_test(std::string outputDirectory, int trial_number); // write somatic, dendritic and interneuron spikes to a difrectory
+		
+		void write_inhAndExc(int num_trials, 
+								const std::vector<int> &num_trials_with_relevant_spikes, 
+								const std::vector<double> &mean_relevant_spike_time, 
+								const std::vector<double> &std_relevant_spike_time, 
+								const std::vector<int> &num_trials_with_nonrelevant_spikes, 
+								const std::vector<double> &mean_spike_time,
+								const std::vector<double> &std_spike_time,
+								const char *filename); // write results of inhibitory and excitatory input test
+														// to a file
+		
+		void write_jitter(int num_trials,
+							const std::vector<int> &num_trials_with_soma_spikes, 
+							const std::vector<double> &average_num_soma_spikes_in_trial,
+							const std::vector<double> &mean_first_soma_spike_time,
+							const std::vector<double> &std_first_soma_spike_time,
+							const std::vector<int> &num_trials_with_dend_spikes, 
+							const std::vector<double> &average_num_dend_spikes_in_trial,
+							const std::vector<double> &mean_first_dend_spike_time,
+							const std::vector<double> &std_first_dend_spike_time,
+							const char *filename); // write results of jitter test to a file
+		
 		//////////////////////////
 		// Check correctness
 		//////////////////////////
 		int check_bad_values(); // check if neuron membrane potentials are in reasonable range
+		
+		void disable_RA2I_immature_outputs(); // disable output HVC-RA -> HVC-I connections for immature neurons
         
         ///////////////////////////////
         // Sending and receiving data
@@ -451,6 +517,7 @@ protected:
         void send_active_synapses(); // send active synapses from master to all processes
         void send_super_synapses(); // send super synapses from master to all processes
         void send_remodeled_indicators(); // send remodeled indicators from master to all processes
+        void send_mature_indicators(); // send maturation indicators from master to all processes
         
         
         

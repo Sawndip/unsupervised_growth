@@ -13,8 +13,10 @@ import numpy as np
 file_RA2I = "/home/eugene/Output/networks/chainGrowth/test/RA_I_connections.bin"
 file_I2RA = "/home/eugene/Output/networks/chainGrowth/test/I_RA_connections.bin"
 
+
 (N_RA, targets_id_RA2I, _, syn_lengths_RA2I, _) = reading.read_connections(file_RA2I)
 (N_I, targets_id_I2RA, _, syn_lengths_I2RA, _) = reading.read_connections(file_I2RA)
+
 
 #############################################
 ### Calculate fraction of connected targets

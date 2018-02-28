@@ -17,7 +17,8 @@ import math
 N = 200 # number of neurons
 TRIAL_DURATION = 500
 
-fileInterneuron = "/home/eugene/Output/networks/chainGrowth/testGrowthDelays/spike_times_interneuron_300.bin"
+#fileInterneuron = "/home/eugene/Output/networks/chainGrowth/testGrowthDelays5/spike_times_interneuron_300.bin"
+fileInterneuron = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/test1/test_spike_times_interneuron_10.bin"
 
 (trial_number, simulation_time, spike_times_interneuron, neuron_fired) = reading.read_time_info(fileInterneuron)
 

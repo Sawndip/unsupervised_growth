@@ -8,11 +8,50 @@ Script plots responses of neurons to different inhibitory inputs
 """
 import matplotlib.pyplot as plt
 
+# passive Dendrite; Erest = -80 mV Egaba = -55mV; Noise: 0.1s, 0.1d
+#Gkick_1 = [0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, 7, 7.5, 8, 8.5, 9, 9.5, 10, 10.5, 11, 11.5, 12, 12.5, 13, 13.5, 14, 14.5, 15, 15.5, 16, 16.5, 17, 17.5, 18, 18.5, 19, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110]
+#num_spikes_to_kicks_1 = [ 0.001, 0, 0, 0.002, 0.004, 0.006, 0.014, 0.014, 0.022, 0.038, 0.036, 0.03, 0.059, 0.059, 0.058, 0.06, 0.087, 0.085, 0.089, 0.094, 0.071, 0.091, 0.083, 0.091, 0.084, 0.114, 0.112, 0.123, 0.107, 0.093, 0.101, 0.109, 0.098, 0.092, 0.097, 0.112, 0.103, 0.106, 0.111, 0.104, 0.089, 0.097, 0.095, 0.099, 0.083, 0.107, 0.098, 0.109, 0.112]
+#mean_spike_delay_kicks_1 = [85.9, -1, -1, 13.18, 0.33, 4.40333, 8.75, 16.64, 12.9591, 14.5226, 13.6128, 14.104, 12.9736, 13.8929, 13.0986, 14.8533, 13.5083, 14.1172, 13.5708, 13.8664, 14.0093, 14.1763, 13.7535, 14.7824, 13.9024, 13.7086, 15.3091, 14.5793, 14.0641, 15.0813, 16.119, 14.5127, 14.8745, 16.8513, 16.3058, 15.8438, 15.9858, 16.6196, 16.664, 16.2023, 18.2811, 19.5313, 21.3741, 22.8624, 22.3386, 24.4497, 23.66, 25.3894, 26.4268]
+#std_spike_delay_kicks = [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 1.50098, 3.6911, 4.69041, 3.02865, 1.57419, 2.83242, 2.79134, 2.63214]
+
+# passive Dendrite; Erest = -80 mV Egaba = -55mV; Noise: 0.1s, 0.05d
+#Gkick_1 = [ 0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95]
+#num_spikes_to_kicks_1 = [0, 0.004, 0.023, 0.024, 0.038, 0.033, 0.034, 0.047, 0.035, 0.038, 0.033, 0.037, 0.044, 0.023, 0.038, 0.033, 0.028, 0.035, 0.041, 0.038]
+#mean_spike_delay_kicks_1 = [-1, 12.22, 13.9487, 16.02, 18.0968, 18.8394, 19.2212, 19.8349, 20.5034, 21.1605, 20.6873, 20.8481, 21.54, 23.5017, 23.8295, 22.9945, 24.6907, 22.744, 24.1385, 25.9232]
+#std_spike_delay_kicks_1 = [-1, 3.89841, 4.61598, 4.04974, 4.32213, 3.59568, 3.35704, 4.43512, 3.48254, 4.26209, 3.45113, 3.27466, 4.61858, 3.71846, 2.77116, 3.72951, 3.79603, 3.52627, 3.48811, 4.75189]
+
+# passive Dendrite; Erest = -80 mV Egaba = -55mV; Noise: 0.1s, 0.1d
+Gkick_1 = [ 0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95]
+num_spikes_to_kicks_1 = [0.001, 0.023, 0.09, 0.095, 0.1, 0.095, 0.107, 0.114, 0.107, 0.109, 0.105, 0.107, 0.106, 0.084, 0.117, 0.101, 0.095, 0.106, 0.117, 0.102]
+mean_spike_delay_kicks_1 = [85.9, 14.2313, 14.3831, 15.412, 17.1418, 17.2078, 17.9226, 18.8949, 20.5387, 20.3561, 21.8476, 20.954, 20.3247, 23.0333, 23.9612, 23.3675, 24.0844, 23.2058, 23.7942, 24.779]
+std_spike_delay_kicks_1 = [-1, 5.08561, 4.76042, 4.91993, 8.44169, 7.86541, 8.84764, 4.96714, 5.0993, 5.48207, 5.02269, 4.3014, 7.64314, 5.36003, 5.00238, 4.74069, 4.80252, 4.3896, 4.47373, 4.29122]
+
+
+# passive Dendrite; Erest = -80 mV Egaba = -55mV; Noise: 0.1s, 0.1d; tInh = 10 ms
+Gkick_2 = [ 0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95]
+num_spikes_to_kicks_2 = [0.001, 0.06, 0.11, 0.101, 0.111, 0.104, 0.106, 0.102, 0.1, 0.132, 0.111, 0.113, 0.124, 0.118, 0.11, 0.11, 0.113, 0.104, 0.117, 0.136]
+mean_spike_delay_kicks_2 = [85.9, 16.767, 22.5269, 25.0499, 27.309, 29.2217, 31.82, 33.3153, 34.4166, 35.9929, 36.5975, 38.869, 38.0319, 39.0475, 41.3345, 41.8171, 42.0864, 42.8452, 43.2215, 42.9582]
+std_spike_delay_kicks_2 = [-1, 5.44325, 7.10383, 7.17865, 9.20664, 9.9754, 12.307, 6.94931, 6.6117, 8.52633, 6.83565, 8.52661, 10.7093, 8.26846, 7.30949, 9.12371, 6.80774, 7.44678, 8.17124, 6.88254]
+
+
+# passive Dendrite; Erest = -80 mV Egaba = -55mV; Noise: 0.1s, 0.15d
+Gkick_3 = [ 0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95]
+num_spikes_to_kicks_3 = [0.02, 0.105, 0.227, 0.255, 0.236, 0.247, 0.246, 0.236, 0.235, 0.234, 0.246, 0.243, 0.233, 0.228, 0.246, 0.237, 0.226, 0.243, 0.255, 0.255]
+mean_spike_delay_kicks_3 = [17.394, 15.1459, 13.6584, 15.0785, 15.7263, 16.6826, 16.0063, 18.6942, 19.0575, 19.1591, 20.0917, 19.9674, 19.5658, 22.4575, 21.4133, 23.4922, 21.8103, 22.9356, 23.7517, 23.8329]
+std_spike_delay_kicks_3 = [ 50.4215, 22.4054, 14.386, 12.4436, 12.8452, 16.8522, 14.1493, 14.8612, 13.7146, 13.7294, 12.7972, 12.8617, 15.0451, 13.0722, 12.0914, 16.5171, 14.979, 15.0256, 10.4365, 13.1574]
+
+#label1 = '$\sigma_s = 0.1;  \sigma_d = 0.05$'
+#label2 = '$\sigma_s = 0.1;  \sigma_d = 0.1$'
+#label3 = '$\sigma_s = 0.1;  \sigma_d = 0.15$'
+
+label1 = r'$\tau_{inh} = 5 ms$'
+label2 = r'$\tau_{inh} = 10 ms$'
+
 # model with E_L = -80 mV
-Gkick = [0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, 7, 7.5, 8, 8.5, 9, 9.5]
-num_spikes_to_kicks = [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.002, 0.006, 0.004, 0.01, 0.036, 0.028, 0.056, 0.066, 0.088]
-mean_spike_delay_kicks = [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 9.96, 17.2533, 14.93, 14.948, 14.0411, 13.5014, 13.3414, 13.737, 13.3477]
-std_spike_delay_kicks = [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 1.50098, 3.6911, 4.69041, 3.02865, 1.57419, 2.83242, 2.79134, 2.63214]
+#Gkick = [0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, 7, 7.5, 8, 8.5, 9, 9.5]
+#num_spikes_to_kicks = [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.002, 0.006, 0.004, 0.01, 0.036, 0.028, 0.056, 0.066, 0.088]
+#mean_spike_delay_kicks = [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 9.96, 17.2533, 14.93, 14.948, 14.0411, 13.5014, 13.3414, 13.737, 13.3477]
+#std_spike_delay_kicks = [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 1.50098, 3.6911, 4.69041, 3.02865, 1.57419, 2.83242, 2.79134, 2.63214]
 
 # model with E_L = -65 mV
 #Gkick = [0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, 7]
@@ -38,29 +77,40 @@ mean_spike_delay_saturated = [mean - TRIAL for mean in mean_spike_delay_saturate
 f = plt.figure()
 
 ax1 = f.add_subplot(311)
-ax1.plot(Gsaturated, num_spikes_to_saturated, label='saturated inhibition')
-ax1.plot(Gkick, num_spikes_to_kicks, label='inhibitory kick')
-ax1.set_ylabel('<# of somatic spikes>')
-ax1.set_xlim([0,7])
+#ax1.plot(Gsaturated, num_spikes_to_saturated, label='saturated inhibition')
+ax1.plot(Gkick_1, num_spikes_to_kicks_1, label=label1)
+ax1.plot(Gkick_2, num_spikes_to_kicks_2, label=label2)
+#ax1.plot(Gkick_3, num_spikes_to_kicks_3, label=label3)
 
-ax1.legend()
+ax1.set_ylabel('p to spike')
+ax1.set_xlim([0,120])
+
+ax1.legend(loc=4)
 
 ax2 = f.add_subplot(312)
-ax2.plot(Gsaturated, mean_spike_delay_saturated, label='saturated inhibition')
-ax2.plot(Gkick, mean_spike_delay_kicks, label='inhibitory kick')
+#ax2.plot(Gsaturated, mean_spike_delay_saturated, label='saturated inhibition')
+ax2.plot(Gkick_1, mean_spike_delay_kicks_1, label=label1)
+ax2.plot(Gkick_2, mean_spike_delay_kicks_2, label=label2)
+#ax2.plot(Gkick_3, mean_spike_delay_kicks_3, label=label3)
 ax2.set_ylabel('<spike delay (ms)>')
-ax2.set_xlim([0,7])
-ax2.set_ylim([0, max(max(mean_spike_delay_saturated) + 5, max(mean_spike_delay_kicks) + 5)])
-ax2.legend()
+ax2.set_xlim([0,120])
+ax2.set_ylim([0, 50])
+
+#ax2.set_xlabel('G_inh (mS/cm^2)')
+#ax2.set_ylim([0, max(max(mean_spike_delay_saturated) + 5, max(mean_spike_delay_kicks) + 5)])
+ax2.legend(loc=4)
 
 ax3 = f.add_subplot(313)
-ax3.plot(Gsaturated, std_spike_delay_saturated, label='saturated inhibition')
-ax3.plot(Gkick, std_spike_delay_kicks, label='inhibitory kick')
+#ax3.plot(Gsaturated, std_spike_delay_saturated, label='saturated inhibition')
+ax3.plot(Gkick_1, std_spike_delay_kicks_1, label=label1)
+ax3.plot(Gkick_2, std_spike_delay_kicks_2, label=label2)
+#ax3.plot(Gkick_3, std_spike_delay_kicks_3, label=label3)
 ax3.set_ylabel('<std of spike delays (ms)>')
 ax3.set_xlabel('G_inh (mS/cm^2)')
-ax3.set_xlim([0,10])
-ax3.set_ylim([0, max(max(std_spike_delay_saturated) + 5, max(std_spike_delay_kicks) + 5)])
+ax3.set_xlim([0,120])
+ax3.set_ylim([0,30])
+#ax3.set_ylim([0, max(max(std_spike_delay_saturated) + 5, max(std_spike_delay_kicks) + 5)])
 ax3.legend()
 
-plt.legend()
+#plt.legend()
 plt.show()

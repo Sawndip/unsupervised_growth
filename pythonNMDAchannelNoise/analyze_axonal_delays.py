@@ -9,20 +9,37 @@ Script analyzes axonal delays between neurons
 import reading
 import matplotlib.pyplot as plt
 import numpy as np
+import os
 
-fileAxonalDelaysRA2I = "/home/eugene/Output/networks/chainGrowth/testGrowthDelays/axonal_delays_RA2I_0.bin"
-fileAxonalDelaysRA2RA = "/home/eugene/Output/networks/chainGrowth/testGrowthDelays/axonal_delays_RA2RA_0.bin"
-fileAxonalDelaysI2RA = "/home/eugene/Output/networks/chainGrowth/testGrowthDelays/axonal_delays_I2RA_0.bin"
+dirname = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/events1/"
+
+trial_number = 4300
+
+fileAxonalDelaysRA2I = os.path.join(dirname, "axonal_delays_RA2I_" + str(trial_number) + ".bin")
+fileAxonalDelaysRA2RA = os.path.join(dirname, "axonal_delays_RA2RA_" + str(trial_number) + ".bin")
+fileAxonalDelaysI2RA = os.path.join(dirname, "axonal_delays_I2RA_" + str(trial_number) + ".bin")
+
+fileActive = os.path.join(dirname, "RA_RA_active_connections_" + str(trial_number) + ".bin")
+fileSuper = os.path.join(dirname, "RA_RA_super_connections_" + str(trial_number) + ".bin")
+
+(_, _, active_synapses) = reading.read_synapses(fileActive)
+(_, _, super_synapses) = reading.read_synapses(fileSuper)
 
 
 (_, _, axonal_delays_RA2I) = reading.read_axonal_delays(fileAxonalDelaysRA2I)
 (_, _, axonal_delays_RA2RA) = reading.read_axonal_delays(fileAxonalDelaysRA2RA)
 (_, _, axonal_delays_I2RA) = reading.read_axonal_delays(fileAxonalDelaysI2RA)
 
+all_axonal_delays_RA2RA = []
+
+for i, targets in enumerate(super_synapses):
+    for target in targets:
+        all_axonal_delays_RA2RA.append(axonal_delays_RA2RA[i][target])
+        
 #print axonal_delays_RA2I 
 
 all_axonal_delays_RA2I = [delay for delays in axonal_delays_RA2I for delay in delays]
-all_axonal_delays_RA2RA = [delay for delays in axonal_delays_RA2RA for delay in delays]
+#all_axonal_delays_RA2RA = [delay for delays in axonal_delays_active_connections for delay in delays]
 all_axonal_delays_I2RA = [delay for delays in axonal_delays_I2RA for delay in delays]
 
 nbins = 50

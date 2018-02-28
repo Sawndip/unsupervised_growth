@@ -12,10 +12,14 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 #filename = "/home/eugene/Output/neuronTest/saturatedInhibitionResponse/Ginh_5.00.bin"
-#filename = "/home/eugene/Output/neuronTest/kickResponse/Ginh_6.00.bin"
-filename = "/home/eugene/Output/neuronTest/response.bin"
-#filename = "/home/eugene/Output/networks/chainGrowth/testGrowthDelays/RA/RA101.bin"
+#filename = "/home/eugene/Output/neuronTest/kickResponse/Ginh_10.00_8.bin"
+#filename = "/home/eugene/Output/neuronTest/response.bin"
+filename = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/test1/RA/RA231.bin"
+#filename = "/home/eugene/Output/networks/chainGrowth/testGrowthDelays5/RA/RA5.bin"
 #filename = "/home/eugene/Output/neuronTest/inhAndExcInputsResponse/RA.bin"
+#filename = "/home/eugene/Output/neuronTest/modelStability/RA29.bin"
+#filename = "/mnt/hodgkin_home/eugene/Output/tuneHVCRA/passiveDendrite/AdRcChange/Ad2000Rc11/RA_soma_9.bin"
+#filename = "/mnt/hodgkin_home/eugene/Output/neuronTest/inhAndExcInputsResponse/RA13.bin"
 
 t, Vs, Vd, Gexc_d, Ginh_d, n, h, r, c, Ca = reading.read_hh2_buffer_full(filename)
 
@@ -35,8 +39,8 @@ print "Std Vs = ", np.std(Vs)
 
 #print t
 #print Vs
-tmin = 0
-tmax = 500
+tmin = 30
+tmax = 200
 
 # membrane potentials
 f = plt.figure()
