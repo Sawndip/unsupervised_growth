@@ -15,6 +15,8 @@ print v
 nInf = 1.0 / (1.0 + np.exp(-(v+35.0) / 10.0))
 hInf = 1.0 / (1.0 + np.exp((v + 45.0) / 7.0))
 mInf = 1.0 / (1.0 + np.exp(-(v + 30.0) / 9.5))
+rInf = 1.0 / (1.0 + np.exp(-(v + 5.0) / 10.0))
+cInf = 1.0 / (1.0 + np.exp(-(v - 10.0) / 7.0))
 
 tauN = 0.1 + 0.5 / (1.0 + np.exp((v + 27.0) / 15.0))
 tauH = 0.1 + 0.75 / (1.0 + np.exp((v + 40.5) / 6.0))
@@ -56,6 +58,19 @@ ax1.set_ylabel("$n_{\infty}$")
 ax2 = f.add_subplot(212)
 ax2.plot(v, tauN)
 ax2.set_ylabel(r'$\tau_{n}$ (ms)')
+ax2.set_xlabel('V (mV)')
+
+
+# Calcium variables
+f = plt.figure()
+
+ax1 = f.add_subplot(211)
+ax1.plot(v, rInf)
+ax1.set_ylabel("$r_{\infty}$")
+
+ax2 = f.add_subplot(212)
+ax2.plot(v, cInf)
+ax2.set_ylabel(r'$c_{\infty}$')
 ax2.set_xlabel('V (mV)')
 
 plt.show()

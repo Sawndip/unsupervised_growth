@@ -1,6 +1,6 @@
 #pragma once
-#ifndef HH2_BUFFER_H
-#define HH2_BUFFER_H
+#ifndef HH2_CLOPATH_H
+#define HH2_CLOPATH_H
 #include <vector>
 #include <functional>
 #include <cmath>
@@ -14,10 +14,10 @@ typedef std::function<double (double)> DDfunction;
 class Poisson_noise;
 class HHI_buffer;
 
-class HH2_buffer
+class HH2_clopath
 {
 public:
-	HH2_buffer();
+	HH2_clopath();
 	
 	int check_bad_values(); // checks if voltage values are in reasonable range
 	
@@ -37,7 +37,7 @@ public:
 	int get_spike_number_dend(); // get number of dendritic spikes
 	
 	std::vector<double> get_Vs(); // get voltage of somatic compartment
-	std::vector<double> get_Vd(); // get voltage of dendritic compartment
+	double get_Vd(){return _Vd;}; // get voltage of dendritic compartment
     
     // set functions
     void set_original_model_parameters(); // set neuron model parameters as in original model (mature HVC-RA)
@@ -90,7 +90,12 @@ public:
 
     // targets
 	void set_targetI(HHI_buffer* target, int n, double G); // set inhibitory target
-	void set_targetRA(HH2_buffer* target, int n, double G); // set excitatory target
+	void set_targetRA(HH2_clopath* target, int n, double G); // set excitatory target
+	
+	// get functions
+	double get_u_minus(){return _u_minus;};
+	double get_u_plus(){return _u_plus;};
+	
 
 protected:
 	// buffer
@@ -117,6 +122,9 @@ protected:
 	double EdK;	//	dendrite's potassium reversal potential
 	double tExc;	//	time constant for excitatory conductance
 	double tInh;	//	time constant for inhibitory conductance
+	double tau_minus; // time constant of dendritic potential filtering
+	double tau_plus; // time constant of dendritic potential filtering
+	
 
 	// dynamic variables
 	double _time; // time array
@@ -134,6 +142,11 @@ protected:
 	double _Gexc_d; //	excitatory dendrite conductance
 	double _Ginh_d;	//	inhibitory dendrite conductance
 	double _Egaba; // reverse GABA potential
+	
+	double _u_minus; // filtered dendritic membrane potential with constant tau_minus 
+	double _u_plus; // filtered dendritic membrane potential with constant tau_plus 
+	
+	
 	
 	std::string _filename; // output filename
 	
@@ -217,7 +230,7 @@ protected:
 
 	// targets
 
-	vector<HH2_buffer*> _targets_RA;	//	all neuron's connections to subsequent neurons
+	vector<HH2_clopath*> _targets_RA;	//	all neuron's connections to subsequent neurons
 	vector<int> _targetsID_RA;	//	vector which contains all ID numbers of target neurons
 	vector<double> _targetsG_RA;	//	vector with conductances of all target synapses
 
@@ -245,6 +258,9 @@ protected:
 	double kc(double vd, double c);
 	double kCa(double vd, double r, double ca);
 
+	double ku_minus(double u_m, double vd);
+	double ku_plus(double u_p, double vd);
+
 	//	Conductance and current functions
 
 	double Ge_s(double t);	//	excitatory soma conductance
@@ -263,9 +279,9 @@ protected:
 	static double tauH(double v){return 0.1 + 0.75 / (1 + exp((v + 40.5) / 6));} 
 	static double mInf(double v){return 1 / (1 + exp(-(v + 30) / 9.5));} 
 	static double rInf(double v){return 1 / (1 + exp(-(v + 5) / 10));} // original +5; spontaneous burst +15
-	static double tauR(double v){return 1.0;}  // original 1
+	static double tauR(double v){return 1;}  // original 1
 	static double cInf(double v){return 1 / (1 + exp(-(v - 10) / 7));} // original -10; spontaneous burst -0
-	static double tauC(double v){return 25;} // original 10
+	static double tauC(double v){return 10;} // original 10
 };
 
 

@@ -14,8 +14,8 @@ import utils
 
 CONVERTION_CONSTANT = 10.0
 
-trial_number = 1700
-dirname = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/events2/"
+trial_number = 5000
+dirname = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/events1/"
 
 fileSoma = os.path.join(dirname, "spike_times_soma_" + str(trial_number) + ".bin")
 fileWeights = os.path.join(dirname, "weights_" + str(trial_number) + ".bin")
@@ -131,8 +131,8 @@ f = plt.figure()
 
 ax1 = f.add_subplot(111)
 hist, bin_edges = np.histogram(convergence, bins=nbins)
-print bin_edges
-print hist
+#print bin_edges
+#print hist
 bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2.
 ax1.step(bin_centers, hist, where="pre")
 ax1.set_xlabel('# of convergent super inputs')
@@ -159,8 +159,8 @@ for neuron, spike_time in zip(ordered_by_first_spikes, ordered_first_spike_times
         num_super_outputs_of_chain_neurons.append(num_super_outputs[neuron])
 
 
-print first_spike_time_of_chain_neurons
-print input_weights_of_chain_neurons
+#print first_spike_time_of_chain_neurons
+#print input_weights_of_chain_neurons
 
 f = plt.figure()
 
@@ -194,8 +194,8 @@ f = plt.figure()
 
 ax1 = f.add_subplot(111)
 hist, bin_edges = np.histogram(input_weights_of_chain_neurons, bins=nbins)
-print bin_edges
-print hist
+#print bin_edges
+#print hist
 bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2.
 ax1.step(bin_centers, hist, where="pre")
 ax1.set_xlabel('Input excitatory weight (nS)')
@@ -208,32 +208,32 @@ f = plt.figure()
 
 ax1 = f.add_subplot(221)
 hist, bin_edges = np.histogram(num_active_inputs[neurons_in_chain], bins=nbins)
-print bin_edges
-print hist
+#print bin_edges
+#print hist
 bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2.
 ax1.step(bin_centers, hist, where="pre")
 ax1.set_title("# active inputs")
 
 ax2 = f.add_subplot(222)
 hist, bin_edges = np.histogram(num_super_inputs[neurons_in_chain], bins=nbins)
-print bin_edges
-print hist
+#print bin_edges
+#print hist
 bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2.
 ax2.step(bin_centers, hist, where="pre")
 ax2.set_title("# super inputs")
 
 ax3 = f.add_subplot(223)
 hist, bin_edges = np.histogram(num_active_outputs[neurons_in_chain], bins=nbins)
-print bin_edges
-print hist
+#print bin_edges
+#print hist
 bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2.
 ax3.step(bin_centers, hist, where="pre")
 ax3.set_title("# active outputs")
 
 ax4 = f.add_subplot(224)
 hist, bin_edges = np.histogram(num_super_outputs[neurons_in_chain], bins=nbins)
-print bin_edges
-print hist
+#print bin_edges
+#print hist
 bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2.
 ax4.step(bin_centers, hist, where="pre")
 ax4.set_title("# super outputs")
@@ -254,6 +254,71 @@ ax2 = f.add_subplot(212)
 ax2.plot([float(i)*trialStep for i in range(trial_number / trialStep + 1)], total_num_super)
 ax2.set_ylabel("# super synapses")
 ax2.set_xlabel('time in trials')
+
+layer = set(training_neurons)
+
+print layer
+print "In degree active = ",num_active_inputs[list(layer)]
+print "Out degree active = ",num_active_outputs[list(layer)]
+print "In degree super = ",num_super_inputs[list(layer)]
+print "Out degree super = ",num_super_outputs[list(layer)]
+   
+
+while len(layer) <= 10 and len(layer) > 0:
+    num_active_out = 0
+    num_super_out = 0
+    
+    new_layer = set()
+    
+    for i in layer:
+        #print len(super_synapses[i])
+        #print len(active_synapses[i])
+        num_active_out += len(active_synapses[i])
+        num_super_out += len(super_synapses[i])
+        
+        for synapse in super_synapses[i]:
+            new_layer.add(synapse)
+            
+    layer = new_layer
+    
+    print layer
+    print "Num active out = ",num_active_out
+    print "Num super out = ",num_super_out
+    print "In degree active = ",num_active_inputs[list(layer)]
+    print "Out degree active = ",num_active_outputs[list(layer)]
+    print "In degree super = ",num_super_inputs[list(layer)]
+    print "Out degree super = ",num_super_outputs[list(layer)]
+   
+    
+#for i in range(N_RA):
+#    if 553 in active_synapses[i]:
+#        print "active: {0} -> 553; w = {1}".format(i, weights[i][553])
+
+    #if 553 in super_synapses[i]:
+     #   print "super: {0} -> 553; w = {1}".format(i, weights[i][553])
+
+
+source_neurons = range(N_RA)
+#target_neurons = [448]
+target_neurons = [490, 947, 448]
+
+for i in source_neurons:
+    for j in target_neurons:
+        if j in active_synapses[i]:
+            print "active: {0} -> {1}; w = {2}".format(i, j, weights[i][j])
+
+        if j in super_synapses[i]:
+            print "super: {0} -> {1}; w = {2}".format(i, j, weights[i][j])
+
+
+for i in range(N_RA):
+    if 2 in active_synapses[i]:
+        print "{0} -> 2".format(i)
+    
+    if 93 in active_synapses[i]:
+        print "{0} -> 93".format(i)
+
+
 
 plt.show()
 

@@ -19,8 +19,8 @@ N = 1000 # number of neurons
 #fileDend = "/home/eugene/Output/networks/chainGrowth/testGrowthDelays6/spike_times_dend_1900.bin"
 #fileSoma = "/home/eugene/Output/networks/chainGrowth/testGrowthDelays6/spike_times_soma_1900.bin"
 
-fileDend = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/events2/spike_times_dend_2450.bin"
-fileSoma = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/events2/spike_times_soma_2450.bin"
+fileDend = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/events2/spike_times_dend_700.bin"
+fileSoma = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/events2/spike_times_soma_700.bin"
 
 
 #fileDend = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/test1/test_spike_times_dend_10.bin"
@@ -114,6 +114,8 @@ min_soma_spike_time = ordered_soma_spikes[0]
 max_soma_spike_time = ordered_soma_spikes[-1] - ordered_soma_spikes[0]
 
 for t, i in zip(ordered_soma_spikes, ordered_soma_neurons):
+    if i == 513 or i == 809 or i == 882:
+        print i,t
     ax1.vlines(t - min_soma_spike_time, id_soma_map[i]-0.5, id_soma_map[i]+0.5)
 
 #ax.scatter(spike_times, random_ID)

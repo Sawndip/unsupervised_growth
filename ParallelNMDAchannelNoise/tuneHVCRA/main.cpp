@@ -16,22 +16,22 @@ double E_REST_MATURE = -80.000000;
 double E_REST_IMMATURE = -80.000000; // was -65.0
 
 double AD_MATURE = 10000.000000;
-double AD_IMMATURE = 1000.000000;
+double AD_IMMATURE = 1000.000000; // was 1000
 
 double GK_MATURE = 8.000000;
-double GK_IMMATURE = 6.000000; // was 16.0
+double GK_IMMATURE = 8.000000; // was 16.0
 
 double GNA_MATURE = 60.000000;
-double GNA_IMMATURE = 20.000000; // was 40.0
+double GNA_IMMATURE = 60.000000; // was 40.0
 
 double RC_MATURE = 55.000000;
-double RC_IMMATURE = 5.5000; // was 1.0
+double RC_IMMATURE = 400.000; // was 5.5
 
 double GCA_MATURE = 55.0;
-double GCA_IMMATURE = 0.0;
+double GCA_IMMATURE = 55.0;
 
 double GCAK_MATURE = 150.0;
-double GCAK_IMMATURE = 0.0;
+double GCAK_IMMATURE = 150.0;
 
 double GSL_MATURE = 0.1;
 double GSL_IMMATURE = 0.1;
@@ -280,7 +280,7 @@ void calculate_conductance_response(int N, double G_step, std::string dirname)
 
 int main(int argc, char **argv)
 {
-	std::string dirname = "/mnt/hodgkin_home/eugene/Output/tuneHVCRA/passiveDendrite/NaKchange/Na20K6/";
+	std::string dirname = "/mnt/hodgkin_home/eugene/Output/tuneHVCRA/Ad1000/tc25/Rc400/";
 	
 	int N = 50;
 	double ampl_step = 0.025;
@@ -301,6 +301,8 @@ int main(int argc, char **argv)
 	calculate_fI(N, ampl_step, true, dirname);
 	calculate_fI(N, ampl_step, false, dirname);
 	
-	double G_step = 0.2;
+	double G_step = 0.05;
+	N = 100;
+	
 	calculate_conductance_response(N, G_step, dirname);
 }

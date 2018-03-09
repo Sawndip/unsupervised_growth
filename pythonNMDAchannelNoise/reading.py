@@ -1025,3 +1025,36 @@ def read_inhAndExc_test(filename):
             
     return probability_for_relevant_spike, mean_relevant_spike_time, std_relevant_spike_time, \
             probability_for_nonrelevant_spike, mean_spike_time, std_spike_time
+            
+def read_clopath_test(filename):
+    """
+    Read results of clopath STDP model simulation
+    """
+    with open(filename, "rb") as file:
+        data = file.read()
+        
+        num_datapoints = struct.unpack("<i", data[:SIZE_OF_INT])[0]
+        
+        print num_datapoints        
+        
+        time = np.empty(num_datapoints, np.float32)
+        vd = np.empty(num_datapoints, np.float32)
+        u_minus = np.empty(num_datapoints, np.float32)
+        u_plus = np.empty(num_datapoints, np.float32)
+        x = np.empty(num_datapoints, np.float32)
+        w = np.empty(num_datapoints, np.float32)
+        
+        
+        ind = SIZE_OF_INT
+        
+        for i in range(num_datapoints): 
+            time[i] = struct.unpack("<d", data[ind:(ind+SIZE_OF_DOUBLE)])[0]
+            vd[i] = struct.unpack("<d", data[(ind+SIZE_OF_DOUBLE):(ind+2*SIZE_OF_DOUBLE)])[0]
+            u_minus[i] = struct.unpack("<d", data[(ind+2*SIZE_OF_DOUBLE):(ind+3*SIZE_OF_DOUBLE)])[0]
+            u_plus[i] = struct.unpack("<d", data[(ind+3*SIZE_OF_DOUBLE):(ind+4*SIZE_OF_DOUBLE)])[0]
+            x[i] = struct.unpack("<d", data[(ind+4*SIZE_OF_DOUBLE):(ind+5*SIZE_OF_DOUBLE)])[0]
+            w[i] = struct.unpack("<d", data[(ind+5*SIZE_OF_DOUBLE):(ind+6*SIZE_OF_DOUBLE)])[0]
+            
+            ind += 6*SIZE_OF_DOUBLE
+            
+    return time, vd, u_minus, u_plus, x, w
