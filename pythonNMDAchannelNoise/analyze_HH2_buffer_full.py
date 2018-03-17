@@ -14,12 +14,12 @@ import numpy as np
 #filename = "/home/eugene/Output/neuronTest/saturatedInhibitionResponse/Ginh_5.00.bin"
 #filename = "/home/eugene/Output/neuronTest/kickResponse/Ginh_10.00_8.bin"
 #filename = "/home/eugene/Output/neuronTest/response.bin"
-#filename = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/test1/RA/RA231.bin"
+filename = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/noImmatureOut1/RA/RA692.bin"
 #filename = "/home/eugene/Output/networks/chainGrowth/testGrowthDelays5/RA/RA5.bin"
 #filename = "/home/eugene/Output/neuronTest/inhAndExcInputsResponse/RA.bin"
 #filename = "/home/eugene/Output/neuronTest/modelStability/RA29.bin"
-filename = "/mnt/hodgkin_home/eugene/Output/tuneHVCRA/Ad1000/Rc55/RA26.bin"
-filename = "/mnt/hodgkin_home/eugene/Output/tuneHVCRA/Ad1000/Rc200/RA23.bin"
+#filename = "/mnt/hodgkin_home/eugene/Output/tuneHVCRA/Ad1000/Rc55/RA26.bin"
+#filename = "/mnt/hodgkin_home/eugene/Output/tuneHVCRA/Ad1000/Rc200/RA23.bin"
 
 #filename = "/mnt/hodgkin_home/eugene/Output/neuronTest/inhAndExcInputsResponse/RA13.bin"
 

@@ -265,7 +265,7 @@ protected:
 	static double rInf(double v){return 1 / (1 + exp(-(v + 5) / 10));} // original +5; spontaneous burst +15
 	static double tauR(double v){return 1.0;}  // original 1
 	static double cInf(double v){return 1 / (1 + exp(-(v - 10) / 7));} // original -10; spontaneous burst -0
-	static double tauC(double v){return 25;} // original 10
+	static double tauC(double v){return 10;} // original 10
 };
 
 

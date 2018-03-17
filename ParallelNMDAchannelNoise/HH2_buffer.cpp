@@ -240,13 +240,13 @@ void HH2_buffer::set_to_rest()
 
 int HH2_buffer::check_bad_values()
 {
-	if ( ( _Vs > 100 ) || ( _Vs < -100 ) )
+	if ( ( _Vs > 100 ) || ( _Vs < -200 ) )
 		return -1;
 	
 	if ( isnan(_Vs) )
 		return -1;
 	
-	if ( ( _Vd > 100 ) || ( _Vd < -100 ) )
+	if ( ( _Vd > 100 ) || ( _Vd < -200 ) )
 		return -1;
 	
 	if ( isnan(_Vd) )

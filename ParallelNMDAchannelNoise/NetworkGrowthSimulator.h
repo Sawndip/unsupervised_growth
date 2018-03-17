@@ -96,7 +96,8 @@ protected:
 		vector <double> xx_I; // x-coordinates of HVC-I neurons
 		vector <double> yy_I; // y-coordinates of HVC-I neurons
 		vector <double> zz_I; // z-coordinates of HVC-I neurons
-				
+		
+		
 		double MODEL_INTERNEURON_DISTANCE; // average distance between neighbouring interneurons in the model 
 		
 		const static double WAITING_TIME; // time in the beginning and end of the trial when no current injection happens
@@ -149,7 +150,8 @@ protected:
 
 		vector<bitArray> active_indicators_local; // array of HVC(RA) neurons with active synapses
 		vector<bitArray> supersynapses_indicators_local; // indicator array for active supersynapses;
-		vector<int> training_neurons; // vector with ids of training neurons
+
+		vector<int> training_neurons; // vector with ids of training neurons
 		
 		vector<vector<int>> active_synapses_local; // array of vectors with IDs of active synapses
 		vector<vector<int>> supersynapses_local; // array of vectors with IDs of supersynapses
@@ -281,7 +283,11 @@ protected:
 	    void trial_event_pre_dend_post_delays_sudden_maturation(bool training); // singe trial with STDP rule; somatic spikes are presynaptic
 																				// events; dendritic spikes - postsynaptic. All somatic spikes
 																				// occured within certain window are considered as a single event
-																				
+		
+		void trial_burst_pre_dend_post_delays_sudden_maturation_noImmatureOut(bool training); // singe trial with STDP rule; bursts are presynaptic
+																				// events; dendritic spikes - postsynaptic. Immature neurons have no output connections
+		
+																		
 	    void trial_soma_pre_dend_post_stdp_no_delays(bool training); // single trial with STDP rule with somatic spikes as presynaptic
 																	 // events and dendritic spikes as postsynaptic. No axonal delays
 		
