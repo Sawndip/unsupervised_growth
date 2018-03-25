@@ -19,8 +19,8 @@ N = 1000 # number of neurons
 #fileDend = "/home/eugene/Output/networks/chainGrowth/testGrowthDelays6/spike_times_dend_1900.bin"
 #fileSoma = "/home/eugene/Output/networks/chainGrowth/testGrowthDelays6/spike_times_soma_1900.bin"
 
-fileDend = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/events2/spike_times_dend_700.bin"
-fileSoma = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/events2/spike_times_soma_700.bin"
+fileDend = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/noImmatureOut3/spike_times_dend_13000.bin"
+fileSoma = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/noImmatureOut3/spike_times_soma_13000.bin"
 
 
 #fileDend = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/test1/test_spike_times_dend_10.bin"
@@ -38,10 +38,10 @@ for spikes, neuron_id in zip(spike_times_soma, neuron_fired_soma):
     if len(spikes) > 6:
         print "Neuron {0} produced {1} spikes".format(neuron_id[0], len(spikes))
 
-#print "Dedritic spikes: ", neuron_fired_dend
+print "Dedritic spikes: ", neuron_fired_dend
 #print "Dendritic spike times: ", spike_times_dend
 
-#print "Somatic spikes: ", neuron_fired_soma
+print "Somatic spikes: ", neuron_fired_soma
 #print "Somatic spike times: ", spike_times_soma
 
 ordered_soma_spikes_raw, ordered_soma_raw = zip(*sorted(zip(spike_times_soma, neuron_fired_soma)))

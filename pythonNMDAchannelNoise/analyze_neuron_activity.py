@@ -120,8 +120,8 @@ def plot_neuron_activity(neurons, training_neurons, firing_rate, probability_to_
     plt.xlabel("Time in trial numbers")
     plt.ylabel("Input weights from training neurons")
 
-dirname = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/events1/"
-trial_number = 2450
+dirname = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/noImmatureOut1/"
+trial_number = 1000
 fileActivityHistory = os.path.join(dirname, "activity_history_" + str(trial_number) + ".bin")
 fileTraining = os.path.join(dirname, "training_neurons.bin")
 
@@ -144,7 +144,7 @@ num_neurons = activity_history.shape[0]
 history_size = activity_history.shape[1]
 window_size = 20
 FIRING_RATE_THRESHOLD = 0.1
-SPIKE_PROBABILITY_THRESHOLD = 0.1
+SPIKE_PROBABILITY_THRESHOLD = 0.3
 
 fire_indicators = np.ones_like(activity_history, np.float32)
 fire_indicators[activity_history == 0] = 0
@@ -219,22 +219,23 @@ active_neurons_not_training = [i for i in active_neurons if i not in training_ne
 #print training_neurons
 print active_neurons_not_training
 
-neurons_to_plot = [448, 490, 947, 20, 21, 32, 57, 143, 151, 163]
+#neurons_to_plot = [448, 490, 947, 20, 21, 32, 57, 143, 151, 163]
+neurons_to_plot = []
 max_num_neurons_to_plot = 10
 
 
-#==============================================================================
-# if len(neurons_to_plot) > 0:
-#     plot_neuron_activity(neurons_to_plot, training_neurons, firing_rate, probability_to_spike, dirname, trial_number)
-# else:
-#      if ( len(active_neurons_not_training) > 0 ):
-#         if ( len(active_neurons_not_training) >= max_num_neurons_to_plot ):
-#             num_neurons_to_plot = max_num_neurons_to_plot
-#         else:
-#             num_neurons_to_plot = len(active_neurons_not_training)
-#         
-#         print "Neurons plotted: ",active_neurons_not_training[:num_neurons_to_plot]
-#==============================================================================
+if len(neurons_to_plot) > 0:
+    plot_neuron_activity(neurons_to_plot, training_neurons, firing_rate, probability_to_spike, dirname, trial_number)
+else:
+     if ( len(active_neurons_not_training) > 0 ):
+        if ( len(active_neurons_not_training) >= max_num_neurons_to_plot ):
+            num_neurons_to_plot = max_num_neurons_to_plot
+        else:
+            num_neurons_to_plot = len(active_neurons_not_training)
+        
+        print "Neurons plotted: ",active_neurons_not_training[:num_neurons_to_plot]
+        
+        plot_neuron_activity(active_neurons_not_training[:num_neurons_to_plot], training_neurons, firing_rate, probability_to_spike, dirname, trial_number)
     
         
 #print activity_history[:][2496]

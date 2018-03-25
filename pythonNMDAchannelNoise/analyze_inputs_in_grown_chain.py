@@ -14,8 +14,8 @@ import utils
 
 CONVERTION_CONSTANT = 10.0
 
-trial_number = 5000
-dirname = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/events1/"
+trial_number = 13000
+dirname = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/noImmatureOut3/"
 
 fileSoma = os.path.join(dirname, "spike_times_soma_" + str(trial_number) + ".bin")
 fileWeights = os.path.join(dirname, "weights_" + str(trial_number) + ".bin")
@@ -262,13 +262,18 @@ print "In degree active = ",num_active_inputs[list(layer)]
 print "Out degree active = ",num_active_outputs[list(layer)]
 print "In degree super = ",num_super_inputs[list(layer)]
 print "Out degree super = ",num_super_outputs[list(layer)]
-   
+
+prev_layer = set()   
 
 while len(layer) <= 10 and len(layer) > 0:
     num_active_out = 0
     num_super_out = 0
     
     new_layer = set()
+    
+    print "Current layer: ",layer
+    print "Prev layer: ",prev_layer
+        
     
     for i in layer:
         #print len(super_synapses[i])
@@ -277,11 +282,16 @@ while len(layer) <= 10 and len(layer) > 0:
         num_super_out += len(super_synapses[i])
         
         for synapse in super_synapses[i]:
-            new_layer.add(synapse)
-            
-    layer = new_layer
+            if synapse not in prev_layer:
+                new_layer.add(synapse)
     
-    print layer
+    print "Next layer: ",new_layer
+    
+        
+    prev_layer = layer
+    layer = new_layer
+        
+    
     print "Num active out = ",num_active_out
     print "Num super out = ",num_super_out
     print "In degree active = ",num_active_inputs[list(layer)]
@@ -300,15 +310,16 @@ while len(layer) <= 10 and len(layer) > 0:
 
 source_neurons = range(N_RA)
 #target_neurons = [448]
-target_neurons = [490, 947, 448]
+target_neurons = [897, 803, 465, 203, 913, 210, 186, 785, 125, 927]
 
 for i in source_neurons:
-    for j in target_neurons:
-        if j in active_synapses[i]:
-            print "active: {0} -> {1}; w = {2}".format(i, j, weights[i][j])
+    if i not in training_neurons:
+        for j in target_neurons:
+            if j in active_synapses[i]:
+                print "active: {0} -> {1}; w = {2}".format(i, j, weights[i][j])
 
-        if j in super_synapses[i]:
-            print "super: {0} -> {1}; w = {2}".format(i, j, weights[i][j])
+            if j in super_synapses[i]:
+                print "super: {0} -> {1}; w = {2}".format(i, j, weights[i][j])
 
 
 for i in range(N_RA):

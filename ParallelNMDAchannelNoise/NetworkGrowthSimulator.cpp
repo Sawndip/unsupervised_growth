@@ -21,6 +21,8 @@ const double NetworkGrowthSimulator::MIN_INTERSOMATIC_DISTANCE = 10.0; // minimu
 const double NetworkGrowthSimulator::G_TRAINING_KICK = 3.0; // strength of excitatory conductance delivered to training neurons
 const double NetworkGrowthSimulator::MATURATION_SCALE = 10000000000000; // timescale of neuron properties maturation
 const double NetworkGrowthSimulator::EXPERIMENTAL_AXONAL_DELAY_PER_MICRON = 0.01; // experimental value of axonal time delay in ms for 1 micron distance
+const double NetworkGrowthSimulator::MATURE_SYNAPSE_SCALING = 15.0; // constant to scale excitatory synapses to mature neurons
+	
 
 static double distance2d(double x1, double y1, double x2, double y2)
 {
@@ -5747,8 +5749,8 @@ void NetworkGrowthSimulator::trial_burst_pre_dend_post_delays_sudden_maturation_
 					//// LTD
 					//////////////
 					// do LTD on dendritic spike time of target neuron if it is not mature neuron
-					if ( mature_global[target_id] != 1 )
-					{
+					//~ if ( mature_global[target_id] != 1 )
+					//~ {
 						// update delivered spikes only if current spike occured later than previous delivered
 						// spike + event_window
 						bool new_event_occured = false;
@@ -5829,23 +5831,23 @@ void NetworkGrowthSimulator::trial_burst_pre_dend_post_delays_sudden_maturation_
 							   
 										LTD(weights_RA_RA_local[i][target_id], dt);
 										
-										// show LTD of pool neurons only
-										//~ auto p = std::equal_range(training_neurons.begin(), training_neurons.end(), Id_RA_local[i]);
-										//~ 
-										//~ if (p.first == p.second)
-										//~ {
-											//~ std::cout << "LTD from  " << Id_RA_local[i] << " -> " << target_id
-												  //~ << " dt = " << dt << " w_before = " << w_before << " dw = " << weights_RA_RA_local[i][target_id] - w_before
-												  //~ << " w_after = " << weights_RA_RA_local[i][target_id] << std::endl;
-										//~ }
-									
+										//~ // show LTD to pool neurons only
+										auto p = std::equal_range(training_neurons.begin(), training_neurons.end(), target_id);
+										
+										if (p.first == p.second)
+										{
+											std::cout << "LTD from  " << Id_RA_local[i] << " -> " << target_id
+												  << " dt = " << dt << " w_before = " << w_before << " dw = " << weights_RA_RA_local[i][target_id] - w_before
+												  << " w_after = " << weights_RA_RA_local[i][target_id] << std::endl;
+										}
+									//~ 
 										update_synapse(i, target_id);	
 										
 									}   
 								}
 							}
 						}
-					} // end if target neuron is not mature
+					//~ } // end if target neuron is not mature
 				} // end if internal_time >= delivery spike time 
 				else
 					break;
@@ -5871,12 +5873,12 @@ void NetworkGrowthSimulator::trial_burst_pre_dend_post_delays_sudden_maturation_
 				
 				spikes_in_trial_dend_local[i].push_back(internal_time); // dend spike time relative to trial onset
 				
-				if ( mature_global[Id_RA_local[i]] != 1 )
-				{
+				//if ( mature_global[Id_RA_local[i]] != 1 )
+				//{
 					RA_neurons_bursted_local.push_back(Id_RA_local[i]);
 				
 					some_RA_neuron_bursted_local = 1;
-				}
+				//}
 				//std::cout << "HVC-RA " << Id_RA_local[i] << " dend spike at " << internal_time << std::endl;
 			} // end if get_fired_dend
 	
@@ -6104,9 +6106,10 @@ void NetworkGrowthSimulator::trial_burst_pre_dend_post_delays_sudden_maturation_
 											{
 												double w_before = weights_RA_RA_local[i][postsyn_ID];
 												
-												
-												LTP(weights_RA_RA_local[i][postsyn_ID], dt);
-												
+												if ( rescaled_indicators_local[i][postsyn_ID] == 0 )
+													LTP(weights_RA_RA_local[i][postsyn_ID], dt);
+												else
+													LTP_toRescaled(weights_RA_RA_local[i][postsyn_ID], dt);
 												//~ std::cout   << "LTP from saturated " << presyn_ID << " -> " << postsyn_ID
 															//~ << " dt = " << dt << " w_before = " << w_before << " dw = " << weights_RA_RA_local[i][postsyn_ID] - w_before
 															//~ << std::endl;
@@ -6156,16 +6159,16 @@ void NetworkGrowthSimulator::trial_burst_pre_dend_post_delays_sudden_maturation_
 												
 											LTD(weights_RA_RA_local[i][postsyn_ID], dt);
 											
-											//~ // show LTD on pool neurons only
-											//~ auto p = std::equal_range(training_neurons.begin(), training_neurons.end(), postsyn_ID);
-											//~ 
-											//~ if (p.first == p.second)
-											//~ {
-												//~ std::cout << "LTD from  " << presyn_ID << " -> " << postsyn_ID
-													  //~ << " dt = " << dt << " w_before = " << w_before << " dw = " << weights_RA_RA_local[i][postsyn_ID] - w_before
-													  //~ << " w_after = " << weights_RA_RA_local[i][postsyn_ID] << std::endl;
-											//~ }
-											//~ 
+											// show LTD on pool neurons only
+											auto p = std::equal_range(training_neurons.begin(), training_neurons.end(), postsyn_ID);
+											
+											if (p.first == p.second)
+											{
+												std::cout << "LTD from  " << presyn_ID << " -> " << postsyn_ID
+													  << " dt = " << dt << " w_before = " << w_before << " dw = " << weights_RA_RA_local[i][postsyn_ID] - w_before
+													  << " w_after = " << weights_RA_RA_local[i][postsyn_ID] << std::endl;
+											}
+											
 											//~ std::cout << "LTD from  " << presyn_ID << " -> " << postsyn_ID
 													  //~ << " dt = " << dt << " w_before = " << w_before << " dw = " << weights_RA_RA_local[i][postsyn_ID] - w_before
 													  //~ << std::endl;
@@ -6175,17 +6178,21 @@ void NetworkGrowthSimulator::trial_burst_pre_dend_post_delays_sudden_maturation_
 										{
 											double w_before = weights_RA_RA_local[i][postsyn_ID];
 											
-											LTP(weights_RA_RA_local[i][postsyn_ID], dt);
+											if ( rescaled_indicators_local[i][postsyn_ID] == 0 )
+												LTP(weights_RA_RA_local[i][postsyn_ID], dt);
+											else
+												LTP_toRescaled(weights_RA_RA_local[i][postsyn_ID], dt);
+										
 											
-											//~ // show LTP on pool neurons only
-											//~ auto p = std::equal_range(training_neurons.begin(), training_neurons.end(), postsyn_ID);
-											//~ 
-											//~ if (p.first == p.second)
-											//~ {
-												//~ std::cout << "LTP from  " << presyn_ID << " -> " << postsyn_ID
-													  //~ << " dt = " << dt << " w_before = " << w_before << " dw = " << weights_RA_RA_local[i][postsyn_ID] - w_before
-													  //~ << " w_after = " << weights_RA_RA_local[i][postsyn_ID] << std::endl;
-											//~ }
+											// show LTP on pool neurons only
+											auto p = std::equal_range(training_neurons.begin(), training_neurons.end(), postsyn_ID);
+											
+											if (p.first == p.second)
+											{
+												std::cout << "LTP from  " << presyn_ID << " -> " << postsyn_ID
+													  << " dt = " << dt << " w_before = " << w_before << " dw = " << weights_RA_RA_local[i][postsyn_ID] - w_before
+													  << " w_after = " << weights_RA_RA_local[i][postsyn_ID] << std::endl;
+											}
 											
 											
 											//~ std::cout << "LTP from  " << presyn_ID << " -> " << postsyn_ID
@@ -6237,7 +6244,8 @@ void NetworkGrowthSimulator::trial_burst_pre_dend_post_delays_sudden_maturation_
     
     this->potentiation_decay_sudden_maturation();
     //printf("After potentiation decay")
-    this->update_all_synapses_sudden_maturation();
+    //this->update_all_synapses_sudden_maturation();
+    this->update_all_synapses();
 	
 	// update maturation info
 	std::vector<int> RA_matured_local;
@@ -6252,7 +6260,7 @@ void NetworkGrowthSimulator::trial_burst_pre_dend_post_delays_sudden_maturation_
 
 		// calculate firing rate in large window:
 		int maturation_window = 300;
-		double maturation_threshold = 0.95;
+		double maturation_threshold = 0.7;
 		
         firing_rate_long_local[i] = std::accumulate(num_spikes_in_recent_trials_local[i].begin(), num_spikes_in_recent_trials_local[i].end(), 0.0)
                                                                                             / static_cast<double>(maturation_params.RATE_WINDOW_LONG);
@@ -10647,6 +10655,8 @@ void NetworkGrowthSimulator::resize_arrays_for_all_processes()
     active_indicators_local.resize(N_RA_local);
     supersynapses_indicators_local.resize(N_RA_local);
 	
+	rescaled_indicators_local.resize(N_RA_local);
+    
 	// spikes in trials
     spikes_in_trial_soma_local.resize(N_RA_local);
     spikes_in_trial_dend_local.resize(N_RA_local);
@@ -10715,6 +10725,7 @@ void NetworkGrowthSimulator::resize_arrays_for_all_processes()
         axonal_delays_RA_RA_local[i].resize(N_RA);
         active_indicators_local[i].resize(N_RA);
         supersynapses_indicators_local[i].resize(N_RA);
+        rescaled_indicators_local[i].resize(N_RA);
 	}
 }
 //~ 
@@ -10879,7 +10890,6 @@ void NetworkGrowthSimulator::update_all_synapses()
 
 void NetworkGrowthSimulator::rescale_inhibition_to_mature(int neuron_id)
 {
-	double weight_scaling_constant = 10.0;
 	// rescale inhibitory synapses to mature neuron
 	for (int i = 0; i < N_I_local; i++)
 	{
@@ -10888,58 +10898,63 @@ void NetworkGrowthSimulator::rescale_inhibition_to_mature(int neuron_id)
 		if ( it != syn_ID_I_RA_local[i].end() )
 		{
 			int ind = std::distance(syn_ID_I_RA_local[i].begin(), it);
-			weights_I_RA_local[i][ind] /= weight_scaling_constant;
+			weights_I_RA_local[i][ind] /= MATURE_SYNAPSE_SCALING;
 		}
 	}
 }
 
 void NetworkGrowthSimulator::rescale_synapses_to_mature(int neuron_id)
 {
-	double weight_scaling_constant = 10.0;
 	
 	for (int i = 0; i < N_RA_local; i++)
 	{
-		if ( active_indicators_local[i][neuron_id] == 1 )
-			weights_RA_RA_local[i][neuron_id] *= weight_scaling_constant;
-	}
-	
-	// rescale inhibitory synapses to mature neuron
-	for (int i = 0; i < N_I_local; i++)
-	{
-		auto it = std::find(syn_ID_I_RA_local[i].begin(), syn_ID_I_RA_local[i].end(), neuron_id);
-		
-		if ( it != syn_ID_I_RA_local[i].end() )
-		{
-			int ind = std::distance(syn_ID_I_RA_local[i].begin(), it);
-			weights_I_RA_local[i][ind] /= weight_scaling_constant;
+		if ( active_indicators_local[i][neuron_id] == 1 ){
+			rescaled_indicators_local[i][neuron_id] = 1;
+			weights_RA_RA_local[i][neuron_id] *= MATURE_SYNAPSE_SCALING;
 		}
 	}
 	
-	// rescale synapses in global array
-	if ( MPI_rank == 0 ){
-		for (int i = 0; i < N_I; i++){
-			auto it = std::find(syn_ID_I_RA_global[i].begin(), syn_ID_I_RA_global[i].end(), neuron_id);
-		
-			if ( it != syn_ID_I_RA_global[i].end() ){
-				int ind = std::distance(syn_ID_I_RA_global[i].begin(), it);
-				weights_I_RA_global[i][ind] /= weight_scaling_constant;
-			}
-		}
-	}
+	//~ // rescale inhibitory synapses to mature neuron
+	//~ for (int i = 0; i < N_I_local; i++)
+	//~ {
+		//~ auto it = std::find(syn_ID_I_RA_local[i].begin(), syn_ID_I_RA_local[i].end(), neuron_id);
+		//~ 
+		//~ if ( it != syn_ID_I_RA_local[i].end() )
+		//~ {
+			//~ int ind = std::distance(syn_ID_I_RA_local[i].begin(), it);
+			//~ weights_I_RA_local[i][ind] /= MATURE_SYNAPSE_SCALING;
+		//~ }
+	//~ }
+	//~ 
+	//~ // rescale synapses in global array
+	//~ if ( MPI_rank == 0 ){
+		//~ for (int i = 0; i < N_I; i++){
+			//~ auto it = std::find(syn_ID_I_RA_global[i].begin(), syn_ID_I_RA_global[i].end(), neuron_id);
+		//~ 
+			//~ if ( it != syn_ID_I_RA_global[i].end() ){
+				//~ int ind = std::distance(syn_ID_I_RA_global[i].begin(), it);
+				//~ weights_I_RA_global[i][ind] /= MATURE_SYNAPSE_SCALING;
+			//~ }
+		//~ }
+	//~ }
 }
+
+
 
 void NetworkGrowthSimulator::update_synapse(int i, int j)
 {
 	double w = weights_RA_RA_local[i][j];
 
-    if ( ( w >= synaptic_params.ACTIVATION_THRESHOLD ) && ( active_indicators_local[i][j] == 0 ) && ( remodeled_local[i] == 0) )
+    if ( ( w >= synaptic_params.ACTIVATION_THRESHOLD ) && ( active_indicators_local[i][j] == 0 ) && ( remodeled_local[i] == 0) 
+						&& ( rescaled_indicators_local[i][j] == 0) )
     {
        // printf("Activated synapse from %d onto %d; weight = %f\n", Id_RA_local[i], j, w);
         active_indicators_local[i][j] = 1;
         active_synapses_local[i].push_back(j);
     }
 
-    if ( (w >= synaptic_params.SUPERSYNAPSE_THRESHOLD) && (supersynapses_indicators_local[i][j] == 0) && (static_cast<int>(supersynapses_local[i].size()) < synaptic_params.Nss) )
+    if ( (w >= synaptic_params.SUPERSYNAPSE_THRESHOLD) && (supersynapses_indicators_local[i][j] == 0) && (static_cast<int>(supersynapses_local[i].size()) < synaptic_params.Nss) 
+									&& ( rescaled_indicators_local[i][j] == 0) )
     {
        // printf("Activated supersynapse from %d onto %d; weight = %f\n", Id_RA_local[i], j, w);
         supersynapses_indicators_local[i][j] = 1;
@@ -10976,6 +10991,26 @@ void NetworkGrowthSimulator::update_synapse(int i, int j)
     }
 }
 
+void NetworkGrowthSimulator::LTP_toRescaled(double &w, double dt)
+{
+	// dt in LTP is postsynaptic spike time - presynaptic spike time  
+	if (dt <= synaptic_params.T_0)
+	{
+		std::cerr << "Time t = " << dt << " is smaller than T_0 in LTP!" << std::endl;
+		return;
+	}
+	
+	if (dt <= synaptic_params.T_0 + synaptic_params.T_P)
+		w = w + MATURE_SYNAPSE_SCALING * synaptic_params.A_P * (dt - synaptic_params.T_0) / synaptic_params.T_P;
+	else
+		w = w + MATURE_SYNAPSE_SCALING * synaptic_params.A_P * exp(-(dt - synaptic_params.T_0 - synaptic_params.T_P) / synaptic_params.TAU_P);
+		
+	if (w > MATURE_SYNAPSE_SCALING * synaptic_params.WEIGHT_MAX)
+        w = MATURE_SYNAPSE_SCALING * synaptic_params.WEIGHT_MAX;
+
+    if (w < 0)
+        w = 0;
+}
 
 void NetworkGrowthSimulator::LTP(double &w, double dt)
 {

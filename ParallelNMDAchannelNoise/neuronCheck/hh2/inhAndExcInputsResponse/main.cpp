@@ -9,7 +9,7 @@
 
 int main()
 {
-	double Gie = 50; // strength of inhibitory kick
+	double Gie = 2; // strength of inhibitory kick
 	
 	double Gei = 0.25;
 	
@@ -20,13 +20,13 @@ int main()
 	double mean_delays = 0; // mean axonal delay
 
 	int num_source_neurons = 10; // number of neurons in first layer (sources)
-	int num_target_neurons = 1000; // number of neurons in second layer (targets)
+	int num_target_neurons = 100; // number of neurons in second layer (targets)
 
 	// white noise parameters
 	double white_noise_mean_soma = 0.000000;
 	double white_noise_std_soma = 0.10000; // was 0.10
 	double white_noise_mean_dend = 0.000000;
-	double white_noise_std_dend = 0.10000; // was 0.10
+	double white_noise_std_dend = 0.15000; // was 0.10
 	
 	// trial parameters
 	double TIMESTEP = 0.02;
@@ -35,7 +35,7 @@ int main()
 	std::vector<std::vector<std::pair<double,int>>> delivery_queue_RA_RA; // queue with spike delivery times for HVC-RA -> HVC-RA interactions
 		
 	double E_GABA_MATURE = -80.000000;
-	double E_GABA_IMMATURE = -55.000000;
+	double E_GABA_IMMATURE = -80.000000;
 
 	double E_REST_MATURE = -80.000000;
 	double E_REST_IMMATURE = -80.000000;

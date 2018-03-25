@@ -100,6 +100,7 @@ protected:
 		
 		double MODEL_INTERNEURON_DISTANCE; // average distance between neighbouring interneurons in the model 
 		
+		const static double MATURE_SYNAPSE_SCALING; // constant to scale excitatory synapses to mature neurons
 		const static double WAITING_TIME; // time in the beginning and end of the trial when no current injection happens
 		const static double STDP_WINDOW; // time window in which spikes contribute to STDP change in weight
 		const static double TIMESTEP; // time step for dynamics
@@ -150,6 +151,7 @@ protected:
 
 		vector<bitArray> active_indicators_local; // array of HVC(RA) neurons with active synapses
 		vector<bitArray> supersynapses_indicators_local; // indicator array for active supersynapses;
+		vector<bitArray> rescaled_indicators_local; // indicator array that shows if synapse was rescaled;
 
 		vector<int> training_neurons; // vector with ids of training neurons
 		
@@ -314,6 +316,7 @@ protected:
         void LTP_burst(double &w, double t); // long-term potentiation for burst STDP rule
         void LTD(double &w, double t); // long-term depression STDP rule
 		void LTP(double &w, double t); // long-term potentiation STDP rule
+		void LTP_toRescaled(double &w, double t); // long-term potentiation STDP rule for rescaled
 		
 		void potentiation_decay(); // apply potentiation decay to all RA-RA synapses
 		void potentiation_decay_sudden_maturation(); // apply potentiation decay to all RA-RA synapses with immature targets.
