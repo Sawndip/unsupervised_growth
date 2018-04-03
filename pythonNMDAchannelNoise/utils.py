@@ -305,9 +305,172 @@ def get_source_input_weight_time_sequence(dirname, end_trial, trialStep, source_
         current_trial += trialStep
         
     return input_weights
+
+def get_maturation_time_sequence(dirname, end_trial, trialStep, neurons):
+    """
+    Outputs excitatory conductance input from source_neurons to target_neuron at different
+        points during simulation
+    """
+    
+    num_timepoints = end_trial / trialStep + 1
+    
+    maturation_indicators = np.zeros((len(neurons), num_timepoints), np.float32)
+
+    current_trial = 0
+    timepoint = 0
+
+    while current_trial <= end_trial:   
+        fileMature = os.path.join(dirname, "mature_" + str(current_trial) + ".bin")
+        (_, _, mat_indicators) = reading.read_mature_indicators(fileMature)
         
-            
-            
+        for i, neuron_id in enumerate(neurons):
+            maturation_indicators[i][timepoint] = mat_indicators[neuron_id]
+                
+        timepoint += 1
+        current_trial += trialStep
+        
+    return maturation_indicators         
+
+def get_weight_time_sequence_from_source(dirname, end_trial, trialStep, source_neuron, target_neurons):
+    """
+    Outputs excitatory conductance input from source_neuron to target_neurons at different
+        points during simulation
+    """
+    num_timepoints = end_trial / trialStep + 1
+    
+    synaptic_weights = np.zeros((len(target_neurons), num_timepoints), np.float32)
+
+    current_trial = 0
+    timepoint = 0
+
+    while current_trial <= end_trial:   
+        fileWeights = os.path.join(dirname, "weights_" + str(current_trial) + ".bin")
+        (_, _, weights) = reading.read_weights(fileWeights)
+        
+        for i, target_id in enumerate(target_neurons):
+            synaptic_weights[i][timepoint] = weights[source_neuron][target_id]
+                
+        timepoint += 1
+        current_trial += trialStep
+        
+    return synaptic_weights               
+
+    
+def get_weight_time_sequence(dirname, end_trial, trialStep, source_neurons, target_neuron):
+    """
+    Outputs excitatory conductance input from source_neurons to target_neuron at different
+        points during simulation
+    """
+    num_timepoints = end_trial / trialStep + 1
+    
+    synaptic_weights = np.zeros((len(source_neurons), num_timepoints), np.float32)
+
+    current_trial = 0
+    timepoint = 0
+
+    while current_trial <= end_trial:   
+        fileWeights = os.path.join(dirname, "weights_" + str(current_trial) + ".bin")
+        (_, _, weights) = reading.read_weights(fileWeights)
+        
+        for i, source_id in enumerate(source_neurons):
+            synaptic_weights[i][timepoint] = weights[source_id][target_neuron]
+                
+        timepoint += 1
+        current_trial += trialStep
+        
+    return synaptic_weights               
+
+
+def get_stdp_timeDif_sequence(dirname, end_trial, trialStep, N_RA, target_neurons, source_neuron):
+    """
+    Outputs time difference between first spike of source neuron and dendritic spike times of target neurons
+        - quantity used in STDP rules
+    """
+    num_timepoints = end_trial / trialStep + 1
+    
+    timeDif_sequence = np.zeros((len(target_neurons), num_timepoints), np.float32)
+
+    current_trial = 0
+    timepoint = 0
+
+    while current_trial <= end_trial:   
+        fileSomaSpikeTimes = os.path.join(dirname, "spike_times_soma_" + str(current_trial) + ".bin")
+        fileDendSpikeTimes = os.path.join(dirname, "spike_times_dend_" + str(current_trial) + ".bin")
+        
+        (_, _, soma_spike_times_raw, neuron_spiked) = reading.read_time_info(fileSomaSpikeTimes)
+    
+        first_soma_spike_times = np.empty(N_RA, np.float32)
+        first_soma_spike_times.fill(-1.0)
+
+        for n, time in zip(neuron_spiked, soma_spike_times_raw):
+            first_soma_spike_times[n[0]] = time[0]
+        
+        (_, _, dend_spike_times_raw, neuron_spiked) = reading.read_time_info(fileDendSpikeTimes)
+    
+        first_dend_spike_times = np.empty(N_RA, np.float32)
+        first_dend_spike_times.fill(-1.0)
+
+        for n, time in zip(neuron_spiked, dend_spike_times_raw):
+            first_dend_spike_times[n[0]] = time[0]
+                
+        
+        for i, target in enumerate(target_neurons):
+            timeDif_sequence[i][timepoint] = first_dend_spike_times[target] - first_soma_spike_times[source_neuron]
+                
+        timepoint += 1
+        current_trial += trialStep
+        
+    return timeDif_sequence
+    
+
+def get_first_spike_time_sequence_relative_to_training(dirname, end_trial, trialStep, N, neurons, training_neurons):
+    """
+    Outputs first spike times of neurons relative to first spike time of training neurons
+        at different points during simulation
+    """
+    num_timepoints = end_trial / trialStep + 1
+    
+    spike_times_sequence = np.zeros((len(neurons), num_timepoints), np.float32)
+
+    current_trial = 0
+    timepoint = 0
+
+    while current_trial <= end_trial:   
+        fileSpikeTimes = os.path.join(dirname, "spike_times_soma_" + str(current_trial) + ".bin")
+        
+        spike_times = neuron_first_spike_time_relative_to_training(N, neurons, training_neurons, fileSpikeTimes)
+        
+        for i, spike in enumerate(spike_times):
+            spike_times_sequence[i][timepoint] = spike
+                
+        timepoint += 1
+        current_trial += trialStep
+        
+    return spike_times_sequence
+    
+
+def neuron_first_spike_time_relative_to_training(N, neurons, training_neurons, filename):
+    """
+    Outputs first spike times of neurons relative to first spike time of training neurons
+    """
+    (_, _, spike_times_raw, neuron_spiked) = reading.read_time_info(filename)
+    
+    
+    #print neuron_spiked
+    #print spike_times_raw    
+    
+    first_spike_times = np.empty(N, np.float32)
+    first_spike_times.fill(-1.0)
+
+    for n, time in zip(neuron_spiked, spike_times_raw):
+        first_spike_times[n[0]] = time[0]
+
+    # calculate mean spike time of training neurons
+    mean_training_first_spike = np.mean(first_spike_times[training_neurons])
+    
+    return first_spike_times[neurons] - mean_training_first_spike    
+
+
 def index(a, x):
     'Locate the leftmost value exactly equal to x'
     i = bisect.bisect_left(a, x)

@@ -12,10 +12,21 @@ import os
 import numpy as np
 import utils
 
+
+def get_hist_for_discrete_integers(data):
+    """
+    Outputs histogram for discrete integer values
+    """
+    left_of_first_bin = data.min() - 0.5
+    right_of_last_bin = data.max() + 0.5
+
+    return 1.0, left_of_first_bin, right_of_last_bin
+
+
 CONVERTION_CONSTANT = 10.0
 
-trial_number = 13000
-dirname = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/noImmatureOut3/"
+trial_number = 22500
+dirname = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/noImmatureOut4/"
 
 fileSoma = os.path.join(dirname, "spike_times_soma_" + str(trial_number) + ".bin")
 fileWeights = os.path.join(dirname, "weights_" + str(trial_number) + ".bin")
@@ -166,23 +177,27 @@ f = plt.figure()
 
 ax1 = f.add_subplot(511)
 ax1.plot(first_spike_time_of_chain_neurons, input_weights_of_chain_neurons)
-ax1.set_ylabel('Input excitatory weight (nS)')
+ax1.set_ylabel('In exc w (nS)')
+ax1.set_xticklabels([])
 
 ax2 = f.add_subplot(512)
 ax2.plot(first_spike_time_of_chain_neurons, num_active_inputs_of_chain_neurons)
-ax2.set_ylabel('# of active inputs')
+ax2.set_ylabel('# of act in')
+ax2.set_xticklabels([])
 
 ax3 = f.add_subplot(513)
 ax3.plot(first_spike_time_of_chain_neurons, num_super_inputs_of_chain_neurons)
-ax3.set_ylabel('# of super inputs')
+ax3.set_ylabel('# of sup in')
+ax3.set_xticklabels([])
 
 ax4 = f.add_subplot(514)
 ax4.plot(first_spike_time_of_chain_neurons, num_active_outputs_of_chain_neurons)
-ax4.set_ylabel('# of active outputs')
+ax4.set_ylabel('# of act out')
+ax4.set_xticklabels([])
 
 ax5 = f.add_subplot(515)
 ax5.plot(first_spike_time_of_chain_neurons, num_super_outputs_of_chain_neurons)
-ax5.set_ylabel('# of super outputs')
+ax5.set_ylabel('# of sup out')
 
 ax5.set_xlabel('Time (ms)')
 
@@ -207,35 +222,46 @@ nbins = 20
 f = plt.figure()
 
 ax1 = f.add_subplot(221)
-hist, bin_edges = np.histogram(num_active_inputs[neurons_in_chain], bins=nbins)
+#hist, bin_edges = np.histogram(num_active_inputs[neurons_in_chain], bins=nbins)
 #print bin_edges
 #print hist
-bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2.
-ax1.step(bin_centers, hist, where="pre")
+#bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2.
+
+#ax1.step(bin_centers, hist, where="pre")
+d, left_of_first_bin, right_of_last_bin = get_hist_for_discrete_integers(num_active_inputs[neurons_in_chain])
+ax1.hist(num_active_inputs[neurons_in_chain], np.arange(left_of_first_bin, right_of_last_bin + d, d))
 ax1.set_title("# active inputs")
 
 ax2 = f.add_subplot(222)
-hist, bin_edges = np.histogram(num_super_inputs[neurons_in_chain], bins=nbins)
+#hist, bin_edges = np.histogram(num_super_inputs[neurons_in_chain], bins=nbins)
 #print bin_edges
 #print hist
-bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2.
-ax2.step(bin_centers, hist, where="pre")
+#bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2.
+#ax2.step(bin_centers, hist, where="pre")
+
+d, left_of_first_bin, right_of_last_bin = get_hist_for_discrete_integers(num_super_inputs[neurons_in_chain])
+ax2.hist(num_active_inputs[neurons_in_chain], np.arange(left_of_first_bin, right_of_last_bin + d, d))
 ax2.set_title("# super inputs")
 
 ax3 = f.add_subplot(223)
-hist, bin_edges = np.histogram(num_active_outputs[neurons_in_chain], bins=nbins)
+#hist, bin_edges = np.histogram(num_active_outputs[neurons_in_chain], bins=nbins)
 #print bin_edges
 #print hist
-bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2.
-ax3.step(bin_centers, hist, where="pre")
+#bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2.
+#ax3.step(bin_centers, hist, where="pre")
+d, left_of_first_bin, right_of_last_bin = get_hist_for_discrete_integers(num_active_outputs[neurons_in_chain])
+ax3.hist(num_active_outputs[neurons_in_chain], np.arange(left_of_first_bin, right_of_last_bin + d, d))
 ax3.set_title("# active outputs")
 
 ax4 = f.add_subplot(224)
-hist, bin_edges = np.histogram(num_super_outputs[neurons_in_chain], bins=nbins)
+#hist, bin_edges = np.histogram(num_super_outputs[neurons_in_chain], bins=nbins)
 #print bin_edges
 #print hist
-bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2.
-ax4.step(bin_centers, hist, where="pre")
+#bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2.
+#ax4.step(bin_centers, hist, where="pre")
+
+d, left_of_first_bin, right_of_last_bin = get_hist_for_discrete_integers(num_super_outputs[neurons_in_chain])
+ax4.hist(num_super_outputs[neurons_in_chain], np.arange(left_of_first_bin, right_of_last_bin + d, d))
 ax4.set_title("# super outputs")
 
 

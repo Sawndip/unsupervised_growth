@@ -12,8 +12,8 @@ import numpy as np
 
 TRAINING_KICK_TIME = 100.0
 
-filename = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/test1/jitter.bin"
-fileMature = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/events1/mature_4300.bin"
+filename = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/test/noImmatureOut4/jitter.bin"
+fileMature = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/noImmatureOut4/mature_23500.bin"
 
 N, num_test_trials, \
     probability_soma_spike, average_num_soma_spikes_in_trial, mean_first_soma_spike_time, std_first_soma_spike_time,\
@@ -47,19 +47,19 @@ f = plt.figure()
 ax1 = f.add_subplot(311)
 ax1.plot(mean_first_soma_spike_time_mature[indices_sorted_soma_spikes] - TRAINING_KICK_TIME, probability_soma_spike_mature[indices_sorted_soma_spikes])
 ax1.set_ylabel('p to produce soma spike')
-ax1.set_xlim([0, 100])
+ax1.set_xlim([0, 50])
 ax1.set_ylim([-0.1, 1.1])
 
 ax2 = f.add_subplot(312)
 ax2.plot(mean_first_soma_spike_time_mature[indices_sorted_soma_spikes] - TRAINING_KICK_TIME, std_first_soma_spike_time_mature[indices_sorted_soma_spikes])
 ax2.set_ylabel('jitter in 1st soma spike (ms)')
-ax2.set_xlim([0, 100])
+ax2.set_xlim([0, 50])
 ax2.set_ylim([-0.1, 2.0])
 
 ax3 = f.add_subplot(313)
 ax3.plot(mean_first_soma_spike_time_mature[indices_sorted_soma_spikes] - TRAINING_KICK_TIME, average_num_soma_spikes_in_trial_mature[indices_sorted_soma_spikes])
 ax3.set_ylabel('< # soma spikes >')
-ax3.set_xlim([0, 100])
+ax3.set_xlim([0, 50])
 ax3.set_ylim([-0.1, 6.1])
 
 ########## First dendritic spike properties vs. time ##################
@@ -68,19 +68,19 @@ f = plt.figure()
 ax1 = f.add_subplot(311)
 ax1.plot(mean_first_dend_spike_time_mature[indices_sorted_dend_spikes] - TRAINING_KICK_TIME, probability_dend_spike_mature[indices_sorted_dend_spikes])
 ax1.set_ylabel('p to produce dend spike')
-ax1.set_xlim([0, 100])
+ax1.set_xlim([0, 50])
 ax1.set_ylim([-0.1, 1.1])
 
 ax2 = f.add_subplot(312)
 ax2.plot(mean_first_dend_spike_time_mature[indices_sorted_dend_spikes] - TRAINING_KICK_TIME, std_first_dend_spike_time_mature[indices_sorted_dend_spikes])
 ax2.set_ylabel('jitter in 1st dend spike (ms)')
-ax2.set_xlim([0, 100])
+ax2.set_xlim([0, 50])
 ax2.set_ylim([-0.1, 2.0])
 
 ax3 = f.add_subplot(313)
 ax3.plot(mean_first_dend_spike_time_mature[indices_sorted_dend_spikes] - TRAINING_KICK_TIME, average_num_dend_spikes_in_trial_mature[indices_sorted_dend_spikes])
 ax3.set_ylabel('< # dend spikes >')
-ax3.set_xlim([0, 100])
+ax3.set_xlim([0, 50])
 ax3.set_ylim([-0.1, 2.1])
 
 ########## Jitter histograms #################

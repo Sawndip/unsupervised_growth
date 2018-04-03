@@ -3,4 +3,4 @@
 # starting trial
 # number of testing trials
 # path to output directory
-mpirun -np 23 ./main /home/eugene/Output/networks/chainGrowth/passiveDendrite/events1/ 4300 50 /home/eugene/Output/networks/chainGrowth/passiveDendrite/test1/
+mpirun -np 23 ./main /home/eugene/Output/networks/chainGrowth/passiveDendrite/noImmatureOut4/ 23500 10 /home/eugene/Output/networks/chainGrowth/passiveDendrite/test/noImmatureOut4/

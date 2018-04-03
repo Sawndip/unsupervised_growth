@@ -144,8 +144,8 @@ def write_pajek_neurons(dirname, trial_number):
                     continue
     
 if __name__ == "__main__":
-    dirname = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/events1/"
-    trial_number = 4300
+    dirname = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/noImmatureOut4/"
+    trial_number = 22500
     
     write_pajek_neurons(dirname, trial_number)
     #write_pajek_hvcRA_coord(dirname, trial_number)

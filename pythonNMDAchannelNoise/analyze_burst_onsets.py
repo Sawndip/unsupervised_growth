@@ -30,7 +30,9 @@ def calculate_burst_density(burst_times, bin_width):
 
 CURRENT_INJECTION = 50.0
 
-filename = "/home/eugene/Output/networks/MLong/simResults/dendritic_tree/causal_1connection/ee0.06_ie0.03_out50active30_1ms_somaSpikes.bin"
+#filename = "/home/eugene/Output/networks/MLong/simResults/dendritic_tree/causal_1connection/ee0.06_ie0.03_out50active30_1ms_somaSpikes.bin"
+filename = "/home/eugene/Output/networks/MLong/simResults/dendritic_tree/random_5500hvcI/ee0.075_ie0.05_burstOnsets_fullTrial_1_somaSpikes.bin"
+
 #filename = "/home/eugene/Output/networks/MLong/simResults/2chain/e0.50_i0.1_rerouted_0ms_dendSpikes.bin"
 
 (trial_number, simulation_time, spike_times_raw, neuron_fired) = reading.read_time_info(filename)
@@ -69,7 +71,7 @@ print "Max burst time relative to current injection: ",np.max(all_first_spike_ti
 inh = 0.05 / LEAK_CONDUCTANCE
 exc = 0.15 / LEAK_CONDUCTANCE
 
-num_neurons_to_plot = 10000
+num_neurons_to_plot = 20000
 time_to_plot = 200
 
 #==============================================================================

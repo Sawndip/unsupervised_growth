@@ -19,12 +19,11 @@ N = 1000 # number of neurons
 #fileDend = "/home/eugene/Output/networks/chainGrowth/testGrowthDelays6/spike_times_dend_1900.bin"
 #fileSoma = "/home/eugene/Output/networks/chainGrowth/testGrowthDelays6/spike_times_soma_1900.bin"
 
-fileDend = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/noImmatureOut3/spike_times_dend_13000.bin"
-fileSoma = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/noImmatureOut3/spike_times_soma_13000.bin"
+fileDend = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/noImmatureOut6/spike_times_dend_250.bin"
+fileSoma = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/noImmatureOut6/spike_times_soma_250.bin"
 
-
-#fileDend = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/test1/test_spike_times_dend_10.bin"
-#fileSoma = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/test1/test_spike_times_soma_10.bin"
+#fileDend = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/test/noImmatureOut4/test_spike_times_dend_5.bin"
+#fileSoma = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/test/noImmatureOut4/test_spike_times_soma_5.bin"
 
 
 TRIAL_DURATION = 500
@@ -38,17 +37,17 @@ for spikes, neuron_id in zip(spike_times_soma, neuron_fired_soma):
     if len(spikes) > 6:
         print "Neuron {0} produced {1} spikes".format(neuron_id[0], len(spikes))
 
-print "Dedritic spikes: ", neuron_fired_dend
+#print "Dedritic spikes: ", neuron_fired_dend
 #print "Dendritic spike times: ", spike_times_dend
 
-print "Somatic spikes: ", neuron_fired_soma
+#print "Somatic spikes: ", neuron_fired_soma
 #print "Somatic spike times: ", spike_times_soma
 
 ordered_soma_spikes_raw, ordered_soma_raw = zip(*sorted(zip(spike_times_soma, neuron_fired_soma)))
 ordered_dend_spikes_raw, ordered_dend_raw = zip(*sorted(zip(spike_times_dend, neuron_fired_dend)))
 
-#print ordered_soma_spikes_raw
-#print ordered_soma_raw
+print [ spikes[0] for spikes in ordered_soma_spikes_raw[:] ]
+print [ neurons[0] for neurons in ordered_soma_raw[:] ]
 
 spike_times_soma = [t for sublist in list(spike_times_soma) for t in sublist]
 neuron_fired_soma = [ind for sublist in list(neuron_fired_soma) for ind in sublist]
@@ -87,7 +86,7 @@ for i in range(len(spike_times_dend)):
 #plt.yticks(random_ID, neuron_fired)
 ax1.set_xlim([-5, TRIAL_DURATION])
 ax1.set_ylabel("neuron ID")
-ax1.set_xlabel("Time (ms)")
+#ax1.set_xlabel("Time (ms)")
 ax1.set_title("Dendritic spikes")
 ax1.set_ylim([0, N])
 
@@ -127,7 +126,7 @@ plt.yticks([])
 
 ax1.set_xlim([-5, max_soma_spike_time + 50])
 ax1.set_ylabel("neuron ID")
-ax1.set_xlabel("Time (ms)")
+#ax1.set_xlabel("Time (ms)")
 ax1.set_title("Ordered somatic spikes")
 ax1.set_ylim([-5, len(ordered_id_soma_list)+5])
 

@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+ho# -*- coding: utf-8 -*-
 """
 Created on Mon Feb  5 18:58:35 2018
 
@@ -11,9 +11,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os
 
-dirname = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/events1/"
+dirname = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/noImmatureOut2/"
 
-trial_number = 4300
+trial_number = 11900
 
 fileAxonalDelaysRA2I = os.path.join(dirname, "axonal_delays_RA2I_" + str(trial_number) + ".bin")
 fileAxonalDelaysRA2RA = os.path.join(dirname, "axonal_delays_RA2RA_" + str(trial_number) + ".bin")
@@ -30,16 +30,18 @@ fileSuper = os.path.join(dirname, "RA_RA_super_connections_" + str(trial_number)
 (_, _, axonal_delays_RA2RA) = reading.read_axonal_delays(fileAxonalDelaysRA2RA)
 (_, _, axonal_delays_I2RA) = reading.read_axonal_delays(fileAxonalDelaysI2RA)
 
-all_axonal_delays_RA2RA = []
+super_axonal_delays_RA2RA = []
 
 for i, targets in enumerate(super_synapses):
     for target in targets:
-        all_axonal_delays_RA2RA.append(axonal_delays_RA2RA[i][target])
+        super_axonal_delays_RA2RA.append(axonal_delays_RA2RA[i][target])
         
+
+
 #print axonal_delays_RA2I 
 
 all_axonal_delays_RA2I = [delay for delays in axonal_delays_RA2I for delay in delays]
-#all_axonal_delays_RA2RA = [delay for delays in axonal_delays_active_connections for delay in delays]
+all_axonal_delays_RA2RA = [delay for delays in axonal_delays_RA2RA for delay in delays]
 all_axonal_delays_I2RA = [delay for delays in axonal_delays_I2RA for delay in delays]
 
 nbins = 50
@@ -52,19 +54,26 @@ hist, bin_edges = np.histogram(all_axonal_delays_RA2I, bins=nbins)
 print bin_edges
 print hist
 bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2.
-ax1.step(bin_centers, hist / float(np.max(hist)), label="HVC(RA) -> HVC(I)", where="pre")
+ax1.step(bin_centers, hist / float(np.sum(hist)), label="HVC(RA) -> HVC(I)", where="pre")
 
 hist, bin_edges = np.histogram(all_axonal_delays_RA2RA, bins=nbins)
 print bin_edges
 print hist
 bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2.
-ax1.step(bin_centers, hist / float(np.max(hist)), label="HVC(RA) -> HVC(RA)", where="pre")
+ax1.step(bin_centers, hist / float(np.sum(hist)), label="HVC(RA) -> HVC(RA)", where="pre")
+
+hist, bin_edges = np.histogram(super_axonal_delays_RA2RA, bins=nbins)
+print bin_edges
+print hist
+bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2.
+ax1.step(bin_centers, hist / float(np.sum(hist)), label="super HVC(RA) -> HVC(RA)", where="pre")
+
 
 hist, bin_edges = np.histogram(all_axonal_delays_I2RA, bins=nbins)
 print bin_edges
 print hist
 bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2.
-ax1.step(bin_centers, hist / float(np.max(hist)), label="HVC(I) -> HVC(RA)", where="pre")
+ax1.step(bin_centers, hist / float(np.sum(hist)), label="HVC(I) -> HVC(RA)", where="pre")
 
 ax1.set_xlabel('Axonal time delay (ms)')
 ax1.set_ylabel('norm # of connections')

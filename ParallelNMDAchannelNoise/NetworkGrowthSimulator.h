@@ -154,6 +154,7 @@ protected:
 		vector<bitArray> rescaled_indicators_local; // indicator array that shows if synapse was rescaled;
 
 		vector<int> training_neurons; // vector with ids of training neurons
+		vector<double> training_spread_times; // vector with time spread of training neurons
 		
 		vector<vector<int>> active_synapses_local; // array of vectors with IDs of active synapses
 		vector<vector<int>> supersynapses_local; // array of vectors with IDs of supersynapses
@@ -279,6 +280,7 @@ protected:
 	    void initialize_generator(); // initialize generator for processes
         
         // trials
+        void trial_no_stdp_fixedSpread(std::vector<double>& spread_times); // trial with no stdp and fixed spread of training neurons
         void trial_no_stdp(double training_kick_time); // trial with no stdp, used for testing grown chains 
 	    void trial_somatic_stdp_no_delays(bool training); // single trial with STDP rule based on somatic spikes. No axonal delays
 	    
@@ -289,6 +291,19 @@ protected:
 		void trial_burst_pre_dend_post_delays_sudden_maturation_noImmatureOut(bool training); // singe trial with STDP rule; bursts are presynaptic
 																				// events; dendritic spikes - postsynaptic. Immature neurons have no output connections
 		
+		void trial_burst_pre_dend_event_post_delays_sudden_maturation_noImmatureOut(bool training); // singe trial with STDP rule; bursts are presynaptic
+																				// events; dendritic events (dendritic spikes within event_window) - postsynaptic. 
+																				// Immature neurons have no output connections
+		
+		
+		void trial_burst_pre_dend_event_post_delays_sudden_maturation_noImmatureOut_fixedSpread(bool training, std::vector<double>& spread_times);
+														// // singe trial with STDP rule; bursts are presynaptic
+																				// events; dendritic spikes - postsynaptic. Immature neurons have no output connections
+																				// training neurons have fixed spread
+		
+		void trial_noImmatureOut_fixedSpread(bool training, std::vector<double>& spread_times); // singe trial with STDP rule; bursts are presynaptic
+																				// events; dendritic events (dendritic spikes within event_window) - postsynaptic. Immature neurons have no output connections
+																				// training neurons have fixed spread
 																		
 	    void trial_soma_pre_dend_post_stdp_no_delays(bool training); // single trial with STDP rule with somatic spikes as presynaptic
 																	 // events and dendritic spikes as postsynaptic. No axonal delays
@@ -307,6 +322,7 @@ protected:
         void randomize_after_trial(); // set all neurons to the resting state
         void reset_after_chain_test(); // reset trial after chain test: neuron time is set to zero; neuron parameters to initial values
         void reset_after_trial(); // continue the network activity by reset all neurons
+        void setToRest_after_trial_soma_pre_dend_post_delays(); // set neurons to rest and clear all event arrays
         void reset_after_trial_soma_pre_dend_post_no_delays(); // resest network after trial with no axonal delays
         void reset_after_trial_soma_pre_dend_post_delays(); // resest network after trial with axonal delays
 		void set_all_mature(); // set all neurons to a mature state
@@ -400,6 +416,7 @@ protected:
 
 		// reading network topology
 		void read_training_neurons(const char *filename); // read training neurons from file
+		void read_training_spread(const char *filename); // read spread of training neurons from file
 		void read_network_topology(std::string networkDir); // read network topology from files located in directory networkDir
 		void read_number_of_neurons(const char *filename); // read number of HVC-RA and HVC-I neurons in the network
 		void read_all_coordinates(const char *file_RA_xy, const char *file_I_xy); // read coordinates of HVC-RA and HVC-I neurons
@@ -458,6 +475,7 @@ protected:
 																
         void write_number_of_neurons(const char* filename); // write number of HVC-RA and HVC-I neurons in network
         void write_training_neurons(const char *filename); // write training neurons to a file
+        void write_training_spread(const char* filename); // write spread of training neurons to a file
         
         void write_coordinates(const vector<double> &x, const vector<double> &y, const vector<double> &z,
 										const char *filename); // write coordinates to a file
