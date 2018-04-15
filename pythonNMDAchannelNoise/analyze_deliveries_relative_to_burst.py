@@ -12,9 +12,10 @@ import numpy as np
 import os
 import matplotlib.pyplot as plt
 
-dirname = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/noImmatureOut4/"
+#dirname = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/noImmatureOut8/"
+dirname = "/home/eugene/results/immature/clusters/11/"
 
-trial_number = 23500
+trial_number = 13600
 
 fileConnections = os.path.join(dirname, "RA_RA_active_connections_" + str(trial_number) + ".bin")
 #fileSpikeTimes = os.path.join(dirname, "spike_times_soma_" + str(trial_number) + ".bin")
@@ -24,8 +25,8 @@ fileWeights = os.path.join(dirname, "weights_" + str(trial_number) + ".bin")
 fileTraining = os.path.join(dirname, "training_neurons.bin")
 
 
-fileSpikeTimes = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/test/noImmatureOut4/test_spike_times_soma_5.bin"
-
+#fileSpikeTimes = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/test/noImmatureOut8/test_spike_times_soma_5.bin"
+fileSpikeTimes = "/home/eugene/results/immature/clusters/test/11/test_spike_times_soma_5.bin"
 
 MARGIN_LATE = 0.0 # margin for the burst coming late
 
@@ -82,13 +83,13 @@ example_arrivals = [[] for i in range(len(example_neurons))]
 for i in range(N_RA):
     if first_spike_times[i] > 0:
         for j, target in enumerate(active_synapses[i]):
-            if target not in training_neurons and first_spike_times[target] > 0 and mature_indicators[target] == 1 :
+            if target not in training_neurons and first_spike_times[target] > 0 and mature_indicators[target] == 1 and mature_indicators[i] == 1:
                 time_difference = first_spike_times[i] + axonal_delays_RA2RA[i][target] - first_spike_times[target]
                 
                 if time_difference > 20:
                     print "time difference = {0} source: {1} target: {2} delay = {3} weight = {4}".format(time_difference, i, target, axonal_delays_RA2RA[i][target], weights[i][target])
-                
-                arrivals.append(time_difference)
+                else:
+                    arrivals.append(time_difference)
                 
                 if target in example_neurons:
                     ind = example_neurons.index(target)
@@ -105,7 +106,7 @@ print "Fraction of late deliveries: ",float(num_late_arrivals) / float(num_arriv
 
 plt.figure()
 
-plt.hist(arrivals, bins = 400)
+plt.hist(arrivals, bins = 100)
 #plt.title('Statistics of deliveries')
 plt.xlabel('spike delivery time - target burst onset time (ms)')
 plt.ylabel('# of deliveries')

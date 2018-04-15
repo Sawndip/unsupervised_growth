@@ -19,8 +19,8 @@ N = 1000 # number of neurons
 #fileDend = "/home/eugene/Output/networks/chainGrowth/testGrowthDelays6/spike_times_dend_1900.bin"
 #fileSoma = "/home/eugene/Output/networks/chainGrowth/testGrowthDelays6/spike_times_soma_1900.bin"
 
-fileDend = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/noImmatureOut6/spike_times_dend_250.bin"
-fileSoma = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/noImmatureOut6/spike_times_soma_250.bin"
+fileDend = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/maturationTransition1/spike_times_dend_35.bin"
+fileSoma = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/maturationTransition1/spike_times_soma_35.bin"
 
 #fileDend = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/test/noImmatureOut4/test_spike_times_dend_5.bin"
 #fileSoma = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/test/noImmatureOut4/test_spike_times_soma_5.bin"

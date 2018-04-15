@@ -24,7 +24,8 @@ def calculate_longAndLat(coord):
 
     for i in range(num_neurons):
         latitude[i] = np.arcsin(coord[i][2])
-        longitude[i] = np.arcsin(coord[i][1] / np.cos(latitude[i]))
+        longitude[i] = np.arctan2(coord[i][1], coord[i][0])
+    
 
     return longitude, latitude
     

@@ -25,8 +25,9 @@ def get_hist_for_discrete_integers(data):
 
 CONVERTION_CONSTANT = 10.0
 
-trial_number = 22500
-dirname = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/noImmatureOut4/"
+trial_number = 13600
+#dirname = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/noImmatureOut8/"
+dirname = "/home/eugene/results/immature/clusters/11/"
 
 fileSoma = os.path.join(dirname, "spike_times_soma_" + str(trial_number) + ".bin")
 fileWeights = os.path.join(dirname, "weights_" + str(trial_number) + ".bin")
@@ -240,7 +241,7 @@ ax2 = f.add_subplot(222)
 #ax2.step(bin_centers, hist, where="pre")
 
 d, left_of_first_bin, right_of_last_bin = get_hist_for_discrete_integers(num_super_inputs[neurons_in_chain])
-ax2.hist(num_active_inputs[neurons_in_chain], np.arange(left_of_first_bin, right_of_last_bin + d, d))
+ax2.hist(num_super_inputs[neurons_in_chain], np.arange(left_of_first_bin, right_of_last_bin + d, d))
 ax2.set_title("# super inputs")
 
 ax3 = f.add_subplot(223)
@@ -283,7 +284,7 @@ ax2.set_xlabel('time in trials')
 
 layer = set(training_neurons)
 
-print layer
+print "Training_neurons:", layer
 print "In degree active = ",num_active_inputs[list(layer)]
 print "Out degree active = ",num_active_outputs[list(layer)]
 print "In degree super = ",num_super_inputs[list(layer)]

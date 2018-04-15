@@ -22,6 +22,7 @@ const double NetworkGrowthSimulator::G_TRAINING_KICK = 3.0; // strength of excit
 const double NetworkGrowthSimulator::MATURATION_SCALE = 10000000000000; // timescale of neuron properties maturation
 const double NetworkGrowthSimulator::EXPERIMENTAL_AXONAL_DELAY_PER_MICRON = 0.01; // experimental value of axonal time delay in ms for 1 micron distance
 const double NetworkGrowthSimulator::MATURE_SYNAPSE_SCALING = 15.0; // constant to scale excitatory synapses to mature neurons
+
 //const double NetworkGrowthSimulator::INHIBITION_SYNAPSE_SCALING = 10.0; // constant to scale excitatory synapses to mature neurons
 
 
@@ -1437,8 +1438,8 @@ void NetworkGrowthSimulator::new_chain_growth(const ConfigurationNetworkGrowth &
 	//this->set_training_neurons_mature();
 	
 	// rescale inhibitory synapses to training neurons
-	for (size_t i = 0; i < training_neurons.size(); i++)
-		this->rescale_synapses_to_mature(training_neurons[i]);
+	//for (size_t i = 0; i < training_neurons.size(); i++)
+	//	this->rescale_synapses_to_mature(training_neurons[i]);
 		
 	//this->disable_RA2I_immature_outputs();
 		
@@ -1620,6 +1621,28 @@ void NetworkGrowthSimulator::set_neuron_properties()
 		HVCRA_local[i].set_GNa(GNa_local[i]);
 		HVCRA_local[i].set_Ad(Ad_local[i]);
 		HVCRA_local[i].set_Rc(Rc_local[i]);
+	}
+}
+
+void NetworkGrowthSimulator::update_neuron_properties_sameDendrite()
+{
+	for (int i = 0; i < N_RA_local; i++)
+	{
+		if ( mature_global[Id_RA_local[i]] != 1){
+			// update only properties of the neurons that are not mature
+			double age = static_cast<int>(num_trials_after_replacement_local[i]);
+			
+
+			double rest_potential = maturation_params.E_REST_MATURE + 
+										(maturation_params.E_REST_IMMATURE - maturation_params.E_REST_MATURE) * 
+																	exp(-age / MATURATION_SCALE);
+			
+			double GCa = maturation_params.GCA_MATURE + (maturation_params.GCA_IMMATURE - maturation_params.GCA_MATURE) * exp(-age / MATURATION_SCALE);
+			
+			
+			HVCRA_local[i].set_Erest(rest_potential);
+			HVCRA_local[i].set_GCa(GCa);
+		}
 	}
 }
 
@@ -3873,6 +3896,38 @@ void NetworkGrowthSimulator::reset_after_chain_test()
     }	
 }
 
+void NetworkGrowthSimulator::setToRest_afterEpoch()
+{
+	for (int i = 0; i < N_RA; i++)
+    {
+		if (MPI_rank == 0)
+		{
+			spikes_in_trial_soma_global[i].clear();
+			spikes_in_trial_dend_global[i].clear();
+        }
+    }
+
+	if (MPI_rank == 0)
+	{
+		for (int i = 0; i < N_I; i++)
+			spikes_in_trial_interneuron_global[i].clear();
+	}
+	
+    for (int i = 0; i < N_RA_local; i++)
+    {
+		HVCRA_local[i].set_to_rest();
+
+        spikes_in_trial_soma_local[i].clear();
+        spikes_in_trial_dend_local[i].clear();
+    }
+
+    for (int i = 0; i < N_I_local; i++)
+    {
+        HVCI_local[i].set_to_rest();
+        spikes_in_trial_interneuron_local[i].clear();
+    }	
+}
+
 void NetworkGrowthSimulator::setToRest_after_trial_soma_pre_dend_post_delays()
 {
 	for (int i = 0; i < N_RA; i++)
@@ -4970,9 +5025,10 @@ void NetworkGrowthSimulator::chain_growth(bool training, int save_freq_short, in
 	    
 	    //this->trial_noImmatureOut_fixedSpread(training, spread_times);
 	    
-	    this->trial_burst_pre_dend_event_post_delays_sudden_maturation_noImmatureOut_fixedSpread(training, spread_times);
+	    //this->trial_burst_pre_dend_event_post_delays_sudden_maturation_noImmatureOut_fixedSpread(training, spread_times);
 	    //this->trial_soma_pre_dend_post_stdp_delays_sudden_maturation(training);
 	    
+	    this->trial_1stSoma_pre_1stSoma_post_delays_fixedSpread(training, spread_times);
 	    
 	    int bad_values_indicator_local = this->check_bad_values();
 	    int bad_values_indicator_global;
@@ -5030,7 +5086,11 @@ void NetworkGrowthSimulator::chain_growth(bool training, int save_freq_short, in
 		//this->reset_after_trial_soma_pre_dend_post_no_delays();
 		//this->reset_after_trial_soma_pre_dend_post_delays();
 		
-		this->setToRest_after_trial_soma_pre_dend_post_delays();
+		//this->setToRest_after_trial_soma_pre_dend_post_delays();
+		this->setToRest_afterEpoch();
+		
+		this->update_neuron_properties_sameDendrite();
+		
 		//~ // gather all neurons that are to be replaced
 		//~ this->gather_neurons_2replace();
     //~ 
@@ -5039,6 +5099,7 @@ void NetworkGrowthSimulator::chain_growth(bool training, int save_freq_short, in
 			//~ this->replace_neurons();
 			
         trial_number++;
+        
         //this->randomize_after_trial();
 		//break;
     }
@@ -7227,6 +7288,779 @@ void NetworkGrowthSimulator::trial_burst_pre_dend_post_delays_sudden_maturation_
 	}
 }
 
+void NetworkGrowthSimulator::trial_1stSoma_pre_1stSoma_post_delays_fixedSpread(bool training, std::vector<double>& spread_times)
+{
+	double event_window = 30.0; // window in which all somatic spikes are considered as one event
+	
+	// indicators for conductance updates and bursting
+	int some_RA_inh_conductance_was_updated_global = 0;
+	int some_RA_inh_conductance_was_updated_local = 0;
+	
+	int some_RA_exc_conductance_was_updated_global = 0;
+	int some_RA_exc_conductance_was_updated_local = 0;
+	
+	int some_I_exc_conductance_was_updated_global = 0;
+	int some_I_exc_conductance_was_updated_local = 0;
+	
+	int some_RA_neuron_new_postEvent_global = 0;
+	int some_RA_neuron_new_postEvent_local = 0;
+	
+	 // arrays with updates for conductances
+    std::vector<double> update_Ge_RA_local(N_RA);
+	std::vector<double> update_Ge_RA_global(N_RA);
+
+	std::vector<double> update_Gi_RA_local(N_RA);
+	std::vector<double> update_Gi_RA_global(N_RA);
+
+	std::vector<double> update_Ge_I_local(N_I);
+	std::vector<double> update_Ge_I_global(N_I);
+	
+	std::vector<int> RA_neurons_new_postEvent_local; // local array of HVC-RA neurons that produced new postsynaptic event
+	std::vector<int> RA_neurons_new_postEvent_global; // global array of HVC-RA neurons that produced new postsynaptic event
+	
+	std::vector<std::vector<std::vector<double>>> delivered_preEvent_times_local(N_RA_local); // local array with the times when presynaptic events 
+															 // source HVC-RA neuron were delivered to other HVC-RA neurons
+		
+	for (int i = 0; i < N_RA_local; i++)
+		delivered_preEvent_times_local[i].resize(N_RA);
+		
+		
+	std::vector<std::vector<std::pair<double,int>>> delivery_queue_RA_RA_soma_local(N_RA_local); // local queue with spike delivery times for HVC-RA -> HVC-RA interactions
+	std::vector<std::vector<std::pair<double,int>>> delivery_queue_RA_I_local(N_RA_local); // local queue with spike delivery times for HVC-RA -> HVC-I interactions
+	std::vector<std::vector<std::pair<double,int>>> delivery_queue_I_RA_local(N_I_local); // local queue with spike delivery times for HVC-I -> HVC-RA interactions
+		
+	std::vector<std::vector<double>> previous_postEvent_times_global(N_RA); // array with the previous somatic spike times of neurons that are not too old
+		
+	// sample training innervation time and send to all processes
+  // training neurons innervation
+	std::vector<bool> indicators_training(N_RA);
+	std::fill(indicators_training.begin(), indicators_training.end(), false);
+	
+	for (int i = 0; i < N_TR; i++)
+		indicators_training[training_neurons[i]] = true;
+		
+	std::vector<bool> indicators_current_injected(N_RA);
+	std::fill(indicators_current_injected.begin(), indicators_current_injected.end(), false);
+	
+	// sample mean training innervation time and send to all processes
+    double mean_injection_time;
+    
+	if (MPI_rank == 0)
+	{
+		mean_injection_time = WAITING_TIME + noise_generator.random(TRIAL_DURATION - 2*WAITING_TIME);
+		std::cout << "mean_injection_time = " << mean_injection_time << std::endl;
+    }
+    MPI_Bcast(&mean_injection_time, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+	
+    double internal_time = 0;
+    double network_time = NETWORK_UPDATE_FREQUENCY;
+
+   
+
+    //printf("network time = %f\n", network_time);
+
+    
+	// initialize update arrays and fired indicators
+	std::fill(update_Ge_RA_local.begin(), update_Ge_RA_local.end(), 0.0);
+	std::fill(update_Ge_RA_global.begin(), update_Ge_RA_global.end(), 0.0);
+	std::fill(update_Gi_RA_local.begin(), update_Gi_RA_local.end(), 0.0);
+	std::fill(update_Gi_RA_global.begin(), update_Gi_RA_global.end(), 0.0);
+	std::fill(update_Ge_I_local.begin(), update_Ge_I_local.end(), 0.0);
+	std::fill(update_Ge_I_global.begin(), update_Ge_I_global.end(), 0.0);
+	
+	
+    // evolve dynamics
+    int num_steps = static_cast<int>(TRIAL_DURATION / TIMESTEP);
+    
+    for (int t = 1; t < num_steps; t++)
+	{
+		internal_time += TIMESTEP;
+		
+		//////////////////////
+		// HVC-RA neurons
+		//////////////////////
+		
+		for (int i = 0; i < N_RA_local; i++)
+		{
+			if ( (training) && ( indicators_training[Id_RA_local[i]] ) && ( !indicators_current_injected[Id_RA_local[i]] ) )
+			{
+				if ( internal_time > spread_times[Id_RA_local[i]] + mean_injection_time )
+				{
+					HVCRA_local[i].raiseE(G_TRAINING_KICK);
+					indicators_current_injected[Id_RA_local[i]] = true;
+				}
+			}
+			
+            // Debraband step
+            HVCRA_local[i].Debraband_step_no_target_update();
+            
+           
+			///////////////////////////////
+			// HVC-RA somatic spike
+			///////////////////////////////
+			// if some neuron produced somatic spike
+            if (HVCRA_local[i].get_fired_soma())
+            {
+                spikes_in_trial_soma_local[i].push_back(internal_time);
+
+				// update somatic spikes only if current spike occured later than previous 
+				// somatic spike + event_window
+				if ( previous_postEvent_times_global[Id_RA_local[i]].empty() )
+				{
+					RA_neurons_new_postEvent_local.push_back(Id_RA_local[i]);
+					some_RA_neuron_new_postEvent_local = 1;
+					std::cout << "HVC-RA " << Id_RA_local[i] << " postsynaptic event at " << internal_time << std::endl;
+				}
+				else if ( internal_time > previous_postEvent_times_global[Id_RA_local[i]].back() + event_window)
+				{
+					RA_neurons_new_postEvent_local.push_back(Id_RA_local[i]);
+					some_RA_neuron_new_postEvent_local = 1;
+					std::cout << "HVC-RA " << Id_RA_local[i] << " postsynaptic event at " << internal_time << std::endl;
+				}
+							
+				// for inhibitory neurons
+				// loop over all inhibitory targets of fired neurons
+				size_t num_I_targets = syn_ID_RA_I_local[i].size();
+				
+				for (size_t j = 0; j < num_I_targets; j++)
+				{
+					double delivery_time = internal_time + axonal_delays_RA_I_local[i][j];
+					
+					// if queue is empty, just add item to the queue
+					if ( delivery_queue_RA_I_local[i].empty() )
+						delivery_queue_RA_I_local[i].push_back(std::pair<double,int>(delivery_time, j));	
+					// otherwise add item so that queue is sorted
+					else
+					{
+						auto it = std::upper_bound(delivery_queue_RA_I_local[i].begin(), delivery_queue_RA_I_local[i].end(), std::pair<double,int>(delivery_time, j));
+						delivery_queue_RA_I_local[i].insert(it, std::pair<double,int>(delivery_time, j));
+					}
+				}
+					//std::cout << "neuron " << Id_RA_local[i] << " spike time = " << internal_time << " axonal delay = " << axonal_delays_RA_I[Id_RA_local[i]][syn_ID] << " delivery time RA to I: " << delivery_queue_RA_I[i].back().first << " delivery target id: " << syn_ID_RA_I_local[i][delivery_queue_RA_I[i].back().second] << std::endl;
+				
+				
+				// if neuron is saturated, deliver spikes only to supersynaptic targets
+				if ( static_cast<int>(supersynapses_local[i].size()) == synaptic_params.Nss )
+				{
+					for (size_t j = 0; j < supersynapses_local[i].size(); j++)
+					{
+						int target_id = supersynapses_local[i][j];
+						
+						double delivery_time = internal_time + axonal_delays_RA_RA_local[i][target_id];
+						
+						// if queue is empty, just add item to the queue
+						if ( delivery_queue_RA_RA_soma_local[i].empty() )
+							delivery_queue_RA_RA_soma_local[i].push_back(std::pair<double,int>(delivery_time, target_id));	
+						// otherwise add item so that queue is sorted
+						else
+						{
+							auto it = std::upper_bound(delivery_queue_RA_RA_soma_local[i].begin(), delivery_queue_RA_RA_soma_local[i].end(), std::pair<double,int>(delivery_time, target_id));
+							delivery_queue_RA_RA_soma_local[i].insert(it, std::pair<double,int>(delivery_time, target_id));
+						}
+					}
+				}
+				else // deliver spikes to everyone except itself
+				{	
+					for (int j = 0; j < N_RA; j++)
+					{
+						if ( j != Id_RA_local[i])
+						{
+						
+							double delivery_time = internal_time + axonal_delays_RA_RA_local[i][j];
+						
+							// if queue is empty, just add item to the queue
+							if ( delivery_queue_RA_RA_soma_local[i].empty() )
+								delivery_queue_RA_RA_soma_local[i].push_back(std::pair<double,int>(delivery_time, j));	
+							// otherwise add item so that queue is sorted
+							else
+							{
+								auto it = std::upper_bound(delivery_queue_RA_RA_soma_local[i].begin(), delivery_queue_RA_RA_soma_local[i].end(), std::pair<double,int>(delivery_time, j));
+								delivery_queue_RA_RA_soma_local[i].insert(it, std::pair<double,int>(delivery_time, j));
+							}
+						}
+					}
+				}
+			
+            } // end if local HVC-RA neuron spiked  
+            
+             //////////////////////////////////
+			// HVC-RA -> HVC-I delivery queue
+			//////////////////////////////////
+            // check if somatic spike was delivered to some interneuron
+            // loop through the delivery queue to check if current time exceeds the spike delivery time
+            std::vector<std::pair<double,int>>::iterator it = delivery_queue_RA_I_local[i].begin();
+			
+            for (; it != delivery_queue_RA_I_local[i].end(); it++)
+            {
+				if (internal_time >= it->first)
+				{
+					
+					some_I_exc_conductance_was_updated_local = 1;
+					
+					int pos_in_local_target_array = it->second;
+					int target_id = syn_ID_RA_I_local[i][pos_in_local_target_array];
+					
+					update_Ge_I_local[target_id] += weights_RA_I_local[i][pos_in_local_target_array];
+					
+					//~ std::cout << "HVC(RA) neuron " << Id_RA_local[i] << " at time " << internal_time 
+							  //~ << " delivered spike with delivery time " << it->first 
+							  //~ << " to HVC(I) neuron " << syn_ID_RA_I_local[i][pos_in_local_target_array] << std::endl;
+				}
+				else
+					break;
+			}
+			
+			// delete all processed spikes
+			delivery_queue_RA_I_local[i].erase(delivery_queue_RA_I_local[i].begin(), it);
+			
+			//////////////////////////////////////////////////
+			// HVC-RA -> HVC-RA somatic spike delivery queue
+			//////////////////////////////////////////////////
+			// check if somatic spike was delivered to some HVC(RA) neuron
+			// loop through the delivery queue to check if current time exceeds the spike delivery time
+            it = delivery_queue_RA_RA_soma_local[i].begin();
+            
+            for (; it != delivery_queue_RA_RA_soma_local[i].end(); it++)
+            {
+				double delivery_time = it->first;
+				
+				if ( internal_time >= delivery_time )
+				{
+					int target_id = it->second;
+					
+					// update conductance of target if synapse is active
+					if ( active_indicators_local[i][target_id] == 1 )
+					{
+						some_RA_exc_conductance_was_updated_local = 1;
+						update_Ge_RA_local[target_id] += weights_RA_RA_local[i][target_id];
+					}
+					
+					//////////////
+					//// LTD
+					//////////////
+					// update delivered spikes only if current spike occured later than previous delivered
+					// spike + event_window
+					bool new_preEvent_occured = false;
+				
+					if ( !delivered_preEvent_times_local[i][target_id].empty() ){
+						if ( delivery_time > delivered_preEvent_times_local[i][target_id].back() + event_window ){
+							delivered_preEvent_times_local[i][target_id].push_back(delivery_time);
+							new_preEvent_occured = true;
+						}
+					}
+					else{
+						delivered_preEvent_times_local[i][target_id].push_back(delivery_time);
+						new_preEvent_occured = true;
+					}
+					
+					if ( new_preEvent_occured ){
+						 // if neuron is saturated apply LTD only if target is among super synapses
+						if (static_cast<int>(supersynapses_local[i].size()) == synaptic_params.Nss)
+						{
+							if ( supersynapses_indicators_local[i][target_id] == 1 )
+							{	
+								// find previous dendritic spikes that are not too old
+								if ( !previous_postEvent_times_global[target_id].empty() )
+								{
+									std::vector<double>::iterator it_relevant_postEvent = std::lower_bound(previous_postEvent_times_global[target_id].begin(),
+																										previous_postEvent_times_global[target_id].end(),
+																										internal_time - STDP_WINDOW);
+																						
+									for (auto it_postEvent = it_relevant_postEvent; it_postEvent != previous_postEvent_times_global[target_id].end(); it_postEvent++)
+									{
+										double dt = *it_postEvent - delivery_time;
+
+										//std::cout << "dt in saturated LTD = " << dt << std::endl;
+
+										
+										double w_before = weights_RA_RA_local[i][target_id];     
+							   
+										LTD(weights_RA_RA_local[i][target_id], dt);
+										
+										
+										//~ std::cout << "LTD from saturated " << Id_RA_local[i] << " -> " << supersynapse_id
+												  //~ << " dt = " << dt << " w_before = " << w_before << " dw = " << weights_RA_RA_local[i][supersynapse_id] - w_before
+												  //~ << std::endl;
+												  
+										//printf("LTD from saturated neuron %d onto %d; somatic spike: %f; dendritic spike: %f; dt = %f; dw = %f\n",
+										//            Id_RA_local[i], supersynapse_id, spikes_in_trial_soma_local[i].back(), spike_times_dend_global[supersynapse_id],
+										//            dt, weights_local[i][supersynapse_id] - w);
+										
+										update_synapse(i, target_id);	
+										
+									}   
+								}
+							}
+
+							// if some supersynapse desaturated, update all synapses
+							if (static_cast<int>(supersynapses_local[i].size()) < synaptic_params.Nss)
+								for (int j = 0; j < N_RA; j++)
+									this->update_synapse(i, j);
+						}
+						// if not saturated apply LTD rule 
+						else
+						{
+							// find previous dendritic spikes that are not too old
+							if ( !previous_postEvent_times_global[target_id].empty() )
+							{
+								std::vector<double>::iterator it_relevant_postEvent = std::lower_bound(previous_postEvent_times_global[target_id].begin(),
+																									previous_postEvent_times_global[target_id].end(),
+																									internal_time - STDP_WINDOW);
+																					
+								for (auto it_postEvent = it_relevant_postEvent; it_postEvent != previous_postEvent_times_global[target_id].end(); it_postEvent++)
+								{
+									double dt = *it_postEvent - delivery_time;
+
+									//std::cout << "dt in saturated LTD = " << dt << std::endl;
+
+									
+									double w_before = weights_RA_RA_local[i][target_id];     
+						   
+									LTD(weights_RA_RA_local[i][target_id], dt);
+									
+									//~ // show LTD to pool neurons only
+									//~ auto p = std::equal_range(training_neurons.begin(), training_neurons.end(), target_id);
+									//~ 
+									//~ if (p.first == p.second)
+									//~ {
+										//~ std::cout << "LTD from  " << Id_RA_local[i] << " -> " << target_id
+											  //~ << " dt = " << dt << " w_before = " << w_before << " dw = " << weights_RA_RA_local[i][target_id] - w_before
+											  //~ << " w_after = " << weights_RA_RA_local[i][target_id] << std::endl;
+									//~ }
+								//~ 
+									update_synapse(i, target_id);	
+									
+								}   
+							}
+						}
+					}
+				} // end if internal_time >= delivery spike time 
+				else
+					break;
+			}
+			
+			// delete all processed spikes
+			delivery_queue_RA_RA_soma_local[i].erase(delivery_queue_RA_RA_soma_local[i].begin(), it);
+			
+			
+			///////////////////////////////
+			// HVC-RA dendritic spike
+			///////////////////////////////
+			//if some neuron produced dendritic spike, store this neuron in array
+			
+			if ( HVCRA_local[i].get_fired_dend() )
+			{
+				//~ // show spikes of pool neurons only
+				//~ auto p = std::equal_range(training_neurons.begin(), training_neurons.end(), Id_RA_local[i]);
+				//~ 
+				//~ if (p.first == p.second)
+					//~ std::cout << "HVC-RA " << Id_RA_local[i] << " dend spike at " << internal_time << std::endl;
+				//~ 
+				std::cout << "HVC-RA " << Id_RA_local[i] << " dend spike at " << internal_time << std::endl;
+				
+				spikes_in_trial_dend_local[i].push_back(internal_time); // dend spike time relative to trial onset
+				
+				
+				//std::cout << "HVC-RA " << Id_RA_local[i] << " dend spike at " << internal_time << std::endl;
+			} // end if get_fired_dend
+	
+            
+		} // end for i = 0 -> N_RA_local (loop through all local HVC-RA neurons)
+		
+		//////////////////////
+		// HVC-I neurons
+		//////////////////////
+		for (int i = 0; i < N_I_local; i++)
+		{
+			HVCI_local[i].DP8_step_no_target_update();
+			
+			
+			///////////////////////////////
+			// HVC-I spike
+			///////////////////////////////
+			//  if some I neuron spikes, update delivery queue
+			if (HVCI_local[i].get_fired())
+			{
+				//printf("My rank = %d; I neuron %d fired; spike_time = %f\n", MPI_rank, Id_I_local[i], internal_time);
+				spikes_in_trial_interneuron_local[i].push_back(internal_time);
+
+				size_t num_RA_targets = syn_ID_I_RA_local[i].size();
+				// loop over all targets of fired neurons
+				for (size_t j = 0; j < num_RA_targets; j++)
+				{
+					double delivery_time = internal_time + axonal_delays_I_RA_local[i][j];
+					
+					//std::cout << "HVC-I -> HVC-RA: " << Id_I_local[i] << " -> " << syn_ID_I_RA_local[i][j] << " spike time " << internal_time << " delivery time = " << delivery_time << std::endl; 
+					
+					// if queue is empty, just add item to the queue
+					if ( delivery_queue_I_RA_local[i].empty() )
+						delivery_queue_I_RA_local[i].push_back(std::pair<double,int>(delivery_time, j));	
+					// otherwise add item so that queue is sorted
+					else
+					{
+						auto it = std::upper_bound(delivery_queue_I_RA_local[i].begin(), delivery_queue_I_RA_local[i].end(), std::pair<double,int>(delivery_time, j));
+						delivery_queue_I_RA_local[i].insert(it, std::pair<double,int>(delivery_time, j));
+					}
+				}
+			}
+			
+			//////////////////////////////////
+			// HVC-I -> HVC-RA delivery queue
+			//////////////////////////////////
+			// check if interneuron spike was delivered to some HVC-RA neuron
+			// loop through the delivery queue to check if current time exceeds the spike delivery time
+			std::vector<std::pair<double,int>>::iterator it = delivery_queue_I_RA_local[i].begin();
+			
+			for (; it != delivery_queue_I_RA_local[i].end(); it++)
+			{
+				if (internal_time >= it->first)
+				{
+					some_RA_inh_conductance_was_updated_local = 1;
+					int pos_in_local_target_array = it->second;
+					int target_id = syn_ID_I_RA_local[i][pos_in_local_target_array];
+					
+					//std::cout << "Delivered spike HVC-I -> HVC-RA: " << Id_I_local[i] << " -> " << target_id << " delivered_time " << internal_time << " delivery time in queue = " << it->first << std::endl; 
+					
+					
+					update_Gi_RA_local[target_id] += weights_I_RA_local[i][pos_in_local_target_array];
+					
+					//~ std::cout << "HVC(I) neuron " << Id_I_local[i] << " at time " << internal_time 
+							  //~ << " delivered spike with delivery time " << it->first 
+							  //~ << " to neuron " << syn_ID_I_RA_local[i][pos_in_local_target_array] << std::endl;
+				}
+				else
+					break;
+			}
+			
+			// delete all processed spikes
+			delivery_queue_I_RA_local[i].erase(delivery_queue_I_RA_local[i].begin(), it);
+		
+		}  // end for i = 0 -> N_I_local (loop through all local HVC-I neurons)
+		
+		/////////////////////////////
+		// Network Synchronization //
+		/////////////////////////////
+		if ( ( internal_time > network_time ) || ( t == num_steps-1 ) )
+        {
+            //if (MPI_rank == 0)
+            //{
+            //    std::cout << "internal time = " << internal_time << " > network_time = " << network_time << std::endl; 
+            //}
+
+            MPI_Allreduce(&some_RA_exc_conductance_was_updated_local, &some_RA_exc_conductance_was_updated_global, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+            MPI_Allreduce(&some_RA_inh_conductance_was_updated_local, &some_RA_inh_conductance_was_updated_global, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+        
+            MPI_Allreduce(&some_I_exc_conductance_was_updated_local, &some_I_exc_conductance_was_updated_global, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+        
+            MPI_Allreduce(&some_RA_neuron_new_postEvent_local, &some_RA_neuron_new_postEvent_global, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+            
+        
+			
+            ////////////////////////////////////////////
+            //// Process HVC-I -> HVC-RA interactions
+            ////////////////////////////////////////////
+            if ( some_RA_inh_conductance_was_updated_global > 0 )
+            {
+            // sum update array and send to all processes
+
+                MPI_Allreduce(&update_Gi_RA_local[0], &update_Gi_RA_global[0], N_RA, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+
+                for (int i = 0; i < N_RA_local; i++)
+                {
+					//std::cout << "HVC-RA neuron " << Id_RA_local[i] << " raised inhibitory conductance by " << update_Gi_RA_global[Id_RA_local[i]] << std::endl;
+                    HVCRA_local[i].raiseI(update_Gi_RA_global[Id_RA_local[i]]);
+            	}
+				// update conductance arrays and delivered indicators
+				some_RA_inh_conductance_was_updated_global = 0;
+				some_RA_inh_conductance_was_updated_local = 0;
+				
+				std::fill(update_Gi_RA_local.begin(), update_Gi_RA_local.end(), 0.0);
+				std::fill(update_Gi_RA_global.begin(), update_Gi_RA_global.end(), 0.0);
+            }
+            
+            ////////////////////////////////////////////
+            //// Process HVC-RA -> HVC-I interactions
+            ////////////////////////////////////////////
+			if ( some_I_exc_conductance_was_updated_global > 0 )
+			{
+				// sum all update arrays and send to all processes
+
+				MPI_Allreduce(&update_Ge_I_local[0], &update_Ge_I_global[0], N_I, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+
+				// now update excitatory conductances of all neurons
+
+				for (int i = 0; i < N_I_local; i++)
+					HVCI_local[i].raiseE(update_Ge_I_global[Id_I_local[i]]);
+
+				// update conductance arrays and fired indicators
+				some_I_exc_conductance_was_updated_local = 0;
+				some_I_exc_conductance_was_updated_global = 0;
+
+				std::fill(update_Ge_I_local.begin(), update_Ge_I_local.end(), 0.0);
+				std::fill(update_Ge_I_global.begin(), update_Ge_I_global.end(), 0.0);
+			}
+			
+			////////////////////////////////////////////
+            //// Process HVC-RA -> HVC-RA interactions
+            ////////////////////////////////////////////
+			if ( some_RA_exc_conductance_was_updated_global > 0 )
+			{
+				// sum all update arrays and send to all processes
+
+				MPI_Allreduce(&update_Ge_RA_local[0], &update_Ge_RA_global[0], N_RA, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+
+				// now update excitatory conductances of all neurons
+				for (int i = 0; i < N_RA_local; i++)
+					HVCRA_local[i].raiseExcWeight(update_Ge_RA_global[Id_RA_local[i]]); // update conductance
+
+				// update conductance arrays and fired indicators
+				some_RA_exc_conductance_was_updated_global = 0;
+				some_RA_exc_conductance_was_updated_local = 0;
+				
+				std::fill(update_Ge_RA_local.begin(), update_Ge_RA_local.end(), 0.0);
+				std::fill(update_Ge_RA_global.begin(), update_Ge_RA_global.end(), 0.0);
+			}	
+
+			////////////////////////////////////////////
+            //// Process HVC-RA dendritic spikes
+            ////////////////////////////////////////////
+			if ( some_RA_neuron_new_postEvent_global > 0 )
+            {
+				// update conductance arrays and fired indicators
+            	some_RA_neuron_new_postEvent_local = 0;
+	        	some_RA_neuron_new_postEvent_global = 0;
+	        	
+	        	// gather all HVC-RA neurons that produced new postsynaptic event
+				this->gather_spiked_or_bursted_neurons(RA_neurons_new_postEvent_local, RA_neurons_new_postEvent_global);
+				
+				// update postsynaptic event arrays
+				for (size_t j = 0; j < RA_neurons_new_postEvent_global.size(); j++)
+					previous_postEvent_times_global[RA_neurons_new_postEvent_global[j]].push_back(internal_time);
+				
+				////////////////////////////////////////////////////////////////////////////////////////////////////////////
+				// LTP or LTD of previously delivered somatic spike times on HVC-RA neuron with new postsynaptic events  ///
+				////////////////////////////////////////////////////////////////////////////////////////////////////////////
+				
+				for (int i = 0; i < N_RA_local; i++)
+                {
+					int presyn_ID = Id_RA_local[i]; // real id of presynaptic neuron
+					
+                    // if neuron is saturated apply LTP only if spiked neurons are among supersynapse targets
+                    if ( static_cast<int>(supersynapses_local[i].size()) == synaptic_params.Nss )
+                    {
+                        for (size_t j = 0; j < RA_neurons_new_postEvent_global.size(); j++)
+                        {
+                            int postsyn_ID = RA_neurons_new_postEvent_global[j]; // id of postsynaptic neuron
+                            
+                            // do not allow self-to-self synapses to emerge
+							if ( presyn_ID != postsyn_ID )
+							{
+								std::vector<int>::iterator pos = std::find(supersynapses_local[i].begin(),
+											supersynapses_local[i].end(), postsyn_ID );
+
+								if ( pos!=supersynapses_local[i].end() )
+								{
+									// find previous somatic spikes that are not too old
+									if ( !delivered_preEvent_times_local[i][postsyn_ID].empty() )
+									{
+										std::vector<double>::iterator it_relevant_preEvents = std::lower_bound(delivered_preEvent_times_local[i][postsyn_ID].begin(),
+																											delivered_preEvent_times_local[i][postsyn_ID].end(),
+																											internal_time - STDP_WINDOW);
+																							
+										for (auto it = it_relevant_preEvents; it != delivered_preEvent_times_local[i][postsyn_ID].end(); it++)
+										{
+											double dt = internal_time - *it;
+									
+										
+											//std::cout << "From neuron " << Id_RA_local[i] << " to neuron " << fired_ID << " dt = " << dt << std::endl;
+											
+											if (dt <= synaptic_params.T_0)
+											{
+												double w_before = weights_RA_RA_local[i][postsyn_ID];
+												
+												LTD(weights_RA_RA_local[i][postsyn_ID], dt);
+												
+												//~ std::cout   << "LTD from saturated " << presyn_ID << " -> " << postsyn_ID
+															//~ << " dt = " << dt << " w_before = " << w_before << " dw = " << weights_RA_RA_local[i][postsyn_ID] - w_before
+															//~ << std::endl;
+											}
+											else
+											{
+												double w_before = weights_RA_RA_local[i][postsyn_ID];
+												
+											
+												LTP(weights_RA_RA_local[i][postsyn_ID], dt);
+												
+												//~ std::cout   << "LTP from saturated " << presyn_ID << " -> " << postsyn_ID
+															//~ << " dt = " << dt << " w_before = " << w_before << " dw = " << weights_RA_RA_local[i][postsyn_ID] - w_before
+															//~ << std::endl;
+												
+											}	
+											//double w = weights_local[i][fired_ID];
+											
+											//printf("LTP from saturated neuron %d onto %d; somatic spike at %f; dendritic spike at %f; dt = %f; dw = %f\n", 
+											 //           Id_RA_local[i], fired_ID, spikes_in_trial_soma_local[i][k], spike_times_dend_global[fired_ID], 
+											 //           dt, weights_local[i][fired_ID] - w);
+											
+											update_synapse(i, postsyn_ID);
+											
+										}
+									}
+								}
+							}
+                        }
+
+                    }
+                    // if not saturated apply LTP for all dendritic spikes
+                    else
+                    {
+                        for (size_t j = 0; j < RA_neurons_new_postEvent_global.size(); j++)
+                        {
+                            int postsyn_ID = RA_neurons_new_postEvent_global[j];
+                            // don't allow self-to-self connections
+                            if ( postsyn_ID != presyn_ID )
+                            {
+                                // find previous somatic spikes that are not too old
+								if ( !delivered_preEvent_times_local[i][postsyn_ID].empty() )
+								{
+									std::vector<double>::iterator it_relevant_preEvents = std::lower_bound(delivered_preEvent_times_local[i][postsyn_ID].begin(),
+																										delivered_preEvent_times_local[i][postsyn_ID].end(),
+																										internal_time - STDP_WINDOW);
+																						
+									for (auto it = it_relevant_preEvents; it != delivered_preEvent_times_local[i][postsyn_ID].end(); it++)
+									{
+										double dt = internal_time - *it;
+								
+
+										//std::cout << "From neuron " << Id_RA_local[i] << " to neuron " << fired_ID << " dt = " << dt << std::endl;
+										
+									    if (dt <= synaptic_params.T_0)
+									    {
+											double w_before = weights_RA_RA_local[i][postsyn_ID];
+												
+											LTD(weights_RA_RA_local[i][postsyn_ID], dt);
+											
+											// show LTD on pool neurons only
+											//~ auto p = std::equal_range(training_neurons.begin(), training_neurons.end(), postsyn_ID);
+											//~ 
+											//~ if (p.first == p.second)
+											//~ {
+												//~ std::cout << "LTD from  " << presyn_ID << " -> " << postsyn_ID
+													  //~ << " dt = " << dt << " w_before = " << w_before << " dw = " << weights_RA_RA_local[i][postsyn_ID] - w_before
+													  //~ << " w_after = " << weights_RA_RA_local[i][postsyn_ID] << std::endl;
+											//~ }
+											
+											//~ std::cout << "LTD from  " << presyn_ID << " -> " << postsyn_ID
+													  //~ << " dt = " << dt << " w_before = " << w_before << " dw = " << weights_RA_RA_local[i][postsyn_ID] - w_before
+													  //~ << std::endl;
+											
+										}
+										else
+										{
+											double w_before = weights_RA_RA_local[i][postsyn_ID];
+											
+											LTP(weights_RA_RA_local[i][postsyn_ID], dt);
+											
+											
+											// show LTP on pool neurons only
+											//~ auto p = std::equal_range(training_neurons.begin(), training_neurons.end(), postsyn_ID);
+											//~ 
+											//~ if (p.first == p.second)
+											//~ {
+												//~ std::cout << "LTP from  " << presyn_ID << " -> " << postsyn_ID
+													  //~ << " dt = " << dt << " w_before = " << w_before << " dw = " << weights_RA_RA_local[i][postsyn_ID] - w_before
+													  //~ << " w_after = " << weights_RA_RA_local[i][postsyn_ID] << std::endl;
+											//~ }
+											
+											
+											//~ std::cout << "LTP from  " << presyn_ID << " -> " << postsyn_ID
+													  //~ << " dt = " << dt << " w_before = " << w_before << " dw = " << weights_RA_RA_local[i][postsyn_ID] - w_before
+													  //~ << std::endl;
+										}	
+										//double w = weights_local[i][fired_ID];
+										
+										//printf("LTP from saturated neuron %d onto %d; somatic spike at %f; dendritic spike at %f; dt = %f; dw = %f\n", 
+										 //           Id_RA_local[i], fired_ID, spikes_in_trial_soma_local[i][k], spike_times_dend_global[fired_ID], 
+										 //           dt, weights_local[i][fired_ID] - w);
+										
+										update_synapse(i, postsyn_ID);
+									
+									}
+								}
+                            }
+                        }
+                   }
+
+                } // end for i -> N_RA_local
+
+				       
+
+               // check if we need axon remodeling
+
+                for (int i = 0; i < N_RA_local; i++)
+                {
+                    if ( (static_cast<int>(supersynapses_local[i].size()) == synaptic_params.Nss) && (remodeled_local[i] == 0) )
+					    this->axon_remodeling(i);
+
+				   
+                }
+            
+				// clear bursts
+				RA_neurons_new_postEvent_local.clear();
+				RA_neurons_new_postEvent_global.clear();
+				
+            } // end if some HVC-RA produced new postsynaptic event
+            
+            
+            network_time += NETWORK_UPDATE_FREQUENCY;
+        }
+    }
+    
+    this->potentiation_decay();
+    //printf("After potentiation decay")
+    //this->update_all_synapses_sudden_maturation();
+    this->update_all_synapses();
+	
+	// check if some neurons became silent
+	for (int i = 0; i < N_RA_local; i++)
+	{
+		num_spikes_in_recent_trials_local[i].push_front(static_cast<int>(spikes_in_trial_soma_local[i].size()));
+        
+        //firing_rate_short_local[i] = std::accumulate(num_spikes_in_recent_trials[i].begin(), num_spikes_in_recent_trials[i].begin() + RATE_WINDOW_SHORT, 0.0)
+          //                          / static_cast<double>(RATE_WINDOW_SHORT);
+
+		// calculate firing rate in large window:
+		int death_window = 1000;
+		double death_threshold = 0.02;
+		
+        firing_rate_long_local[i] = std::accumulate(num_spikes_in_recent_trials_local[i].begin(), num_spikes_in_recent_trials_local[i].end(), 0.0)
+                                                                                            / static_cast<double>(maturation_params.RATE_WINDOW_LONG);
+        	
+		std::vector<double> recent_firing_robustness(death_window);
+		
+		for (int j = 0; j < death_window; j++ )
+			if ( num_spikes_in_recent_trials_local[i][j] > 0 )
+				recent_firing_robustness[j] = 1;
+		
+		double firing_robustness = std::accumulate(recent_firing_robustness.begin(), recent_firing_robustness.end(), 0.0) / static_cast<double>(death_window);
+		
+		if ( ( firing_robustness < death_threshold ) && ( trial_number > death_window ) )
+		{
+			std::cout << "Neuron " << Id_RA_local[i] << " became silent!" << std::endl;
+		}                                                                                                                          
+			//if (std::accumulate(num_bursts_in_recent_trials[i].begin(), num_bursts_in_recent_trials[i].end(), 0.0) >= 1)
+			//{
+			//	std::cout << "Recent bursts of neuron " << Id_RA_local[i] << " :" << std::endl;
+				
+			//	for (size_t j = 0; j < num_bursts_in_recent_trials[i].size(); j++)
+			//		std::cout << num_bursts_in_recent_trials[i][j] << "\t";
+				
+			//	std::cout << std::endl;
+			//}
+		
+	}
+}
+
 void NetworkGrowthSimulator::trial_burst_pre_dend_event_post_delays_sudden_maturation_noImmatureOut_fixedSpread(bool training, std::vector<double>& spread_times)
 {
 	double event_window = 30.0; // window in which all somatic spikes are considered as one event
@@ -7308,7 +8142,7 @@ void NetworkGrowthSimulator::trial_burst_pre_dend_event_post_delays_sudden_matur
 		
 		for (int i = 0; i < N_RA_local; i++)
 		{
-			if ( ( indicators_training[Id_RA_local[i]] ) && ( !indicators_current_injected[Id_RA_local[i]] ) )
+			if ( (training) && ( indicators_training[Id_RA_local[i]] ) && ( !indicators_current_injected[Id_RA_local[i]] ) )
 			{
 				if ( internal_time > spread_times[Id_RA_local[i]] + mean_injection_time )
 				{
@@ -7330,7 +8164,7 @@ void NetworkGrowthSimulator::trial_burst_pre_dend_event_post_delays_sudden_matur
                 spikes_in_trial_soma_local[i].push_back(internal_time);
                 
 				// update delivery queues if neuron is mature (no output for immature neuron and no wiring mechanism)
-				if ( mature_global[Id_RA_local[i]] == 1 ){
+				//if ( mature_global[Id_RA_local[i]] == 1 ){
 				
 					// for inhibitory neurons
 					// loop over all inhibitory targets of fired neurons
@@ -7394,7 +8228,7 @@ void NetworkGrowthSimulator::trial_burst_pre_dend_event_post_delays_sudden_matur
 							}
 						}
 					}
-				}
+				//}
                 
             } // end if local HVC-RA neuron spiked  
             
@@ -7981,7 +8815,7 @@ void NetworkGrowthSimulator::trial_burst_pre_dend_event_post_delays_sudden_matur
           //                          / static_cast<double>(RATE_WINDOW_SHORT);
 
 		// calculate firing rate in large window:
-		int maturation_window = 300;
+		int maturation_window = 1000;
 		double maturation_threshold = 0.7;
 		
         firing_rate_long_local[i] = std::accumulate(num_spikes_in_recent_trials_local[i].begin(), num_spikes_in_recent_trials_local[i].end(), 0.0)
@@ -13651,7 +14485,7 @@ void NetworkGrowthSimulator::potentiation_decay_sudden_maturation()
     {
         for (int j = 0; j < N_RA; j++)
         {
-			if ( mature_global[j] != 1 )
+			if ( rescaled_indicators_local[i][j] != 1 )
 			{
 				if (weights_RA_RA_local[i][j] >= synaptic_params.SUPERSYNAPSE_THRESHOLD)
 					weights_RA_RA_local[i][j] -= synaptic_params.BETA_SUPERSYNAPSE;
@@ -13820,9 +14654,7 @@ void NetworkGrowthSimulator::rescale_synapses_to_mature(int neuron_id)
 	//~ }
 }
 
-
-
-void NetworkGrowthSimulator::update_synapse(int i, int j)
+void NetworkGrowthSimulator::update_synapse_sudden_maturation(int i, int j)
 {
 	double w = weights_RA_RA_local[i][j];
 
@@ -13836,6 +14668,54 @@ void NetworkGrowthSimulator::update_synapse(int i, int j)
 
     if ( (w >= synaptic_params.SUPERSYNAPSE_THRESHOLD) && (supersynapses_indicators_local[i][j] == 0) && (static_cast<int>(supersynapses_local[i].size()) < synaptic_params.Nss) 
 									&& ( rescaled_indicators_local[i][j] == 0) )
+    {
+       // printf("Activated supersynapse from %d onto %d; weight = %f\n", Id_RA_local[i], j, w);
+        supersynapses_indicators_local[i][j] = 1;
+        supersynapses_local[i].push_back(j);
+    }
+
+    if ( (w < synaptic_params.SUPERSYNAPSE_THRESHOLD) && (supersynapses_indicators_local[i][j] == 1) )
+    {
+       // printf("Deactivated supersynapse from %d onto %d; weight = %f\n", Id_RA_local[i], j, w);
+        supersynapses_indicators_local[i][j] = 0;
+        remodeled_local[i] = 0;
+        std::vector<int>::iterator pos = std::find(supersynapses_local[i].begin(),
+                                                    supersynapses_local[i].end(), j);
+
+        if (pos!= supersynapses_local[i].end())
+            supersynapses_local[i].erase(pos);
+        else
+            std::cout << "Supersynapse " << Id_RA_local[i] << " -> " << j << " to be erased is not found!" << std::endl;
+    }
+
+    if ( (w < synaptic_params.ACTIVATION_THRESHOLD) && (active_indicators_local[i][j] == 1) )
+    {
+      //  printf("Deactivated synapse from %d onto %d; w = %f\n", Id_RA_local[i], j, w);
+        active_indicators_local[i][j] = 0;
+
+        std::vector<int>::iterator pos = std::find(active_synapses_local[i].begin(),
+                                                    active_synapses_local[i].end(), j);
+
+        if (pos!= active_synapses_local[i].end())
+            active_synapses_local[i].erase(pos);
+        else
+            std::cout << "Active synapse " << Id_RA_local[i] << " -> " << j << " to be erased is not found!" << std::endl;
+
+    }
+}
+
+void NetworkGrowthSimulator::update_synapse(int i, int j)
+{
+	double w = weights_RA_RA_local[i][j];
+
+    if ( ( w >= synaptic_params.ACTIVATION_THRESHOLD ) && ( active_indicators_local[i][j] == 0 ) && ( remodeled_local[i] == 0) )
+    {
+       // printf("Activated synapse from %d onto %d; weight = %f\n", Id_RA_local[i], j, w);
+        active_indicators_local[i][j] = 1;
+        active_synapses_local[i].push_back(j);
+    }
+
+    if ( (w >= synaptic_params.SUPERSYNAPSE_THRESHOLD) && (supersynapses_indicators_local[i][j] == 0) && (static_cast<int>(supersynapses_local[i].size()) < synaptic_params.Nss) )
     {
        // printf("Activated supersynapse from %d onto %d; weight = %f\n", Id_RA_local[i], j, w);
         supersynapses_indicators_local[i][j] = 1;

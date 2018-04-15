@@ -11,8 +11,8 @@ import matplotlib.pyplot as plt
 import utils
 import os
 
-dirname = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/noImmatureOut5/"
-trial_number = 4000
+dirname = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/noImmatureOut7/"
+trial_number = 2000
 trialStep = 50
 
 fileAxonalDelaysRA2RA = os.path.join(dirname, "axonal_delays_RA2RA_" + str(trial_number) + ".bin")
@@ -86,7 +86,7 @@ fileAxonalDelaysRA2RA = os.path.join(dirname, "axonal_delays_RA2RA_" + str(trial
  ##########################################################
 N_RA = 1000
  
-source_neuron = 195
+source_neuron = 228
  
  ##### find all supersynaptic targets ever existing from source neuron
 all_supersynapse_targets = set()

@@ -1,5 +1,5 @@
 #include "HHI_buffer.h" 
-#include "HH2_buffer.h"
+#include "HH2_test.h"
 #include <iostream>
 #include "poisson_noise.h"
 #include <vector>
@@ -9,7 +9,7 @@
 
 int main()
 {
-	double Gie = 2; // strength of inhibitory kick
+	double Gie = 0.0; // strength of inhibitory kick
 	
 	double Gei = 0.25;
 	
@@ -20,13 +20,13 @@ int main()
 	double mean_delays = 0; // mean axonal delay
 
 	int num_source_neurons = 10; // number of neurons in first layer (sources)
-	int num_target_neurons = 100; // number of neurons in second layer (targets)
+	int num_target_neurons = 200; // number of neurons in second layer (targets)
 
 	// white noise parameters
 	double white_noise_mean_soma = 0.000000;
 	double white_noise_std_soma = 0.10000; // was 0.10
 	double white_noise_mean_dend = 0.000000;
-	double white_noise_std_dend = 0.15000; // was 0.10
+	double white_noise_std_dend = 0.20000; // was 0.10
 	
 	// trial parameters
 	double TIMESTEP = 0.02;
@@ -38,10 +38,10 @@ int main()
 	double E_GABA_IMMATURE = -80.000000;
 
 	double E_REST_MATURE = -80.000000;
-	double E_REST_IMMATURE = -80.000000;
+	double E_REST_IMMATURE = -55.000000;
 
 	double AD_MATURE = 10000.000000;
-	double AD_IMMATURE = 1000.000000;
+	double AD_IMMATURE = 10000.000000;
 
 	double GK_MATURE = 8.000000;
 	double GK_IMMATURE = 8.000000;
@@ -50,13 +50,13 @@ int main()
 	double GNA_IMMATURE = 60.000000;
 
 	double RC_MATURE = 55.000000;
-	double RC_IMMATURE = 5.50000;
+	double RC_IMMATURE = 55.0000;
 	
 	double GCA_MATURE = 55.0;
 	double GCA_IMMATURE = 0.0;
 	
 	double GCAK_MATURE = 150.0;
-	double GCAK_IMMATURE = 0.0;
+	double GCAK_IMMATURE = 150.0;
 	
 	double GSL_MATURE = 0.1;
 	double GSL_IMMATURE = 0.1;
@@ -64,7 +64,7 @@ int main()
 	double GDL_MATURE = 0.1;
 	double GDL_IMMATURE = 0.1;
 
-	double age = 0.0;
+	double age = 100;
 	
 	double gaba_potential = E_GABA_MATURE + (E_GABA_IMMATURE - E_GABA_MATURE) * exp(-age);
 	double rest_potential = E_REST_MATURE + (E_REST_IMMATURE - E_REST_MATURE) * exp(-age);
@@ -91,8 +91,8 @@ int main()
 			  << "Rc = "     << Rc             << std::endl;
 			  
 	
-	std::vector<HH2_buffer> source_neurons(num_source_neurons);
-	std::vector<HH2_buffer> target_neurons(num_target_neurons);
+	std::vector<HH2_test> source_neurons(num_source_neurons);
+	std::vector<HH2_test> target_neurons(num_target_neurons);
 	HHI_buffer interneuron;
 	
 	unsigned seed = 1991;
@@ -107,6 +107,17 @@ int main()
 		source_neurons[i].set_noise_generator(&noise_generator);
 		source_neurons[i].set_white_noise(white_noise_mean_soma, white_noise_std_soma, 
 									   white_noise_mean_dend, white_noise_std_dend);
+		
+		source_neurons[i].set_Ei(E_GABA_MATURE);
+		source_neurons[i].set_Erest(E_REST_MATURE);
+		source_neurons[i].set_Gk(GK_MATURE);
+		source_neurons[i].set_GNa(GNA_MATURE);
+		source_neurons[i].set_GCa(GCA_MATURE);
+		source_neurons[i].set_GCaK(GCAK_MATURE);
+		source_neurons[i].set_GsL(GSL_MATURE);
+		source_neurons[i].set_GdL(GDL_MATURE);
+		source_neurons[i].set_Ad(AD_MATURE);
+		source_neurons[i].set_Rc(RC_MATURE);
 	}
 	
 	;
@@ -137,8 +148,8 @@ int main()
 	interneuron.set_dynamics(TIMESTEP);
 	
 	double weight_ee = 0; // strenght of excitatory weight from first to second layer neurons
-	double dweight_ee = 2.5;
-	int num_steps = 20; 
+	double dweight_ee = 10;
+	int num_steps = 15; 
 	
 	std::vector<double> weights(num_steps);
 	
@@ -160,7 +171,7 @@ int main()
 	{
 		weights[k] = weight_ee;
 		
-		std::string filename = "/mnt/hodgkin_home/eugene/Output/neuronTest/inhAndExcInputsResponse/RA" + std::to_string(k) + ".bin";
+		std::string filename = "/home/eugene/Output/neuronTest/inhAndExcInputsResponse/RA" + std::to_string(k) + ".bin";
 	
 		struct stat buf;
 	
@@ -222,14 +233,14 @@ int main()
 				
 				if ( target_neurons[i].get_fired_soma() )
 				{
-					if ( !b_spike_indicators[i] )
+					if ( ( !b_spike_indicators[i] ) && (training_fired) )
 					{
-						if ( training_fired )
+						//if ( training_fired )
 							first_soma_spike_delays.push_back(static_cast<double>(t) * TIMESTEP - training_first_spike_time);
-						else{
-							std::cout << "Training neuron didn't fire! Time = " << static_cast<double>(t) * TIMESTEP << "\n" << std::endl;
-							first_soma_spike_delays.push_back(static_cast<double>(t) * TIMESTEP - T_KICK);
-						}
+						//else{
+							//std::cout << "Training neuron didn't fire! Time = " << static_cast<double>(t) * TIMESTEP << "\n" << std::endl;
+							//first_soma_spike_delays.push_back(static_cast<double>(t) * TIMESTEP - T_KICK);
+						//}
 						
 						b_spike_indicators[i] = true;
 					}
@@ -344,6 +355,7 @@ int main()
 	for (int i = 0; i < num_steps; i++)
 		std::cout << total_num_somatic_spikes_in_trials[i] << ", ";
 	std::cout << std::endl;
+	
 	
 	std::cout << "Mean somatic spike delays:\n";
 	for (int i = 0; i < num_steps; i++)

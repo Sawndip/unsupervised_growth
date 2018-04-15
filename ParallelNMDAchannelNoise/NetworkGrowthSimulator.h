@@ -13,7 +13,7 @@
 #include "ConfigurationNetworkTopology.h"
 
 #include "HHI_buffer.h"
-#include "HH2_buffer.h"
+#include "HH2_test.h"
 
 using std::vector;
 using std::pair;
@@ -85,7 +85,7 @@ protected:
 		int N_RA_local; // number of RA neurons in each process
 		int N_I_local; // number of I neurons in each process
 		
-		vector<HH2_buffer> HVCRA_local; // array of HVC(RA) neurons
+		vector<HH2_test> HVCRA_local; // array of HVC(RA) neurons
 		vector<HHI_buffer> HVCI_local; // array of HVC(I) neurons
 
 		// coordinates info
@@ -265,6 +265,7 @@ protected:
 		///////////////////////////////////
 		
         void update_neuron_properties(); // update all neuron properties based on their age
+        void update_neuron_properties_sameDendrite(); // update all neuron properties based on their age for same dendrite size
         void set_neuron_properties_sudden_maturation(); // set neuron properties according to mature indicators
         void set_neuron_properties(); // set neuron properties according to values in local arrays
         void set_training_neurons_mature(); // set mature parameters for training  HVC-RA neurons
@@ -301,6 +302,10 @@ protected:
 																				// events; dendritic spikes - postsynaptic. Immature neurons have no output connections
 																				// training neurons have fixed spread
 		
+		void trial_1stSoma_pre_1stSoma_post_delays_fixedSpread(bool training, std::vector<double>& spread_times);
+													// single trial with STDP rule; presynaptic event - delivered first somatic spike
+													// postsynaptic event - fired first somatic spike
+		
 		void trial_noImmatureOut_fixedSpread(bool training, std::vector<double>& spread_times); // singe trial with STDP rule; bursts are presynaptic
 																				// events; dendritic events (dendritic spikes within event_window) - postsynaptic. Immature neurons have no output connections
 																				// training neurons have fixed spread
@@ -323,6 +328,8 @@ protected:
         void reset_after_chain_test(); // reset trial after chain test: neuron time is set to zero; neuron parameters to initial values
         void reset_after_trial(); // continue the network activity by reset all neurons
         void setToRest_after_trial_soma_pre_dend_post_delays(); // set neurons to rest and clear all event arrays
+        void setToRest_afterEpoch(); // set neurons to rest after epoch
+        
         void reset_after_trial_soma_pre_dend_post_no_delays(); // resest network after trial with no axonal delays
         void reset_after_trial_soma_pre_dend_post_delays(); // resest network after trial with axonal delays
 		void set_all_mature(); // set all neurons to a mature state
@@ -339,6 +346,7 @@ protected:
 													 // if target neuron is mature, active synapse doesn't decay 
 		
 		void update_synapse(int i, int j); // update synapse from neuron i to neuron j
+		void update_synapse_sudden_maturation(int i, int j); // update synapse from neuron i to neuron j for the case of sudden maturation
 		
 		void update_all_synapses(); // update synapses between RA neurons potentiation decay
 		void update_all_synapses_sudden_maturation(); // update synapses that contact immature targets 

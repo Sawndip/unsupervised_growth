@@ -12,12 +12,13 @@ import reading
 import os
 import numpy as np
 
-trial_number = 50
+trial_number = 250
 
 CONVERTION_CONSTANT = 10 # 1 weight in the model equals 10 pS
 MAX_WEIGHT = 50
 
-dirname = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/noImmatureOut5/"
+dirname = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/maturationTransition1/"
+#dirname = "/home/eugene/results/immature/clusters/11/"
 
 fileWeights = os.path.join(dirname, "weights_" + str(trial_number) + ".bin")
 fileActiveSynapses = os.path.join(dirname, "RA_RA_active_connections_" + str(trial_number) + ".bin")

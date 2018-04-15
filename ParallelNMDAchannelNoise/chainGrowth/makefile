@@ -1,5 +1,5 @@
-OBJ = main.o HH2_buffer.o HHI_buffer.o poisson_noise.o NetworkGrowthSimulator.o ConfigurationNetworkGrowth.o ConfigurationNetworkTopology.o
-SRC = main.cpp HH2_buffer.cpp HHI_buffer.cpp poisson_noise.cpp NetworkGrowthSimulator.cpp ConfigurationNetworkGrowth.cpp ConfigurationNetworkTopology.cpp
+OBJ = main.o HH2_buffer.o HH2_test.o HHI_buffer.o poisson_noise.o NetworkGrowthSimulator.o ConfigurationNetworkGrowth.o ConfigurationNetworkTopology.o
+SRC = main.cpp HH2_buffer.cpp HH2_test.cpp HHI_buffer.cpp poisson_noise.cpp NetworkGrowthSimulator.cpp ConfigurationNetworkGrowth.cpp ConfigurationNetworkTopology.cpp
 CXX = mpic++
 CFLAGS = -std=c++11 -g -Wall 
 CXXFLAGS = -std=c++11 -g -Wall

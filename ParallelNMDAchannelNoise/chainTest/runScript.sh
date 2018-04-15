@@ -3,4 +3,4 @@
 # starting trial
 # number of testing trials
 # path to output directory
-mpirun -np 23 ./main /home/eugene/Output/networks/chainGrowth/passiveDendrite/noImmatureOut4/ 23500 10 /home/eugene/Output/networks/chainGrowth/passiveDendrite/test/noImmatureOut4/
+mpirun -np 23 ./main /home/eugene/results/immature/clusters/11/ 13600 20 /home/eugene/results/immature/clusters/test/11/

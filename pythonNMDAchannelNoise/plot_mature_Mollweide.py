@@ -18,8 +18,8 @@ R = 1.0 # radius of sphere
 num_iter = 10000
 tolerance = 1e-7
 
-dirname = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/events1/"
-trial_number = 1700
+dirname = "/home/eugene/results/immature/clusters/11/"
+trial_number = 13600
 
 fileMature = os.path.join(dirname, "mature_" + str(trial_number) + ".bin")
 fileCoordRA = os.path.join(dirname, "RA_xy_" + str(trial_number) + ".bin")
@@ -83,6 +83,32 @@ for i in range(num_parallels):
 
 #ax.scatter(coord_I[:,0], coord_I[:,1], coord_I[:,2], c='r')
 #ax.scatter(coord_RA[:,0], coord_RA[:,1], coord_RA[:,2], c='b')
+
+from mpl_toolkits.mplot3d import Axes3D
+
+f = plt.figure()
+ax = Axes3D(f)
+num_grids = 20
+
+phi = np.linspace(0,2*np.pi, num_grids).reshape(num_grids, 1) # the angle of the projection in the xy-plane
+theta = np.linspace(0, np.pi, num_grids).reshape(-1, num_grids) # the angle from the polar axis, ie the polar angle
+
+
+# Transformation formulae for a spherical coordinate system.
+x = np.sin(theta)*np.cos(phi)
+y = np.sin(theta)*np.sin(phi)
+z = np.cos(theta)
+
+surf = ax.plot_wireframe(x, y, z,color='k')
+
+ax.set_aspect(1.0)
+surf.set_facecolor((0,0,0,0))
+
+ax.scatter(coord[training_neurons][:,0], coord[training_neurons][:,1], coord[training_neurons][:,2], 'b', 50)
+
+ax.set_xlim3d(-1.5, 1.5)
+ax.set_ylim3d(-1.5, 1.5)
+ax.set_zlim3d(-1.5, 1.5)
 
 plt.show()
 
