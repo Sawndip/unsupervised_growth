@@ -25,9 +25,10 @@ def get_hist_for_discrete_integers(data):
 
 CONVERTION_CONSTANT = 10.0
 
-trial_number = 13600
-#dirname = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/noImmatureOut8/"
-dirname = "/home/eugene/results/immature/clusters/11/"
+trial_number = 50
+
+dirname = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/maturationTransition2/"
+#dirname = "/home/eugene/results/immature/clusters/matTrans6/"
 
 fileSoma = os.path.join(dirname, "spike_times_soma_" + str(trial_number) + ".bin")
 fileWeights = os.path.join(dirname, "weights_" + str(trial_number) + ".bin")
@@ -335,26 +336,44 @@ while len(layer) <= 10 and len(layer) > 0:
      #   print "super: {0} -> 553; w = {1}".format(i, weights[i][553])
 
 
-source_neurons = range(N_RA)
+source_neurons = [195, 228, 860, 461, 525, 146, 726, 873, 252, 893]
 #target_neurons = [448]
-target_neurons = [897, 803, 465, 203, 913, 210, 186, 785, 125, 927]
+#target_neurons = [897, 803, 465, 203, 913, 210, 186, 785, 125, 927]
+
+#target_neurons = [195, 228, 860, 461, 525, 146, 726, 873, 252, 893]
+
+target_neurons = range(N_RA)
+#for i in range(N_RA):
+ #   if i not in source_neurons:
+
+
+#==============================================================================
+# for i in source_neurons:
+#     if i not in training_neurons:
+#         for j in target_neurons:
+#             if j in active_synapses[i]:
+#                 print "active: {0} -> {1}; w = {2}".format(i, j, weights[i][j])
+# 
+#             if j in super_synapses[i]:
+#                 print "super: {0} -> {1}; w = {2}".format(i, j, weights[i][j])
+# 
+#==============================================================================
 
 for i in source_neurons:
-    if i not in training_neurons:
-        for j in target_neurons:
-            if j in active_synapses[i]:
-                print "active: {0} -> {1}; w = {2}".format(i, j, weights[i][j])
+    for j in target_neurons:
+        #if j in active_synapses[i]:
+         #   print "active: {0} -> {1}; w = {2}".format(i, j, weights[i][j])
 
-            if j in super_synapses[i]:
-                print "super: {0} -> {1}; w = {2}".format(i, j, weights[i][j])
+        if j in super_synapses[i]:
+            print "super: {0} -> {1}; w = {2}".format(i, j, weights[i][j])
 
 
-for i in range(N_RA):
-    if 2 in active_synapses[i]:
-        print "{0} -> 2".format(i)
+#for i in range(N_RA):
+ #   if 2 in active_synapses[i]:
+  #      print "{0} -> 2".format(i)
     
-    if 93 in active_synapses[i]:
-        print "{0} -> 93".format(i)
+   # if 93 in active_synapses[i]:
+    #    print "{0} -> 93".format(i)
 
 
 

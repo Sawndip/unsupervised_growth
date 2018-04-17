@@ -111,7 +111,8 @@ protected:
 		
 		const static double MIN_INTERSOMATIC_DISTANCE; // minimum allowed distance between somatas of two neurons in the model
 		const static double G_TRAINING_KICK; // strength of excitatory conductance kick delivered to training HVC-RA neurons
-		const static double MATURATION_SCALE; // timescale of neuron properties maturation
+		const static double MATURATION_SCALE_SPONTANEOUS; // timescale of neuron properties of spontaneous maturation
+		const static double MATURATION_SCALE_DRIVEN; // timescale of neuron properties of driven maturation
 
 		double internal_time; // network
         double network_time; // network time
@@ -191,6 +192,9 @@ protected:
 		vector<int> mature_local; // local indicators if neuron became mature
 		vector<int> mature_global; // global indicators if neuron became mature
 		
+		vector<int> maturation_scale_local; // local rate of maturation
+		vector<int> maturation_scale_global; // global rate of maturation
+		
 		///////////////////////////////////
 		//// Maturation arrays ////////////
 		///////////////////////////////////
@@ -201,11 +205,14 @@ protected:
 		vector<double> rest_potential_local; // array with local values of rest potential
 		vector<double> rest_potential_global; // array with global values of rest potential
 		
-		vector<double> Gk_local; // array with local values of potassium somatic potential
-		vector<double> Gk_global; // array with global values of potassium somatic potential
+		vector<double> Gk_local; // array with local values of potassium somatic conductance
+		vector<double> Gk_global; // array with global values of potassium somatic conductance
 		
-		vector<double> GNa_local; // array with local values of sodium somatic potential
-		vector<double> GNa_global; // array with global values of sodium somatic potential
+		vector<double> GNa_local; // array with local values of sodium somatic conductance
+		vector<double> GNa_global; // array with global values of sodium somatic conductance
+		
+		vector<double> GCa_local; // array with local values of calcium dendritic conductance
+		
 		
 		vector<double> Ad_local; // array with local values of dendritic area
 		vector<double> Ad_global; // array with global values of dendritic area
@@ -266,6 +273,9 @@ protected:
 		
         void update_neuron_properties(); // update all neuron properties based on their age
         void update_neuron_properties_sameDendrite(); // update all neuron properties based on their age for same dendrite size
+        void update_neuron_properties_sameDendrite_diffMaturationRate();// update all neuron properties based on their age for same dendrite size;
+																		// maturation rate can be different for different neurons
+																		
         void set_neuron_properties_sudden_maturation(); // set neuron properties according to mature indicators
         void set_neuron_properties(); // set neuron properties according to values in local arrays
         void set_training_neurons_mature(); // set mature parameters for training  HVC-RA neurons

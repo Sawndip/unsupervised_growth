@@ -20,13 +20,13 @@ int main()
 	double mean_delays = 0; // mean axonal delay
 
 	int num_source_neurons = 10; // number of neurons in first layer (sources)
-	int num_target_neurons = 200; // number of neurons in second layer (targets)
+	int num_target_neurons = 1; // number of neurons in second layer (targets)
 
 	// white noise parameters
 	double white_noise_mean_soma = 0.000000;
-	double white_noise_std_soma = 0.10000; // was 0.10
+	double white_noise_std_soma = 0.0000; // was 0.10
 	double white_noise_mean_dend = 0.000000;
-	double white_noise_std_dend = 0.20000; // was 0.10
+	double white_noise_std_dend = 0.0000; // was 0.20
 	
 	// trial parameters
 	double TIMESTEP = 0.02;
@@ -38,7 +38,7 @@ int main()
 	double E_GABA_IMMATURE = -80.000000;
 
 	double E_REST_MATURE = -80.000000;
-	double E_REST_IMMATURE = -55.000000;
+	double E_REST_IMMATURE = -80.000000;
 
 	double AD_MATURE = 10000.000000;
 	double AD_IMMATURE = 10000.000000;
@@ -64,7 +64,7 @@ int main()
 	double GDL_MATURE = 0.1;
 	double GDL_IMMATURE = 0.1;
 
-	double age = 100;
+	double age = 0.0;
 	
 	double gaba_potential = E_GABA_MATURE + (E_GABA_IMMATURE - E_GABA_MATURE) * exp(-age);
 	double rest_potential = E_REST_MATURE + (E_REST_IMMATURE - E_REST_MATURE) * exp(-age);
@@ -149,7 +149,7 @@ int main()
 	
 	double weight_ee = 0; // strenght of excitatory weight from first to second layer neurons
 	double dweight_ee = 10;
-	int num_steps = 15; 
+	int num_steps = 50; 
 	
 	std::vector<double> weights(num_steps);
 	
@@ -179,6 +179,7 @@ int main()
 			std::remove(filename.c_str());
 	
 		target_neurons[0].set_recording_full(filename.c_str());
+		//source_neurons[0].set_recording_full(filename.c_str());
 		
 		bool training_excited = false;
 		bool training_fired = false;
@@ -193,6 +194,8 @@ int main()
 		
 		std::vector<bool> b_spike_indicators(num_target_neurons);
 		std::fill(b_spike_indicators.begin(), b_spike_indicators.end(), false);
+		
+		int num_source_spikes = 0;
 		
 		// trial
 		for (int t = 0; t < static_cast<int>(TRIAL_DURATION / TIMESTEP); t++)
@@ -218,6 +221,7 @@ int main()
 					}
 					
 					//std::cout << "source neuron " << i << " somatic spike at " << static_cast<double>(t) * TIMESTEP << std::endl;
+					num_source_spikes += 1;
 					
 					for ( int j = 0; j < num_target_neurons; j++ )
 						target_neurons[j].raiseExcWeight(weight_ee);
@@ -326,6 +330,9 @@ int main()
 		
 		
 		weight_ee += dweight_ee;
+		
+		std::cout << "Total number of source somatic spikes: " << num_source_spikes << "\n"
+				  << "Average number of source somatic spikes: " << static_cast<double>(num_source_spikes) / static_cast<double>(num_source_neurons) << std::endl;
 		
 		for (int i = 0; i < num_source_neurons; i++)
 			source_neurons[i].reset_time();

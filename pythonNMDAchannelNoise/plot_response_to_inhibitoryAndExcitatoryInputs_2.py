@@ -621,84 +621,389 @@ num_targets = 10
 # ax4.set_xlabel('Single weight')
 #==============================================================================
 
-################### Kick = 0 Different age, noise sigma_s = 0.1 sigma_d = 0.2 #########################
-num_neurons = 200
+#==============================================================================
+# 
+# ################### Age0.1 Different inhibitory kicks, no noise #########################
+# 
+# num_neurons = 1
+# 
+# weights_kick0_age01 = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160, 170, 180, 190, 200, 210, 220, 230, 240, 250, 260, 270, 280, 290, 300, 310, 320, 330, 340, 350, 360, 370, 380, 390, 400, 410, 420, 430, 440, 450, 460, 470, 480, 490]
+# p_fire_soma_kick0_age01 = [0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+# num_soma_spikes_kick0_age01 = np.array([0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2]) / np.float(num_neurons)
+# mean_spike_delay_kick0_age01 = [-1, -1, -1, -1, 11.22, 8.46, 7.46, 6.78, 6.28, 5.9, 5.58, 5.32, 5.1, 4.92, 4.78, 4.64, 4.5, 4.4, 4.28, 4.2, 4.1, 4.02, 3.94, 3.88, 3.82, 3.76, 3.7, 3.64, 3.58, 3.54, 3.48, 3.44, 3.4, 3.36, 3.32, 3.28, 3.26, 3.22, 3.18, 3.16, 3.12, 3.1, 3.08, 3.04, 3.02, 3, 2.98, 2.94, 2.92, 2.9]
+# std_spike_delay_kick0_age01 = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+# 
+# weights_kick05_age01 = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160, 170, 180, 190, 200, 210, 220, 230, 240, 250, 260, 270, 280, 290, 300, 310, 320, 330, 340, 350, 360, 370, 380, 390, 400, 410, 420, 430, 440, 450, 460, 470, 480, 490]
+# p_fire_soma_kick05_age01 = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+# num_soma_spikes_kick05_age01 = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2]) / np.float(num_neurons)
+# mean_spike_delay_kick05_age01 = [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 6.06, 5.3, 4.92, 4.66, 4.46, 4.3, 4.18, 4.06, 3.98, 3.88, 3.82, 3.74, 3.68, 3.62, 3.58, 3.52, 3.48, 3.44, 3.4, 3.36, 3.32, 3.28, 3.24, 3.22, 3.18, 3.16, 3.12, 3.1, 3.06, 3.04, 3.02, 3, 2.96, 2.94, 2.92, 2.9]
+# std_spike_delay_kick05_age01 = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+# 
+# 
+# weights_kick1_age01 = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160, 170, 180, 190, 200, 210, 220, 230, 240, 250, 260, 270, 280, 290, 300, 310, 320, 330, 340, 350, 360, 370, 380, 390, 400, 410, 420, 430, 440, 450, 460, 470, 480, 490]
+# p_fire_soma_kick1_age01 = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+# num_soma_spikes_kick1_age01 = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]) / np.float(num_neurons)
+# mean_spike_delay_kick1_age01 = [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 4.92, 4.52, 4.3, 4.14, 4.02, 3.92, 3.82, 3.76, 3.68, 3.62, 3.58, 3.52, 3.48, 3.44, 3.4, 3.36, 3.32, 3.28, 3.24, 3.22, 3.18, 3.14, 3.12, 3.1, 3.06, 3.04, 3.02, 3, 2.96, 2.94, 2.92, 2.9]
+# std_spike_delay_kick1_age01 = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+# 
+# 
+# weights_kick15_age01 = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160, 170, 180, 190, 200, 210, 220, 230, 240, 250, 260, 270, 280, 290, 300, 310, 320, 330, 340, 350, 360, 370, 380, 390, 400, 410, 420, 430, 440, 450, 460, 470, 480, 490]
+# p_fire_soma_kick15_age01 = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+# num_soma_spikes_kick15_age01 = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]) / np.float(num_neurons)
+# mean_spike_delay_kick15_age01 = [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 4.52, 4.24, 4.06, 3.94, 3.84, 3.76, 3.68, 3.62, 3.58, 3.52, 3.48, 3.44, 3.4, 3.36, 3.32, 3.28, 3.24, 3.22, 3.18, 3.14, 3.12, 3.1, 3.06, 3.04, 3.02, 3, 2.96, 2.94, 2.92, 2.9]
+# std_spike_delay_kick15_age01 = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+# 
+# 
+# 
+# label1 = "G_inh = 0.0"
+# label2 = "G_inh = 0.5"
+# label3 = "G_inh = 1.0"
+# label4 = "G_inh = 1.5"
+# 
+# 
+# f = plt.figure()
+# 
+# ax1 = f.add_subplot(411)
+# ax1.plot(weights_kick0_age01, p_fire_soma_kick0_age01, label=label1)
+# ax1.plot(weights_kick05_age01, p_fire_soma_kick05_age01, label=label2)
+# ax1.plot(weights_kick1_age01, p_fire_soma_kick1_age01, label=label3)
+# ax1.plot(weights_kick15_age01, p_fire_soma_kick15_age01, label=label4)
+# ax1.set_ylabel('p')
+# 
+# plt.legend(loc=9, bbox_to_anchor=(0.5, 1.3), ncol=5)
+# 
+# ax2 = f.add_subplot(412)
+# ax2.plot(weights_kick0_age01, num_soma_spikes_kick0_age01, label=label1)
+# ax2.plot(weights_kick05_age01, num_soma_spikes_kick05_age01, label=label2)
+# ax2.plot(weights_kick1_age01, num_soma_spikes_kick1_age01, label=label3)
+# ax2.plot(weights_kick15_age01, num_soma_spikes_kick15_age01, label=label4)
+# ax2.set_ylabel('# spikes')
+# 
+# ax3 = f.add_subplot(413)
+# ax3.plot(weights_kick0_age01, mean_spike_delay_kick0_age01, label=label1)
+# ax3.plot(weights_kick05_age01, mean_spike_delay_kick05_age01, label=label2)
+# ax3.plot(weights_kick1_age01, mean_spike_delay_kick1_age01, label=label3)
+# ax3.plot(weights_kick15_age01, mean_spike_delay_kick15_age01, label=label4)
+# ax3.set_ylabel('spike delay (ms)')
+# 
+# ax4 = f.add_subplot(414)
+# ax4.plot(weights_kick0_age01, std_spike_delay_kick0_age01, label=label1)
+# ax4.plot(weights_kick05_age01, std_spike_delay_kick05_age01, label=label2)
+# ax4.plot(weights_kick1_age01, std_spike_delay_kick1_age01, label=label3)
+# ax4.plot(weights_kick15_age01, std_spike_delay_kick15_age01, label=label4)
+# ax4.set_ylabel('std spike delay (ms)')
+# ax4.set_xlabel('Single weight')
+#==============================================================================
 
-weights_kick0_age0 = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140]
-p_fire_soma_kick0_age0 = [0.165, 0.145, 0.275, 0.565, 0.75, 0.91, 0.985, 0.975, 1, 1, 1, 1, 1, 1, 1]
-num_soma_spikes_kick0_age0 = np.array([35, 29, 57, 123, 160, 206, 218, 226, 224, 231, 240, 264, 303, 329, 351]) / np.float(num_neurons)
-mean_spike_delay_kick0_age0 = [61.1175, 41.421, 18.3746, 11.6283, 10.8445, 8.45598, 7.50235, 6.98155, 6.2569, 5.8366, 5.6851, 5.36281, 5.1509, 4.9106, 4.8432]
-std_spike_delay_kick0_age0 = [25.3568, 29.7596, 22.4709, 12.1712, 11.1198, 3.41769, 1.81887, 3.1421, 1.17583, 1.13616, 1.05611, 0.900157, 0.803417, 0.715089, 0.852478]
+#==============================================================================
+# ################### Age0.1 Rest -80 mV, Different inhibitory kicks, no noise #########################
+# 
+# num_neurons = 1
+# 
+# weights_kick0_age01 = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160, 170, 180, 190, 200, 210, 220, 230, 240, 250, 260, 270, 280, 290, 300, 310, 320, 330, 340, 350, 360, 370, 380, 390, 400, 410, 420, 430, 440, 450, 460, 470, 480, 490]
+# p_fire_soma_kick0_age01 = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+# num_soma_spikes_kick0_age01 = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2]) / np.float(num_neurons)
+# mean_spike_delay_kick0_age01 = [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 12.5, 10.04, 9.14, 8.54, 8.08, 7.72, 7.42, 7.16, 6.92, 6.72, 6.54, 6.36, 6.2, 6.06, 5.92, 5.8, 5.68, 5.58, 5.48, 5.38, 5.3, 5.22, 5.14, 5.08, 5, 4.94, 4.88, 4.82, 4.78, 4.72, 4.68, 4.62, 4.58, 4.54, 4.5, 4.46, 4.42, 4.38, 4.34, 4.3]
+# std_spike_delay_kick0_age01 = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+# 
+# weights_kick05_age01 = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160, 170, 180, 190, 200, 210, 220, 230, 240, 250, 260, 270, 280, 290, 300, 310, 320, 330, 340, 350, 360, 370, 380, 390, 400, 410, 420, 430, 440, 450, 460, 470, 480, 490]
+# p_fire_soma_kick05_age01 = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+# num_soma_spikes_kick05_age01 = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2]) / np.float(num_neurons)
+# mean_spike_delay_kick05_age01 = [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 10.08, 9.26, 8.72, 8.3, 7.94, 7.64, 7.38, 7.12, 6.9, 6.68, 6.46, 6.26, 6.08, 5.9, 5.74, 5.58, 5.44, 5.32, 5.2, 5.1, 5.02, 4.92, 4.84, 4.76, 4.7, 4.64, 4.58, 4.52, 4.46]
+# std_spike_delay_kick05_age01 = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+# 
+# 
+# weights_kick1_age01 = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160, 170, 180, 190, 200, 210, 220, 230, 240, 250, 260, 270, 280, 290, 300, 310, 320, 330, 340, 350, 360, 370, 380, 390, 400, 410, 420, 430, 440, 450, 460, 470, 480, 490]
+# p_fire_soma_kick1_age01 = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+# num_soma_spikes_kick1_age01 = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]) / np.float(num_neurons)
+# mean_spike_delay_kick1_age01 = [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 11.9, 9.64, 8.94, 8.44, 8.02, 7.66, 7.3, 6.96, 6.62, 6.28, 5.96, 5.68, 5.46, 5.26, 5.1, 4.96, 4.84, 4.74]
+# std_spike_delay_kick1_age01 = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+# 
+# 
+# weights_kick15_age01 = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160, 170, 180, 190, 200, 210, 220, 230, 240, 250, 260, 270, 280, 290, 300, 310, 320, 330, 340, 350, 360, 370, 380, 390, 400, 410, 420, 430, 440, 450, 460, 470, 480, 490]
+# p_fire_soma_kick15_age01 = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1]
+# num_soma_spikes_kick15_age01 = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1]) / np.float(num_neurons)
+# mean_spike_delay_kick15_age01 = [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 7.88, 6.86, 6.1, 5.56]
+# std_spike_delay_kick15_age01 = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+# 
+# 
+# 
+# label1 = "G_inh = 0.0"
+# label2 = "G_inh = 0.5"
+# label3 = "G_inh = 1.0"
+# label4 = "G_inh = 1.5"
+# 
+# 
+# f = plt.figure()
+# 
+# ax1 = f.add_subplot(411)
+# ax1.plot(weights_kick0_age01, p_fire_soma_kick0_age01, label=label1)
+# ax1.plot(weights_kick05_age01, p_fire_soma_kick05_age01, label=label2)
+# ax1.plot(weights_kick1_age01, p_fire_soma_kick1_age01, label=label3)
+# ax1.plot(weights_kick15_age01, p_fire_soma_kick15_age01, label=label4)
+# ax1.set_ylabel('p')
+# 
+# plt.legend(loc=9, bbox_to_anchor=(0.5, 1.3), ncol=5)
+# 
+# ax2 = f.add_subplot(412)
+# ax2.plot(weights_kick0_age01, num_soma_spikes_kick0_age01, label=label1)
+# ax2.plot(weights_kick05_age01, num_soma_spikes_kick05_age01, label=label2)
+# ax2.plot(weights_kick1_age01, num_soma_spikes_kick1_age01, label=label3)
+# ax2.plot(weights_kick15_age01, num_soma_spikes_kick15_age01, label=label4)
+# ax2.set_ylabel('# spikes')
+# 
+# ax3 = f.add_subplot(413)
+# ax3.plot(weights_kick0_age01, mean_spike_delay_kick0_age01, label=label1)
+# ax3.plot(weights_kick05_age01, mean_spike_delay_kick05_age01, label=label2)
+# ax3.plot(weights_kick1_age01, mean_spike_delay_kick1_age01, label=label3)
+# ax3.plot(weights_kick15_age01, mean_spike_delay_kick15_age01, label=label4)
+# ax3.set_ylabel('spike delay (ms)')
+# 
+# ax4 = f.add_subplot(414)
+# ax4.plot(weights_kick0_age01, std_spike_delay_kick0_age01, label=label1)
+# ax4.plot(weights_kick05_age01, std_spike_delay_kick05_age01, label=label2)
+# ax4.plot(weights_kick1_age01, std_spike_delay_kick1_age01, label=label3)
+# ax4.plot(weights_kick15_age01, std_spike_delay_kick15_age01, label=label4)
+# ax4.set_ylabel('std spike delay (ms)')
+# ax4.set_xlabel('Single weight')
+# 
+#==============================================================================
+################### Age0 Rest -80 mV, Different inhibitory kicks, no noise #########################
 
-weights_kick0_age01 = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140]
-p_fire_soma_kick0_age01 = [0.06, 0.045, 0.15, 0.425, 0.665, 0.88, 0.98, 0.985, 0.995, 1, 1, 1, 1, 1, 1]
-num_soma_spikes_kick0_age01 = np.array([13, 9, 30, 87, 134, 183, 203, 208, 225, 249, 298, 356, 403, 416, 429]) / np.float(num_neurons)
-mean_spike_delay_kick0_age01 = [58.6633, 18.0667, 10.5048, 10.9163, 10.9394, 8.68846, 7.8499, 7.31959, 6.55045, 6.02465, 5.8637, 5.5229, 5.3291, 5.0984, 4.9609]
-std_spike_delay_kick0_age01 = [27.2543, 15.0546, 3.36924, 8.56766, 10.1911, 1.83028, 1.80584, 3.16687, 1.17971, 0.99648, 0.934328, 0.851494, 0.764882, 0.673431, 0.827935]
+num_neurons = 1
 
-weights_kick0_age03 = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140]
-p_fire_soma_kick0_age03 = [0.005, 0.005, 0.06, 0.225, 0.48, 0.815, 0.95, 0.985, 0.995, 1, 1, 1, 1, 1, 1]
-num_soma_spikes_kick0_age03 = np.array([1, 1, 12, 45, 96, 165, 222, 277, 361, 415, 427, 417, 420, 407, 403]) / np.float(num_neurons)
-mean_spike_delay_kick0_age03 = [-1, 17.46, 10.565, 11.0509, 10.1215, 9.54626, 8.58063, 7.79178, 7.14342, 6.6255, 6.3813, 6.0158, 5.772, 5.5299, 5.3218]
-std_spike_delay_kick0_age03 = [0, -1, 2.87785, 2.5328, 1.93418, 1.81011, 1.75983, 1.34743, 1.13395, 0.998463, 0.937642, 0.765892, 0.754809, 0.650331, 0.650159]
+weights_kick0_age01 = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160, 170, 180, 190, 200, 210, 220, 230, 240, 250, 260, 270, 280, 290, 300, 310, 320, 330, 340, 350, 360, 370, 380, 390, 400, 410, 420, 430, 440, 450, 460, 470, 480, 490]
+p_fire_soma_kick0_age01 = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+num_soma_spikes_kick0_age01 = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2]) / np.float(num_neurons)
+mean_spike_delay_kick0_age01 = [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 10.26, 9.28, 8.64, 8.18, 7.8, 7.48, 7.22, 6.98, 6.78, 6.6, 6.42, 6.26, 6.12, 5.98, 5.86, 5.74, 5.64, 5.54, 5.44, 5.36, 5.28, 5.2, 5.12, 5.06, 5, 4.94, 4.88, 4.82, 4.78, 4.72, 4.68, 4.64, 4.58, 4.54, 4.5, 4.46, 4.44, 4.4, 4.36]
+std_spike_delay_kick0_age01 = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 
-weights_kick0_age05 = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140]
-p_fire_soma_kick0_age05 = [0.005, 0, 0.03, 0.075, 0.28, 0.69, 0.9, 0.955, 0.995, 1, 1, 1, 1, 1, 1]
-num_soma_spikes_kick0_age05 = np.array([1, 0, 6, 15, 58, 150, 273, 383, 504, 569, 584, 583, 583, 579, 573]) / np.float(num_neurons)
-mean_spike_delay_kick0_age05 = [-1, -1, 10.32, 11.4493, 10.685, 10.297, 9.35133, 8.44607, 7.78794, 7.1765, 6.8906, 6.4818, 6.1867, 5.9126, 5.6845]
-std_spike_delay_kick0_age05 = [0, 0, 1.82761, 2.68739, 1.87911, 1.84457, 1.7635, 1.33139, 1.21048, 1.05991, 0.945859, 0.745692, 0.752447, 0.649107, 0.62312]
-
-weights_kick0_age100 = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140]
-p_fire_soma_kick0_age100 = [0, 0, 0, 0, 0, 0.005, 0.04, 0.155, 0.485, 0.87, 0.975, 1, 1, 1, 1]
-num_soma_spikes_kick0_age100 = np.array([0, 0, 0, 0, 0, 1, 24, 96, 359, 689, 790, 810, 805, 803, 801]) / np.float(num_neurons)
-mean_spike_delay_kick0_age100 = [-1, -1, -1, -1, -1, 11.76, 12.5575, 12.6658, 12.2596, 11.0883, 10.0031, 9.1218, 8.5331, 8.0472, 7.6382]
-std_spike_delay_kick0_age100 = [0, 0, 0, 0, 0, -1, 1.60069, 2.74318, 2.6639, 1.7793, 1.4152, 0.857581, 0.758424, 0.618473, 0.519212]
+weights_kick05_age01 = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160, 170, 180, 190, 200, 210, 220, 230, 240, 250, 260, 270, 280, 290, 300, 310, 320, 330, 340, 350, 360, 370, 380, 390, 400, 410, 420, 430, 440, 450, 460, 470, 480, 490]
+p_fire_soma_kick05_age01 = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+num_soma_spikes_kick05_age01 = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2]) / np.float(num_neurons)
+mean_spike_delay_kick05_age01 = [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 10.44, 9.46, 8.86, 8.42, 8.06, 7.74, 7.48, 7.22, 7, 6.78, 6.58, 6.38, 6.2, 6.02, 5.86, 5.7, 5.56, 5.44, 5.32, 5.22, 5.12, 5.02, 4.94, 4.86, 4.8, 4.72, 4.66, 4.6, 4.56]
+std_spike_delay_kick05_age01 = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 
 
+weights_kick1_age01 = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160, 170, 180, 190, 200, 210, 220, 230, 240, 250, 260, 270, 280, 290, 300, 310, 320, 330, 340, 350, 360, 370, 380, 390, 400, 410, 420, 430, 440, 450, 460, 470, 480, 490]
+p_fire_soma_kick1_age01 = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+num_soma_spikes_kick1_age01 = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]) / np.float(num_neurons)
+mean_spike_delay_kick1_age01 = [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 10.1, 9.22, 8.68, 8.26, 7.88, 7.54, 7.22, 6.92, 6.6, 6.3, 6.02, 5.74, 5.52, 5.34, 5.18, 5.04, 4.92]
+std_spike_delay_kick1_age01 = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 
-label1 = "age 0"
-label2 = "age 0.1"
-label3 = "age 0.3"
-label4 = "age 0.5"
-label5 = "age 100"
+
+weights_kick15_age01 = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160, 170, 180, 190, 200, 210, 220, 230, 240, 250, 260, 270, 280, 290, 300, 310, 320, 330, 340, 350, 360, 370, 380, 390, 400, 410, 420, 430, 440, 450, 460, 470, 480, 490]
+p_fire_soma_kick15_age01 = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1]
+num_soma_spikes_kick15_age01 = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1]) / np.float(num_neurons)
+mean_spike_delay_kick15_age01 = [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 9.68, 8.1, 7.22, 6.48]
+std_spike_delay_kick15_age01 = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+
+
+
+label1 = "G_inh = 0.0"
+label2 = "G_inh = 0.5"
+label3 = "G_inh = 1.0"
+label4 = "G_inh = 1.5"
 
 
 f = plt.figure()
 
 ax1 = f.add_subplot(411)
-ax1.plot(weights_kick0_age0, p_fire_soma_kick0_age0, label=label1)
-ax1.plot(weights_kick0_age01, p_fire_soma_kick0_age01, label=label2)
-ax1.plot(weights_kick0_age03, p_fire_soma_kick0_age03, label=label3)
-ax1.plot(weights_kick0_age05, p_fire_soma_kick0_age05, label=label4)
-ax1.plot(weights_kick0_age100, p_fire_soma_kick0_age100, label=label5)
+ax1.plot(weights_kick0_age01, p_fire_soma_kick0_age01, label=label1)
+ax1.plot(weights_kick05_age01, p_fire_soma_kick05_age01, label=label2)
+ax1.plot(weights_kick1_age01, p_fire_soma_kick1_age01, label=label3)
+ax1.plot(weights_kick15_age01, p_fire_soma_kick15_age01, label=label4)
 ax1.set_ylabel('p')
 
 plt.legend(loc=9, bbox_to_anchor=(0.5, 1.3), ncol=5)
 
 ax2 = f.add_subplot(412)
-ax2.plot(weights_kick0_age0, num_soma_spikes_kick0_age0, label=label1)
-ax2.plot(weights_kick0_age01, num_soma_spikes_kick0_age01, label=label2)
-ax2.plot(weights_kick0_age03, num_soma_spikes_kick0_age03, label=label3)
-ax2.plot(weights_kick0_age05, num_soma_spikes_kick0_age05, label=label4)
-ax2.plot(weights_kick0_age100, num_soma_spikes_kick0_age100, label=label5)
+ax2.plot(weights_kick0_age01, num_soma_spikes_kick0_age01, label=label1)
+ax2.plot(weights_kick05_age01, num_soma_spikes_kick05_age01, label=label2)
+ax2.plot(weights_kick1_age01, num_soma_spikes_kick1_age01, label=label3)
+ax2.plot(weights_kick15_age01, num_soma_spikes_kick15_age01, label=label4)
 ax2.set_ylabel('# spikes')
 
 ax3 = f.add_subplot(413)
-ax3.plot(weights_kick0_age0, mean_spike_delay_kick0_age0, label=label1)
-ax3.plot(weights_kick0_age01, mean_spike_delay_kick0_age01, label=label2)
-ax3.plot(weights_kick0_age03, mean_spike_delay_kick0_age03, label=label3)
-ax3.plot(weights_kick0_age05, mean_spike_delay_kick0_age05, label=label4)
-ax3.plot(weights_kick0_age100, mean_spike_delay_kick0_age100, label=label5)
+ax3.plot(weights_kick0_age01, mean_spike_delay_kick0_age01, label=label1)
+ax3.plot(weights_kick05_age01, mean_spike_delay_kick05_age01, label=label2)
+ax3.plot(weights_kick1_age01, mean_spike_delay_kick1_age01, label=label3)
+ax3.plot(weights_kick15_age01, mean_spike_delay_kick15_age01, label=label4)
 ax3.set_ylabel('spike delay (ms)')
 
 ax4 = f.add_subplot(414)
-ax4.plot(weights_kick0_age0, std_spike_delay_kick0_age0, label=label1)
-ax4.plot(weights_kick0_age01, std_spike_delay_kick0_age01, label=label2)
-ax4.plot(weights_kick0_age03, std_spike_delay_kick0_age03, label=label3)
-ax4.plot(weights_kick0_age05, std_spike_delay_kick0_age05, label=label4)
-ax4.plot(weights_kick0_age100, std_spike_delay_kick0_age100, label=label5)
+ax4.plot(weights_kick0_age01, std_spike_delay_kick0_age01, label=label1)
+ax4.plot(weights_kick05_age01, std_spike_delay_kick05_age01, label=label2)
+ax4.plot(weights_kick1_age01, std_spike_delay_kick1_age01, label=label3)
+ax4.plot(weights_kick15_age01, std_spike_delay_kick15_age01, label=label4)
 ax4.set_ylabel('std spike delay (ms)')
 ax4.set_xlabel('Single weight')
+
+
+#==============================================================================
+# 
+# ################### Kick = 0 Different age, noise sigma_s = 0.1 sigma_d = 0.2 #########################
+# num_neurons = 200
+# 
+# weights_kick0_age0 = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140]
+# p_fire_soma_kick0_age0 = [0.165, 0.145, 0.275, 0.565, 0.75, 0.91, 0.985, 0.975, 1, 1, 1, 1, 1, 1, 1]
+# num_soma_spikes_kick0_age0 = np.array([35, 29, 57, 123, 160, 206, 218, 226, 224, 231, 240, 264, 303, 329, 351]) / np.float(num_neurons)
+# mean_spike_delay_kick0_age0 = [61.1175, 41.421, 18.3746, 11.6283, 10.8445, 8.45598, 7.50235, 6.98155, 6.2569, 5.8366, 5.6851, 5.36281, 5.1509, 4.9106, 4.8432]
+# std_spike_delay_kick0_age0 = [25.3568, 29.7596, 22.4709, 12.1712, 11.1198, 3.41769, 1.81887, 3.1421, 1.17583, 1.13616, 1.05611, 0.900157, 0.803417, 0.715089, 0.852478]
+# 
+# weights_kick0_age01 = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140]
+# p_fire_soma_kick0_age01 = [0.06, 0.045, 0.15, 0.425, 0.665, 0.88, 0.98, 0.985, 0.995, 1, 1, 1, 1, 1, 1]
+# num_soma_spikes_kick0_age01 = np.array([13, 9, 30, 87, 134, 183, 203, 208, 225, 249, 298, 356, 403, 416, 429]) / np.float(num_neurons)
+# mean_spike_delay_kick0_age01 = [58.6633, 18.0667, 10.5048, 10.9163, 10.9394, 8.68846, 7.8499, 7.31959, 6.55045, 6.02465, 5.8637, 5.5229, 5.3291, 5.0984, 4.9609]
+# std_spike_delay_kick0_age01 = [27.2543, 15.0546, 3.36924, 8.56766, 10.1911, 1.83028, 1.80584, 3.16687, 1.17971, 0.99648, 0.934328, 0.851494, 0.764882, 0.673431, 0.827935]
+# 
+# weights_kick0_age03 = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140]
+# p_fire_soma_kick0_age03 = [0.005, 0.005, 0.06, 0.225, 0.48, 0.815, 0.95, 0.985, 0.995, 1, 1, 1, 1, 1, 1]
+# num_soma_spikes_kick0_age03 = np.array([1, 1, 12, 45, 96, 165, 222, 277, 361, 415, 427, 417, 420, 407, 403]) / np.float(num_neurons)
+# mean_spike_delay_kick0_age03 = [-1, 17.46, 10.565, 11.0509, 10.1215, 9.54626, 8.58063, 7.79178, 7.14342, 6.6255, 6.3813, 6.0158, 5.772, 5.5299, 5.3218]
+# std_spike_delay_kick0_age03 = [0, -1, 2.87785, 2.5328, 1.93418, 1.81011, 1.75983, 1.34743, 1.13395, 0.998463, 0.937642, 0.765892, 0.754809, 0.650331, 0.650159]
+# 
+# weights_kick0_age05 = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140]
+# p_fire_soma_kick0_age05 = [0.005, 0, 0.03, 0.075, 0.28, 0.69, 0.9, 0.955, 0.995, 1, 1, 1, 1, 1, 1]
+# num_soma_spikes_kick0_age05 = np.array([1, 0, 6, 15, 58, 150, 273, 383, 504, 569, 584, 583, 583, 579, 573]) / np.float(num_neurons)
+# mean_spike_delay_kick0_age05 = [-1, -1, 10.32, 11.4493, 10.685, 10.297, 9.35133, 8.44607, 7.78794, 7.1765, 6.8906, 6.4818, 6.1867, 5.9126, 5.6845]
+# std_spike_delay_kick0_age05 = [0, 0, 1.82761, 2.68739, 1.87911, 1.84457, 1.7635, 1.33139, 1.21048, 1.05991, 0.945859, 0.745692, 0.752447, 0.649107, 0.62312]
+# 
+# weights_kick0_age100 = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140]
+# p_fire_soma_kick0_age100 = [0, 0, 0, 0, 0, 0.005, 0.04, 0.155, 0.485, 0.87, 0.975, 1, 1, 1, 1]
+# num_soma_spikes_kick0_age100 = np.array([0, 0, 0, 0, 0, 1, 24, 96, 359, 689, 790, 810, 805, 803, 801]) / np.float(num_neurons)
+# mean_spike_delay_kick0_age100 = [-1, -1, -1, -1, -1, 11.76, 12.5575, 12.6658, 12.2596, 11.0883, 10.0031, 9.1218, 8.5331, 8.0472, 7.6382]
+# std_spike_delay_kick0_age100 = [0, 0, 0, 0, 0, -1, 1.60069, 2.74318, 2.6639, 1.7793, 1.4152, 0.857581, 0.758424, 0.618473, 0.519212]
+# 
+# 
+# 
+# label1 = "age 0"
+# label2 = "age 0.1"
+# label3 = "age 0.3"
+# label4 = "age 0.5"
+# label5 = "age 100"
+# 
+# 
+# f = plt.figure()
+# 
+# ax1 = f.add_subplot(411)
+# ax1.plot(weights_kick0_age0, p_fire_soma_kick0_age0, label=label1)
+# ax1.plot(weights_kick0_age01, p_fire_soma_kick0_age01, label=label2)
+# ax1.plot(weights_kick0_age03, p_fire_soma_kick0_age03, label=label3)
+# ax1.plot(weights_kick0_age05, p_fire_soma_kick0_age05, label=label4)
+# ax1.plot(weights_kick0_age100, p_fire_soma_kick0_age100, label=label5)
+# ax1.set_ylabel('p')
+# 
+# plt.legend(loc=9, bbox_to_anchor=(0.5, 1.3), ncol=5)
+# 
+# ax2 = f.add_subplot(412)
+# ax2.plot(weights_kick0_age0, num_soma_spikes_kick0_age0, label=label1)
+# ax2.plot(weights_kick0_age01, num_soma_spikes_kick0_age01, label=label2)
+# ax2.plot(weights_kick0_age03, num_soma_spikes_kick0_age03, label=label3)
+# ax2.plot(weights_kick0_age05, num_soma_spikes_kick0_age05, label=label4)
+# ax2.plot(weights_kick0_age100, num_soma_spikes_kick0_age100, label=label5)
+# ax2.set_ylabel('# spikes')
+# 
+# ax3 = f.add_subplot(413)
+# ax3.plot(weights_kick0_age0, mean_spike_delay_kick0_age0, label=label1)
+# ax3.plot(weights_kick0_age01, mean_spike_delay_kick0_age01, label=label2)
+# ax3.plot(weights_kick0_age03, mean_spike_delay_kick0_age03, label=label3)
+# ax3.plot(weights_kick0_age05, mean_spike_delay_kick0_age05, label=label4)
+# ax3.plot(weights_kick0_age100, mean_spike_delay_kick0_age100, label=label5)
+# ax3.set_ylabel('spike delay (ms)')
+# 
+# ax4 = f.add_subplot(414)
+# ax4.plot(weights_kick0_age0, std_spike_delay_kick0_age0, label=label1)
+# ax4.plot(weights_kick0_age01, std_spike_delay_kick0_age01, label=label2)
+# ax4.plot(weights_kick0_age03, std_spike_delay_kick0_age03, label=label3)
+# ax4.plot(weights_kick0_age05, std_spike_delay_kick0_age05, label=label4)
+# ax4.plot(weights_kick0_age100, std_spike_delay_kick0_age100, label=label5)
+# ax4.set_ylabel('std spike delay (ms)')
+# ax4.set_xlabel('Single weight')
+# 
+#==============================================================================
+
+#==============================================================================
+# ################### Kick 0.5 Different neuron ages, no noise #########################
+# 
+# num_neurons = 10
+# 
+# weights_kick05_age0 = [0, 20, 40, 60, 80, 100, 120, 140, 160, 180, 200, 220, 240, 260, 280, 300, 320, 340, 360, 380]
+# p_fire_soma_kick05_age0 = [0.165, 0.115, 0.08, 0.135, 0.21, 0.35, 0.645, 0.845, 0.965, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+# num_soma_spikes_kick05_age0 = np.array([34, 23, 16, 29, 45, 78, 144, 192, 211, 218, 216, 227, 270, 276, 323, 334, 359, 385, 408, 416]) / np.float(num_neurons)
+# mean_spike_delay_kick05_age0 = [64.8837, 53.688, 55.9017, 29.8632, 19.0669, 14.5115, 7.59184, 6.81853, 5.90166, 4.66102, 4.38384, 4.04313, 3.9672, 3.7554, 3.75658, 3.63729, 3.341, 3.4839, 3.3165, 3.2345]
+# std_spike_delay_kick05_age0 = [21.1052, 26.8209, 27.4249, 32.137, 26.9023, 20.6435, 10.0821, 7.34524, 6.04906, 1.49826, 0.912553, 0.614062, 0.67515, 0.474333, 0.739337, 0.492106, 0.511813, 0.415439, 0.422433, 0.437471]
+# 
+# weights_kick05_age01 = [0, 20, 40, 60, 80, 100, 120, 140, 160, 180, 200, 220, 240, 260, 280, 300, 320, 340, 360, 380]
+# p_fire_soma_kick05_age01 = [0.055, 0.025, 0.01, 0.07, 0.135, 0.235, 0.54, 0.8, 0.945, 0.995, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+# num_soma_spikes_kick05_age01 = np.array([12, 5, 2, 15, 27, 48, 113, 166, 196, 208, 208, 220, 253, 258, 315, 329, 337, 372, 395, 375]) / np.float(num_neurons)
+# mean_spike_delay_kick05_age01 = [64.84, 22.49, 4.16, 18.52, 15.092, 11.9077, 7.69093, 6.92152, 5.60447, 4.87117, 4.5658, 4.1961, 4.1055, 3.8738, 3.8431, 3.7343, 3.4563, 3.5731, 3.4088, 3.3153]
+# std_spike_delay_kick05_age01 = [25.3229, 30.3349, -1, 26.8936, 23.274, 17.0231, 9.81391, 6.81454, 1.82749, 1.49994, 0.937165, 0.704745, 0.687411, 0.465926, 0.770968, 0.470673, 0.43134, 0.39267, 0.395206, 0.391087]
+# 
+# weights_kick05_age03 = [0, 20, 40, 60, 80, 100, 120, 140, 160, 180, 200, 220, 240, 260, 280, 300, 320, 340, 360, 380]
+# p_fire_soma_kick05_age03 = [0.005, 0, 0, 0.005, 0.04, 0.13, 0.41, 0.755, 0.915, 0.99, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+# num_soma_spikes_kick05_age03 = np.array([1, 0, 0, 1, 8, 26, 82, 152, 183, 198, 208, 242, 386, 458, 533, 516, 438, 442, 411, 405]) / np.float(num_neurons)
+# mean_spike_delay_kick05_age03 = [-1, -1, -1, -1, 8.0425, 8.42923, 8.28634, 7.44132, 6.3071, 5.40192, 5.029, 4.5668, 4.4454, 4.1355, 4.0594, 3.9696, 3.6835, 3.7887, 3.6147, 3.5224]
+# std_spike_delay_kick05_age03 = [0, 0, 0, 0, 3.68618, 2.7376, 8.79745, 4.05982, 1.84265, 1.55633, 1.01381, 0.745785, 0.723208, 0.477769, 0.542597, 0.4259, 0.409159, 0.352259, 0.372478, 0.348254]
+# 
+# weights_kick05_age05 = [0, 20, 40, 60, 80, 100, 120, 140, 160, 180, 200, 220, 240, 260, 280, 300, 320, 340, 360, 380]
+# p_fire_soma_kick05_age05 = [0.005, 0, 0, 0, 0.01, 0.05, 0.28, 0.69, 0.88, 0.98, 0.99, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+# num_soma_spikes_kick05_age05 = np.array([1, 0, 0, 0, 2, 10, 56, 138, 176, 200, 270, 443, 539, 590, 599, 588, 547, 566, 532, 478]) / np.float(num_neurons)
+# mean_spike_delay_kick05_age05 = [-1, -1, -1, -1, 9.4, 10.004, 8.56929, 8.17522, 7.31966, 6.07735, 5.58909, 5.0186, 4.8843, 4.4363, 4.3537, 4.2122, 3.8992, 3.9954, 3.8142, 3.7098]
+# std_spike_delay_kick05_age05 = [0, 0, 0, 0, 1.64049, 2.23626, 1.98665, 2.18669, 2.00802, 1.62787, 1.14693, 0.846846, 0.819125, 0.530793, 0.567036, 0.422768, 0.39868, 0.360088, 0.363824, 0.323318]
+# 
+# weights_kick05_age100 = [0, 20, 40, 60, 80, 100, 120, 140, 160, 180, 200, 220, 240, 260, 280, 300, 320, 340, 360, 380]
+# p_fire_soma_kick05_age100 = [0, 0, 0, 0, 0, 0, 0, 0.035, 0.345, 0.875, 0.985, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+# num_soma_spikes_kick05_age100 = np.array([0, 0, 0, 0, 0, 0, 0, 11, 184, 662, 827, 827, 819, 816, 811, 803, 802, 800, 801, 800]) / np.float(num_neurons)
+# mean_spike_delay_kick05_age100 = [-1, -1, -1, -1, -1, -1, -1, 10.9429, 11.5522, 10.7226, 9.32802, 8.2674, 7.6176, 6.5996, 6.3878, 5.7822, 5.1772, 5.256, 4.8931, 4.6549]
+# std_spike_delay_kick05_age100 = [0, 0, 0, 0, 0, 0, 0, 1.91247, 2.05957, 2.01316, 1.38574, 0.905932, 0.794677, 0.737065, 0.646418, 0.57188, 0.453799, 0.410143, 0.36495, 0.272129]
+# 
+# 
+# 
+# label1 = "age 0"
+# label2 = "age 0.1"
+# label3 = "age 0.3"
+# label4 = "age 0.5"
+# label5 = "age 100"
+# 
+# 
+# f = plt.figure()
+# 
+# ax1 = f.add_subplot(411)
+# ax1.plot(weights_kick05_age0, p_fire_soma_kick05_age0, label=label1)
+# ax1.plot(weights_kick05_age01, p_fire_soma_kick05_age01, label=label2)
+# ax1.plot(weights_kick05_age03, p_fire_soma_kick05_age03, label=label3)
+# ax1.plot(weights_kick05_age05, p_fire_soma_kick05_age05, label=label4)
+# ax1.plot(weights_kick05_age100, p_fire_soma_kick05_age100, label=label5)
+# ax1.set_ylabel('p')
+# 
+# plt.legend(loc=9, bbox_to_anchor=(0.5, 1.3), ncol=5)
+# 
+# ax2 = f.add_subplot(412)
+# ax2.plot(weights_kick05_age0, num_soma_spikes_kick05_age0, label=label1)
+# ax2.plot(weights_kick05_age01, num_soma_spikes_kick05_age01, label=label2)
+# ax2.plot(weights_kick05_age03, num_soma_spikes_kick05_age03, label=label3)
+# ax2.plot(weights_kick05_age05, num_soma_spikes_kick05_age05, label=label4)
+# ax2.plot(weights_kick05_age100, num_soma_spikes_kick05_age100, label=label5)
+# ax2.set_ylabel('# spikes')
+# 
+# ax3 = f.add_subplot(413)
+# ax3.plot(weights_kick05_age0, mean_spike_delay_kick05_age0, label=label1)
+# ax3.plot(weights_kick05_age01, mean_spike_delay_kick05_age01, label=label2)
+# ax3.plot(weights_kick05_age03, mean_spike_delay_kick05_age03, label=label3)
+# ax3.plot(weights_kick05_age05, mean_spike_delay_kick05_age05, label=label4)
+# ax3.plot(weights_kick05_age100, mean_spike_delay_kick05_age100, label=label5)
+# ax3.set_ylabel('spike delay (ms)')
+# 
+# ax4 = f.add_subplot(414)
+# ax4.plot(weights_kick05_age0, std_spike_delay_kick05_age0, label=label1)
+# ax4.plot(weights_kick05_age01, std_spike_delay_kick05_age01, label=label2)
+# ax4.plot(weights_kick05_age03, std_spike_delay_kick05_age03, label=label3)
+# ax4.plot(weights_kick05_age05, std_spike_delay_kick05_age05, label=label4)
+# ax4.plot(weights_kick05_age100, std_spike_delay_kick05_age100, label=label5)
+# ax4.set_ylabel('std spike delay (ms)')
+# ax4.set_xlabel('Single weight')
+#==============================================================================
 
 
 plt.show()

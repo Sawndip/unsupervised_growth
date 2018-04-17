@@ -27,7 +27,7 @@ int main(int argc, char** argv)
 	// inhibitory kick
 	double G_kick = 0.0;
 	
-	double trial_duration = 10000; // trial duration in ms
+	double trial_duration = 100000; // trial duration in ms
 	double timestep = 0.02; // timestep in neuron dynamics
 	double wait_time = 50; // time to wait before the kick
 	int kick_time = static_cast<int>(wait_time / timestep); // time when inhibitory kick is delivered to neurons
@@ -60,10 +60,15 @@ int main(int argc, char** argv)
 	double GSL = 0.1;
 	double GDL = 0.1;
 
+	// exponential schedule	
+//	double GCa = GCA_MATURE + (GCA_IMMATURE - GCA_MATURE) * exp(-age);
+//	double E_rest = E_REST_MATURE + (E_REST_IMMATURE - E_REST_MATURE) * exp(-age);
 	
-	double GCa = GCA_MATURE + (GCA_IMMATURE - GCA_MATURE) * exp(-age);
-	double E_rest = E_REST_MATURE + (E_REST_IMMATURE - E_REST_MATURE) * exp(-age);
-	
+	// linear schedule
+	double MATURATION_SCALE = 1.0;
+	double GCa = GCA_IMMATURE + (GCA_MATURE - GCA_IMMATURE) * age / MATURATION_SCALE;
+	double E_rest = E_REST_IMMATURE + (E_REST_MATURE - E_REST_IMMATURE) * age / MATURATION_SCALE;
+
 	Poisson_noise noise_generator;
 	unsigned seed = 1170; // 1170 for kick = 3.0; 1176 for kick = 10.0
 	
@@ -73,7 +78,7 @@ int main(int argc, char** argv)
 	HH2_test neuron;
 	
 	// prepare neuron for simulations
-	neuron.set_recording_full(filename);
+	//neuron.set_recording_full(filename);
 	neuron.set_noise_generator(&noise_generator);
 	neuron.set_white_noise(white_noise_mean_soma, white_noise_std_soma,
 						   white_noise_mean_dend, white_noise_std_dend);

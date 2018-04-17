@@ -14,11 +14,11 @@ import numpy as np
 #filename = "/home/eugene/Output/neuronTest/saturatedInhibitionResponse/Ginh_5.00.bin"
 #filename = "/home/eugene/Output/neuronTest/kickResponse/Ginh_10.00_8.bin"
 #filename = "/home/eugene/Output/neuronTest/response.bin"
-#filename = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/test/noImmatureOut2/RA/RA29.bin"
-filename = "/home/eugene/Output/neuronTest/noise/noise_immature_4.bin"
+#filename = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/maturationTransition1/RA/RA570.bin"
+#filename = "/home/eugene/Output/neuronTest/noise/noise_immature_4.bin"
 
 #filename = "/home/eugene/Output/networks/chainGrowth/testGrowthDelays5/RA/RA5.bin"
-#filename = "/home/eugene/Output/neuronTest/inhAndExcInputsResponse/RA.bin"
+filename = "/home/eugene/Output/neuronTest/inhAndExcInputsResponse/RA30.bin"
 #filename = "/home/eugene/Output/neuronTest/modelStability/RA29.bin"
 #filename = "/mnt/hodgkin_home/eugene/Output/tuneHVCRA/Ad1000/Rc55/RA26.bin"
 #filename = "/mnt/hodgkin_home/eugene/Output/tuneHVCRA/Ad1000/Rc200/RA23.bin"
@@ -43,8 +43,8 @@ print "Std Vs = ", np.std(Vs)
 
 #print t
 #print Vs
-tmin = 30
-tmax = 200
+tmin = 0
+tmax = 500
 
 # membrane potentials
 f = plt.figure()
