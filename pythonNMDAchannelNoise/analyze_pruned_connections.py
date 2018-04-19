@@ -12,9 +12,9 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 
-dirname = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/noImmatureOut8/"
-#dirname = "/home/eugene/results/immature/clusters/11/"
-end_trial = 36900
+dirname = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/maturationTransition2/"
+#dirname = "/home/eugene/results/immature/clusters/matTrans16/"
+end_trial = 14700
 trialStep = 50
 
 

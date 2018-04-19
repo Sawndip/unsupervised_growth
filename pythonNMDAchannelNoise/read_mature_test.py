@@ -4,15 +4,19 @@ Created on Mon Aug  1 11:32:11 2016
 
 @author: jingroup
 """
-
+import numpy as np
 import reading
+import os
 
-fileMature = "/home/eugene/Output/mature40.bin"
+trial_number = 10500
 
-mature = reading.read_mature(fileMature)
+#dirname = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/maturationTransition2/"
+dirname = "/home/eugene/results/immature/clusters/matTrans15/"
 
-print "mature = ", mature
+fileMature = os.path.join(dirname, "mature_" + str(trial_number) + ".bin")
 
-mature_id = [i for i,e in enumerate(mature) if e == 1]
+(_, _, mature_indicators) = reading.read_mature_indicators(fileMature)
 
-print "Mature neurons: ", mature_id
+
+mature_neurons = np.where(mature_indicators == 1)[0]
+print "Mature neurons: ", list(mature_neurons)

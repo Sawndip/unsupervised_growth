@@ -212,6 +212,7 @@ protected:
 		vector<double> GNa_global; // array with global values of sodium somatic conductance
 		
 		vector<double> GCa_local; // array with local values of calcium dendritic conductance
+		vector<double> GCa_global; // global array with calcium dendritic conductances
 		
 		
 		vector<double> Ad_local; // array with local values of dendritic area
@@ -443,6 +444,7 @@ protected:
         // reading data from files
         void read_remodeled_indicators(const char *filename); // read axon-remodeling indicators for HVC-RA neurons
         void read_mature_indicators(const char *filename); // read maturation indicators for HVC-RA neurons
+        void read_maturation_properties(const char *filename); // read maturation properties of HVC-RA neurons
         void read_super_synapses(const char* filename); // read supersynapses from the file
         void read_active_synapses(const char* filename); // read active synapses from the file
         //void read_maturation_info(const char* filename); // read maturation information from the file
@@ -486,6 +488,7 @@ protected:
         void write_replacement_history(const char* filename); // write when HVC-RA neurons were replaced previous times 
         void write_remodeled_indicators(const char *filename); // write axon-remodeling indicators for HVC-RA neurons
         void write_mature_indicators(const char *filename); // write maturation indicators for HVC-RA neurons
+		void write_maturation_properties(const char* filename); // write HVC-RA neuron maturation properties  
 		void write_axonal_delays(const std::vector<std::vector<double>> &axonal_delays, const char *filename); // write axonal time delays between neurons
         
         void set_recording(const std::vector<int> &RA_neurons, const std::vector<int> &I_neurons,
@@ -563,6 +566,7 @@ protected:
         void send_super_synapses(); // send super synapses from master to all processes
         void send_remodeled_indicators(); // send remodeled indicators from master to all processes
         void send_mature_indicators(); // send maturation indicators from master to all processes
+        void send_maturation_properties(); // send maturation properties from master to all processes
         
         
         

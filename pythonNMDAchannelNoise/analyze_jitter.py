@@ -12,11 +12,11 @@ import numpy as np
 
 TRAINING_KICK_TIME = 100.0
 
-filename = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/test/noImmatureOut8/jitter.bin"
-fileMature = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/noImmatureOut8/mature_36900.bin"
+filename = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/test/maturationTransition2/jitter.bin"
+fileMature = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/maturationTransition2/mature_14750.bin"
 
-#filename = "/home/eugene/results/immature/clusters/test/11/jitter.bin"
-#fileMature = "/home/eugene/results/immature/clusters/11/mature_13600.bin"
+#filename = "/home/eugene/results/immature/clusters/test/matTrans15/jitter.bin"
+#fileMature = "/home/eugene/results/immature/clusters/matTrans15/mature_10500.bin"
 
 N, num_test_trials, \
     probability_soma_spike, average_num_soma_spikes_in_trial, mean_first_soma_spike_time, std_first_soma_spike_time,\
@@ -24,7 +24,9 @@ N, num_test_trials, \
 
 
 (_,_,mature_indicators) = reading.read_mature_indicators(fileMature)
-mature_neurons = np.where(mature_indicators == 1)[0]
+
+#mature_neurons = np.where(mature_indicators == 1)[0]
+mature_neurons = range(N)
 
 mean_first_soma_spike_time_mature = mean_first_soma_spike_time[mature_neurons]
 mean_first_dend_spike_time_mature = mean_first_dend_spike_time[mature_neurons]
@@ -57,7 +59,7 @@ ax2 = f.add_subplot(312)
 ax2.plot(mean_first_soma_spike_time_mature[indices_sorted_soma_spikes] - TRAINING_KICK_TIME, std_first_soma_spike_time_mature[indices_sorted_soma_spikes])
 ax2.set_ylabel('jitter in 1st soma spike (ms)')
 ax2.set_xlim([0, 150])
-ax2.set_ylim([-0.1, 2.0])
+ax2.set_ylim([-0.1, 3.0])
 
 ax3 = f.add_subplot(313)
 ax3.plot(mean_first_soma_spike_time_mature[indices_sorted_soma_spikes] - TRAINING_KICK_TIME, average_num_soma_spikes_in_trial_mature[indices_sorted_soma_spikes])

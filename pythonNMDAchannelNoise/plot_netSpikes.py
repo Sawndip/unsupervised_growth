@@ -19,12 +19,16 @@ N = 1000 # number of neurons
 #fileDend = "/home/eugene/Output/networks/chainGrowth/testGrowthDelays6/spike_times_dend_1900.bin"
 #fileSoma = "/home/eugene/Output/networks/chainGrowth/testGrowthDelays6/spike_times_soma_1900.bin"
 
-fileDend = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/maturationTransition2/spike_times_dend_100.bin"
-fileSoma = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/maturationTransition2/spike_times_soma_100.bin"
+#fileDend = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/maturationTransition2/spike_times_dend_14600.bin"
+#fileSoma = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/maturationTransition2/spike_times_soma_14600.bin"
 
-#fileDend = "/home/eugene/results/immature/clusters/matTrans8/spike_times_dend_5600.bin"
-#fileSoma = "/home/eugene/results/immature/clusters/matTrans8/spike_times_soma_5600.bin"
 
+
+fileDend = "/home/eugene/results/immature/clusters/matTrans18/spike_times_dend_9900.bin"
+fileSoma = "/home/eugene/results/immature/clusters/matTrans18/spike_times_soma_9900.bin"
+
+#fileDend = "/home/eugene/results/immature/clusters/test/matTrans17/test_spike_times_dend_10.bin"
+#fileSoma = "/home/eugene/results/immature/clusters/test/matTrans17/test_spike_times_soma_10.bin"
 
 #fileDend = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/test/noImmatureOut4/test_spike_times_dend_5.bin"
 #fileSoma = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/test/noImmatureOut4/test_spike_times_soma_5.bin"

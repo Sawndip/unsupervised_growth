@@ -25,10 +25,10 @@ def get_hist_for_discrete_integers(data):
 
 CONVERTION_CONSTANT = 10.0
 
-trial_number = 50
+trial_number = 3000
 
-dirname = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/maturationTransition2/"
-#dirname = "/home/eugene/results/immature/clusters/matTrans6/"
+#dirname = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/maturationTransition2/"
+dirname = "/home/eugene/results/immature/clusters/matTrans15/"
 
 fileSoma = os.path.join(dirname, "spike_times_soma_" + str(trial_number) + ".bin")
 fileWeights = os.path.join(dirname, "weights_" + str(trial_number) + ".bin")
@@ -293,7 +293,7 @@ print "Out degree super = ",num_super_outputs[list(layer)]
 
 prev_layer = set()   
 
-while len(layer) <= 10 and len(layer) > 0:
+while len(layer) <= 20 and len(layer) > 0:
     num_active_out = 0
     num_super_out = 0
     

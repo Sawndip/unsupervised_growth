@@ -10,12 +10,14 @@ import utils
 import reading
 import matplotlib.pyplot as plt
 
-dirname = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/noImmatureOut5/"
-trial_number = 4900
+#dirname = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/noImmatureOut5/"
+dirname = "/home/eugene/results/immature/clusters/matTrans15/"
+
+trial_number = 3000
 trialStep = 50
 
-training_neurons = [195, 228, 860, 461, 525, 146, 726, 873, 252, 893]
-neurons = [611, 293, 74, 139, 465, 210, 856, 697, 186, 27]
+training_neurons = [669, 822, 291, 228, 726, 807, 909, 493, 285, 592, 850, 179, 886, 438, 23, 824, 196, 964, 221, 127]
+neurons = [770, 774, 264, 777, 139, 404, 593, 280, 29, 287, 163]
 N_RA = 1000
 
 spike_times_sequence = utils.get_first_spike_time_sequence_relative_to_training(dirname, trial_number, trialStep, N_RA, neurons, training_neurons)
@@ -30,7 +32,7 @@ f, axarr = plt.subplots(num_neurons, sharex=True)
 
 for i in range(num_neurons):
     axarr[i].plot(time, spike_times_sequence[i], label="neuron {0}".format(neurons[i]), color='b')
-    axarr[i].set_ylim([0, 20])
+    axarr[i].set_ylim([5, 15])
     axarr[i].tick_params('y', color='b')
     axarr[i].set_ylabel('FST (ms)', color='b')
     axarr[i].legend(loc=2)

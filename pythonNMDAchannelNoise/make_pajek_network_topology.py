@@ -116,9 +116,9 @@ def write_pajek_neurons(dirname, trial_number):
     (_, _, mature_indicators) = reading.read_mature_indicators(fileMature)
     (_, _, super_synapses) = reading.read_synapses(fileSuperSynapses)
 
-    mature_neurons = np.where(mature_indicators == 1)[0]   
-    
-    #mature_neurons = range(N_RA)
+    #mature_neurons = np.where(mature_indicators == 1)[0]   
+    #print list(mature_neurons)
+    mature_neurons = range(N_RA)
     num_neurons = len(mature_neurons)
     # sort array with neurons and training neurons #
     training_neurons.sort()
@@ -146,10 +146,10 @@ def write_pajek_neurons(dirname, trial_number):
                     continue
     
 if __name__ == "__main__":
-    dirname = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/noImmatureOut8/"
-    #dirname = "/home/eugene/results/immature/clusters/11/"
+    #dirname = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/maturationTransition2/"
+    dirname = "/home/eugene/results/immature/clusters/matTrans15/"
     
-    trial_number = 36900
+    trial_number = 10500
     
     write_pajek_neurons(dirname, trial_number)
     #write_pajek_hvcRA_coord(dirname, trial_number)

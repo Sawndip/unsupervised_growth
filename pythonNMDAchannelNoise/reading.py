@@ -156,7 +156,34 @@ def read_weights(filename):
                 pos += SIZE_OF_DOUBLE
         
         return (N_RA, trial_number, weights)  
+    
+def read_maturation_properties(filename):
+    """
+    Read maturation properties of HVC-RA neurons
+    """
+    with open(filename, 'rb') as file:
+        data = file.read()
+           
+        N = struct.unpack('<i', data[:SIZE_OF_INT])[0]
+        trial_number = struct.unpack('<i', data[SIZE_OF_INT:2*SIZE_OF_INT])[0]
         
+        mature_indicators = np.zeros(N, np.int32)
+        maturation_rate = np.zeros(N, np.int32)
+        Erest = np.zeros(N, np.float32)
+        GCa = np.zeros(N, np.float32)
+        
+        ind = 2*SIZE_OF_INT     
+        
+        for i in range(N):
+            mature_indicators[i] = struct.unpack('<i', data[ind:(ind+SIZE_OF_INT)])[0]
+            maturation_rate[i] = struct.unpack('<i', data[(ind+SIZE_OF_INT):(ind+2*SIZE_OF_INT)])[0]
+            Erest[i] = struct.unpack('<d', data[(ind+2*SIZE_OF_INT):(ind+2*SIZE_OF_INT+SIZE_OF_DOUBLE)])[0]
+            GCa[i] = struct.unpack('<d', data[(ind+2*SIZE_OF_INT+SIZE_OF_DOUBLE):(ind+2*SIZE_OF_INT+2*SIZE_OF_DOUBLE)])[0]
+            
+            ind += 2*SIZE_OF_INT+2*SIZE_OF_DOUBLE
+        
+        return (N, trial_number, mature_indicators, maturation_rate, Erest, GCa)    
+
 def read_mature_indicators(filename):
     """
     Read maturation indicators of HVC-RA neurons

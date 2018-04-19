@@ -20,7 +20,7 @@ const double NetworkGrowthSimulator::MIN_INTERSOMATIC_DISTANCE = 10.0; // minimu
 
 const double NetworkGrowthSimulator::G_TRAINING_KICK = 3.0; // strength of excitatory conductance delivered to training neurons
 const double NetworkGrowthSimulator::MATURATION_SCALE_SPONTANEOUS = 100000; // timescale of neuron properties of spontaneous maturation
-const double NetworkGrowthSimulator::MATURATION_SCALE_DRIVEN = 1000; // timescale of neuron properties of driven maturation
+const double NetworkGrowthSimulator::MATURATION_SCALE_DRIVEN = 25; // timescale of neuron properties of driven maturation
 const double NetworkGrowthSimulator::EXPERIMENTAL_AXONAL_DELAY_PER_MICRON = 0.01; // experimental value of axonal time delay in ms for 1 micron distance
 const double NetworkGrowthSimulator::MATURE_SYNAPSE_SCALING = 15.0; // constant to scale excitatory synapses to mature neurons
 
@@ -668,13 +668,7 @@ void NetworkGrowthSimulator::initialize_network()
 			//mature_global[training_neurons[i]] = 1;
 	//}
 	
-	// make training neurons mature
-	for (int i = 0; i < N_RA_local; i++)
-	{
-		if ( std::find(training_neurons.begin(), training_neurons.end(), Id_RA_local[i]) != 
-								training_neurons.end() )
-			mature_local[i] = 1;
-	}
+
 	
 	this->set_noise();
 	this->set_dynamics();
@@ -687,6 +681,7 @@ void NetworkGrowthSimulator::initialize_network()
 	this->send_activity_history();
 	this->send_replacement_history();
 	this->send_remodeled_indicators();
+	this->send_maturation_properties();
 	//this->send_mature_indicators();
 	
 	
@@ -694,7 +689,8 @@ void NetworkGrowthSimulator::initialize_network()
 	
 	// set neuron model parameters
 	//this->update_neuron_properties();
-	this->set_neuron_properties_sudden_maturation();
+	//this->set_neuron_properties_sudden_maturation();
+	this->set_neuron_properties();
 }
 
 void NetworkGrowthSimulator::test_inhAndExc_response(const struct ConnectionParameters &con_par,
@@ -927,8 +923,16 @@ void NetworkGrowthSimulator::test_chain(std::string networkDirectory,  int start
 	if (MPI_rank == 0)
 		this->read_network_state(networkDirectory, starting_trial);
     
+    
     this->send_growth_parameters();
     this->initialize_network();
+    
+    
+    // make everyone mature
+    for (int i = 0; i < N_RA_local; i++)
+		mature_local[i] = 1;
+    
+    this->set_neuron_properties_sudden_maturation();
     
     //this->set_time_for_neurons(trial_number * trial_duration);
     //this->print_super();
@@ -1417,6 +1421,15 @@ void NetworkGrowthSimulator::new_chain_growth(const ConfigurationNetworkGrowth &
 		// sort training neurons for convenience
 		std::sort(training_neurons.begin(), training_neurons.end());
 		
+		// make training neurons mature
+		for (size_t i = 0; i < training_neurons.size(); i++)
+		{
+			mature_global[training_neurons[i]] = 1;
+			GCa_global[training_neurons[i]] = maturation_params.GCA_MATURE;
+			rest_potential_global[training_neurons[i]] = maturation_params.E_REST_MATURE;
+	
+		}
+		
 		// write network to output directory both as initial
 		std::string filename_I_coordinates = outputDirectory + "I_xy.bin";
 		std::string filename_out_training = outputDirectory + "training_neurons.bin";
@@ -1472,7 +1485,7 @@ void NetworkGrowthSimulator::read_network_state(std::string dataDir, int startin
     
     std::string fileActive = dataDir + "RA_RA_active_connections" + fileEnding + ".bin";
     std::string fileSuper = dataDir + "RA_RA_super_connections" + fileEnding + ".bin";
-    std::string fileMaturation = dataDir + "mature" + fileEnding + ".bin";
+    std::string fileMaturationProperties = dataDir + "maturation_properties" + fileEnding + ".bin";
 	std::string fileActivityHistory = dataDir + "activity_history" + fileEnding + ".bin";
 	//std::string fileLastBurstTimes = dataDir + "last_dendritic_spike_times" + trial_extension + ".bin";
 	std::string fileReplacementHistory = dataDir + "replacement_history" + fileEnding + ".bin";
@@ -1531,7 +1544,7 @@ void NetworkGrowthSimulator::read_network_state(std::string dataDir, int startin
     this->read_activity_history(fileActivityHistory.c_str());
     this->read_replacement_history(fileReplacementHistory.c_str());
     this->read_remodeled_indicators(fileRemodeledIndicators.c_str());
-    this->read_mature_indicators(fileMaturation.c_str());
+    this->read_maturation_properties(fileMaturationProperties.c_str());
 }
 
 //~ void NetworkGrowthSimulator::test_chain_recovery(std::string dataDir, int starting_trial, double fraction, bool training, int save_freq_short, int save_freq_long)
@@ -1625,12 +1638,14 @@ void NetworkGrowthSimulator::set_neuron_properties()
 {
 	for (int i = 0; i < N_RA_local; i++)
 	{
-		HVCRA_local[i].set_Ei(gaba_potential_local[i]);
+		//HVCRA_local[i].set_Ei(gaba_potential_local[i]);
 		HVCRA_local[i].set_Erest(rest_potential_local[i]);
-		HVCRA_local[i].set_Gk(Gk_local[i]);
-		HVCRA_local[i].set_GNa(GNa_local[i]);
-		HVCRA_local[i].set_Ad(Ad_local[i]);
-		HVCRA_local[i].set_Rc(Rc_local[i]);
+		HVCRA_local[i].set_GCa(GCa_local[i]);
+		
+		//HVCRA_local[i].set_Gk(Gk_local[i]);
+		//HVCRA_local[i].set_GNa(GNa_local[i]);
+		//HVCRA_local[i].set_Ad(Ad_local[i]);
+		//HVCRA_local[i].set_Rc(Rc_local[i]);
 	}
 }
 
@@ -1651,18 +1666,16 @@ void NetworkGrowthSimulator::update_neuron_properties_sameDendrite_diffMaturatio
 			GCa_local[i] = GCa_local[i]  + (GCa_local[i] - maturation_params.GCA_MATURE) 
 														* ( exp(-1.0 / maturation_scale_local[i]) - 1);
 			
-			if ( ( GCa_local[i] >= maturation_params.GCA_MATURE ) && (rest_potential_local[i] <= maturation_params.E_REST_MATURE) ){
+			double potential_threshold = 0.5;
+			double conductance_threshold = 0.5;
+			
+			if ( ( GCa_local[i] >= maturation_params.GCA_MATURE - conductance_threshold) || 
+					(rest_potential_local[i] <= maturation_params.E_REST_MATURE - potential_threshold) ){
 				GCa_local[i] = maturation_params.GCA_MATURE;
 				rest_potential_local[i] = maturation_params.E_REST_MATURE;
 				
 				mature_local[i] = 1;
 			}
-			
-			else if ( GCa_local[i] >= maturation_params.GCA_MATURE )
-				GCa_local[i] = maturation_params.GCA_MATURE;
-			
-			else if ( rest_potential_local[i] <= maturation_params.E_REST_MATURE )
-				rest_potential_local[i] = maturation_params.E_REST_MATURE;
 			
 			HVCRA_local[i].set_Erest(rest_potential_local[i]);
 			HVCRA_local[i].set_GCa(GCa_local[i]);
@@ -2590,6 +2603,41 @@ void NetworkGrowthSimulator::read_replacement_history(const char* filename)
 	in.close();
 }
 
+void NetworkGrowthSimulator::read_maturation_properties(const char* filename)
+{
+	struct stat buf;
+			
+	if ( stat(filename, &buf) == 1 )
+	{
+		std::cerr << " File " << filename << " doesn't exist!\n" << std::endl;
+		return;
+	}
+	
+	std::ifstream in;
+
+	in.open(filename, std::ios::in | std::ios::binary);
+
+	int N, num_trial;
+	
+	in.read(reinterpret_cast<char *>(&N), sizeof(int));
+	in.read(reinterpret_cast<char *>(&num_trial), sizeof(int));
+
+	if (N != N_RA)
+		std::cerr << "Number of HVC-RA neurons in file with maturation properties N = " << N 
+				  << " is different from N_RA = " << N_RA << std::endl; 
+			
+	std::cout << "Trial number read from file with maturation properties: " << num_trial << std::endl;	  
+	
+	for (int i = 0; i < N; i++){
+		in.read(reinterpret_cast<char *>(&mature_global[i]), sizeof(int));
+		in.read(reinterpret_cast<char *>(&maturation_scale_global[i]), sizeof(int));
+		in.read(reinterpret_cast<char *>(&rest_potential_global[i]), sizeof(double));
+		in.read(reinterpret_cast<char *>(&GCa_global[i]), sizeof(double));
+	}
+	
+	in.close();
+}
+
 void NetworkGrowthSimulator::read_mature_indicators(const char* filename)
 {
 	struct stat buf;
@@ -3314,6 +3362,46 @@ void NetworkGrowthSimulator::send_connections_RAandI()
      delete [] syn_num_RA_local;
      delete [] syn_num_I_local;
 }
+
+void NetworkGrowthSimulator::send_maturation_properties()
+{
+	int* sendcounts;
+	int* displs;
+	
+	if (MPI_rank == 0)
+	{
+		sendcounts = new int[MPI_size];
+		displs = new int[MPI_size];
+		
+		sendcounts[0] = N_RA_sizes[0];
+		displs[0] = 0;
+		
+		for (int i = 1; i < MPI_size; i++)
+		{
+			sendcounts[i] = N_RA_sizes[i];
+			displs[i] = displs[i-1] + sendcounts[i-1];
+		}
+    }
+	
+	MPI_Scatterv(&maturation_scale_global[0], sendcounts, displs, MPI_INT,
+		&maturation_scale_local[0], N_RA_local, MPI_INT, 0, MPI_COMM_WORLD);
+	
+	MPI_Scatterv(&mature_global[0], sendcounts, displs, MPI_INT,
+		&mature_local[0], N_RA_local, MPI_INT, 0, MPI_COMM_WORLD);
+	
+	MPI_Scatterv(&GCa_global[0], sendcounts, displs, MPI_DOUBLE,
+		&GCa_local[0], N_RA_local, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+	
+	MPI_Scatterv(&rest_potential_global[0], sendcounts, displs, MPI_DOUBLE,
+		&rest_potential_local[0], N_RA_local, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+	
+	if (MPI_rank == 0)
+	{
+		delete [] sendcounts;
+		delete [] displs;
+	}
+}
+
 
 void NetworkGrowthSimulator::send_mature_indicators()
 {
@@ -8082,7 +8170,7 @@ void NetworkGrowthSimulator::trial_1stSoma_pre_1stSoma_post_delays_fixedSpread(b
           //                          / static_cast<double>(RATE_WINDOW_SHORT);
 
 		// calculate firing rate in large window:
-		int window = 1000;
+		int window = 25;
 		
 		double death_threshold = 0.02;
 		double driven_threshold = 0.50;
@@ -14382,15 +14470,20 @@ void NetworkGrowthSimulator::resize_arrays_for_master_process()
     
     remodeled_global.resize(N_RA);
     mature_global.resize(N_RA);
+	maturation_scale_global.resize(N_RA);
+	
+	std::fill(maturation_scale_global.begin(), maturation_scale_global.end(), MATURATION_SCALE_SPONTANEOUS);
 	
 	gaba_potential_global.resize(N_RA);
 	rest_potential_global.resize(N_RA);
+	GCa_global.resize(N_RA);
 	Gk_global.resize(N_RA);
 	GNa_global.resize(N_RA);
 	Ad_global.resize(N_RA);
 	Rc_global.resize(N_RA);
 	
-
+	std::fill(GCa_global.begin(), GCa_global.end(), maturation_params.GCA_IMMATURE);
+	std::fill(rest_potential_global.begin(), rest_potential_global.end(), maturation_params.E_REST_IMMATURE);
 	
 	firing_rate_long_global.resize(N_RA);
 	
@@ -14399,7 +14492,6 @@ void NetworkGrowthSimulator::resize_arrays_for_master_process()
 	
 	for (size_t i = 0; i < num_spikes_in_recent_trials_global.size(); i++)
 		num_spikes_in_recent_trials_global[i].resize(maturation_params.RATE_WINDOW_LONG);
-	
 }
 
 
@@ -15478,6 +15570,14 @@ void NetworkGrowthSimulator::gather_full_state_data()
     MPI_Gatherv(&remodeled_local[0], N_RA_local, MPI_INT,
         &remodeled_global[0], recvcounts_RA, displs_RA, MPI_INT, 0, MPI_COMM_WORLD);
     
+    
+    MPI_Gatherv(&rest_potential_local[0], N_RA_local, MPI_DOUBLE,
+        &rest_potential_global[0], recvcounts_RA, displs_RA, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+	
+	MPI_Gatherv(&GCa_local[0], N_RA_local, MPI_DOUBLE,
+        &GCa_global[0], recvcounts_RA, displs_RA, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+	
+	
 	//MPI_Gatherv(&gaba_potential_local[0], N_RA_local, MPI_DOUBLE,
      //   &gaba_potential_global[0], recvcounts_RA, displs_RA, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 	
@@ -15489,6 +15589,9 @@ void NetworkGrowthSimulator::gather_full_state_data()
         
 	MPI_Gatherv(&mature_local[0], N_RA_local, MPI_INT,
         &mature_global[0], recvcounts_RA, displs_RA, MPI_INT, 0, MPI_COMM_WORLD);
+    
+    MPI_Gatherv(&maturation_scale_local[0], N_RA_local, MPI_INT,
+        &maturation_scale_global[0], recvcounts_RA, displs_RA, MPI_INT, 0, MPI_COMM_WORLD);
      
     // Receive functions on the other hand rearrange data immediately. Thus, there is no need
     // to take special care while writing to files
@@ -15820,6 +15923,27 @@ void NetworkGrowthSimulator::write_remodeled_indicators(const char* filename)
 	}
 	output.close();
 }
+
+void NetworkGrowthSimulator::write_maturation_properties(const char* filename)
+{
+	std::ofstream output;
+
+	output.open(filename, std::ios::out | std::ios::binary);
+
+	output.write(reinterpret_cast<char *>(&N_RA), sizeof(int));
+	output.write(reinterpret_cast<char *>(&trial_number), sizeof(int));
+
+	for (int i = 0; i < N_RA; i++)
+	{
+		//printf("weigths[%d][%d] = %1.10f\n", i, j, weights[i][j]);
+		output.write(reinterpret_cast<char *>(&mature_global[i]), sizeof(int));
+		output.write(reinterpret_cast<char *>(&maturation_scale_global[i]), sizeof(int));
+		output.write(reinterpret_cast<char *>(&rest_potential_global[i]), sizeof(double));
+		output.write(reinterpret_cast<char *>(&GCa_global[i]), sizeof(double));
+	}
+	output.close();
+}
+
 
 void NetworkGrowthSimulator::write_mature_indicators(const char* filename)
 {
@@ -16667,6 +16791,8 @@ void NetworkGrowthSimulator::write_full_network_state(std::string fileEnding, st
 	std::string fileActive = outputDirectory + "RA_RA_active_connections" + fileEnding + ".bin";
     std::string fileSuper = outputDirectory + "RA_RA_super_connections" + fileEnding + ".bin";
     std::string fileMaturation = outputDirectory + "mature" + fileEnding + ".bin";
+	std::string fileMaturationProperties = outputDirectory + "maturation_properties" + fileEnding + ".bin";
+	
 	std::string fileActivityHistory = outputDirectory + "activity_history" + fileEnding + ".bin";
     std::string fileReplacementHistory = outputDirectory + "replacement_history" + fileEnding + ".bin";
     std::string fileRemodeledIndicators = outputDirectory + "remodeled_indicators" + fileEnding + ".bin";
@@ -16686,6 +16812,7 @@ void NetworkGrowthSimulator::write_full_network_state(std::string fileEnding, st
     this->write_super_synapses(fileSuper.c_str());
     this->write_active_synapses(fileActive.c_str());
     this->write_mature_indicators(fileMaturation.c_str());
+    this->write_maturation_properties(fileMaturationProperties.c_str());
     this->write_activity_history(fileActivityHistory.c_str());
     this->write_replacement_history(fileReplacementHistory.c_str());
     this->write_remodeled_indicators(fileRemodeledIndicators.c_str());
