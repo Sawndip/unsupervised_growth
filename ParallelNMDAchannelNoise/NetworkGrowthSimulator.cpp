@@ -1578,10 +1578,10 @@ void NetworkGrowthSimulator::continue_chain_growth(std::string dataDir, int star
     this->gather_graph_state_data();
     this->gather_full_state_data();
     
-    if (MPI_rank == 0)
-		this->write_full_network_state("_" + std::to_string(trial_number) + "afterReading", dataDir);
+    //if (MPI_rank == 0)
+		//this->write_full_network_state("_" + std::to_string(trial_number) + "afterReading", dataDir);
 	
-	//this->chain_growth(training, save_freq_short, save_freq_long, dataDir);
+	this->chain_growth(training, save_freq_short, save_freq_long, dataDir);
 	
 }
 
@@ -14366,7 +14366,7 @@ void NetworkGrowthSimulator::gather_spiked_or_bursted_neurons(const std::vector<
 //~ 
 	//~ if (MPI_rank == 0)
 	//~ {
-		//~ // send connections to all processes
+		//~ // send connections to all prclusters/ocesses
 //~ 
 		//~ recvcounts_id_RA[0] = N_RA_sizes[0];
 		//~ displs_id_RA[0] = 0;

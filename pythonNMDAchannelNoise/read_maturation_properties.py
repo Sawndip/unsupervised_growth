@@ -10,7 +10,8 @@ Script read maturation properties from file
 import reading
 import numpy as np
 
-filename = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/maturationTransition3/maturation_properties_150.bin"
+#filename = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/maturationTransition3/maturation_properties_150.bin"
+filename = "/home/eugene/results/immature/clusters/matTrans19/maturation_properties_10000.bin"
 
 
 (N, trial_number, mature_indicators, maturation_rate, Erest, GCa) = reading.read_maturation_properties(filename)

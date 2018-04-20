@@ -24,8 +24,8 @@ N = 1000 # number of neurons
 
 
 
-fileDend = "/home/eugene/results/immature/clusters/matTrans18/spike_times_dend_9900.bin"
-fileSoma = "/home/eugene/results/immature/clusters/matTrans18/spike_times_soma_9900.bin"
+fileDend = "/home/eugene/results/immature/clusters/matTrans19/spike_times_dend_10350.bin"
+fileSoma = "/home/eugene/results/immature/clusters/matTrans19/spike_times_soma_10350.bin"
 
 #fileDend = "/home/eugene/results/immature/clusters/test/matTrans17/test_spike_times_dend_10.bin"
 #fileSoma = "/home/eugene/results/immature/clusters/test/matTrans17/test_spike_times_soma_10.bin"

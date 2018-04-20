@@ -13,9 +13,9 @@ import os
 import matplotlib.pyplot as plt
 
 #dirname = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/noImmatureOut8/"
-dirname = "/home/eugene/results/immature/clusters/matTrans15/"
+dirname = "/home/eugene/results/immature/clusters/matTrans16/"
 
-trial_number = 10500
+trial_number = 10400
 
 fileConnections = os.path.join(dirname, "RA_RA_active_connections_" + str(trial_number) + ".bin")
 #fileSpikeTimes = os.path.join(dirname, "spike_times_soma_" + str(trial_number) + ".bin")
@@ -26,7 +26,7 @@ fileTraining = os.path.join(dirname, "training_neurons.bin")
 
 
 #fileSpikeTimes = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/test/noImmatureOut8/test_spike_times_soma_5.bin"
-fileSpikeTimes = "/home/eugene/results/immature/clusters/test/matTrans15/test_spike_times_soma_5.bin"
+fileSpikeTimes = "/home/eugene/results/immature/clusters/test/matTrans16/test_spike_times_soma_5.bin"
 
 MARGIN_LATE = 0.0 # margin for the burst coming late
 

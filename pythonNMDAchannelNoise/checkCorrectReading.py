@@ -12,10 +12,10 @@ import reading
 import os
 import numpy as np
 
-starting_trial = 4300
+starting_trial = 200
 
-dirname_before = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/events1/"
-dirname_after = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/test1/"
+dirname_before = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/maturationTransition3/"
+dirname_after = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/maturationTransition3/"
 
 
 fileCoordBefore = os.path.join(dirname_before, "RA_xy_" + str(starting_trial) + ".bin")
@@ -31,6 +31,7 @@ fileActivityHistoryBefore = os.path.join(dirname_before, "activity_history_" + s
 fileReplacementHistoryBefore = os.path.join(dirname_before, "replacement_history_" + str(starting_trial) + ".bin")
 fileRemodeledIndicatorsBefore = os.path.join(dirname_before, "remodeled_indicators_" + str(starting_trial) + ".bin")
 fileMatureIndicatorsBefore = os.path.join(dirname_before, "mature_" + str(starting_trial) + ".bin")
+fileMaturationPropertiesBefore = os.path.join(dirname_before, "maturation_properties_" + str(starting_trial) + ".bin")
 
 fileCoordAfter = os.path.join(dirname_after, "RA_xy_" + str(starting_trial) + "afterReading.bin")
 fileActiveAfter = os.path.join(dirname_after, "RA_RA_active_connections_" + str(starting_trial) + "afterReading.bin")
@@ -45,6 +46,7 @@ fileActivityHistoryAfter = os.path.join(dirname_after, "activity_history_" + str
 fileReplacementHistoryAfter = os.path.join(dirname_after, "replacement_history_" + str(starting_trial) + "afterReading.bin")
 fileRemodeledIndicatorsAfter = os.path.join(dirname_after, "remodeled_indicators_" + str(starting_trial) + "afterReading.bin")
 fileMatureIndicatorsAfter = os.path.join(dirname_after, "mature_" + str(starting_trial) + "afterReading.bin")
+fileMaturationPropertiesAfter = os.path.join(dirname_before, "maturation_properties_" + str(starting_trial) + "afterReading.bin")
 
 ###########################
 #### Read data from files
@@ -105,8 +107,13 @@ coordAfter = reading.read_coordinates(fileCoordAfter)
 (_, _, remodeled_indicators_after) = reading.read_remodeled_indicators(fileRemodeledIndicatorsAfter) 
 
 ################# Maturation indicators ###########
-(_, _, mature_indicators_before) = reading.read_mature_indicators(fileMatureIndicatorsBefore)
-(_, _, mature_indicators_after) = reading.read_mature_indicators(fileMatureIndicatorsAfter)
+#(_, _, mature_indicators_before) = reading.read_mature_indicators(fileMatureIndicatorsBefore)
+#(_, _, mature_indicators_after) = reading.read_mature_indicators(fileMatureIndicatorsAfter)
+
+################# Maturation properties ###########
+(_, _, mature_indicators_before, maturation_rate_before, Erest_before, GCa_before) = reading.read_maturation_properties(fileMaturationPropertiesBefore)
+(_, _, mature_indicators_after, maturation_rate_after, Erest_after, GCa_after) = reading.read_maturation_properties(fileMaturationPropertiesAfter)
+
 
 #print active_synapses
 
@@ -150,4 +157,8 @@ print np.array_equal(np.array(axonal_delays_RA2I_from_delay_file_before), np.arr
 print np.array_equal(activity_history_before, activity_history_after)
 print np.array_equal(replacement_history_before, replacement_history_after)
 print np.array_equal(remodeled_indicators_before, remodeled_indicators_after)
+
 print np.array_equal(mature_indicators_before, mature_indicators_after)
+print np.array_equal(maturation_rate_before, maturation_rate_after)
+print np.array_equal(Erest_before, Erest_after)
+print np.array_equal(GCa_before, GCa_after)
