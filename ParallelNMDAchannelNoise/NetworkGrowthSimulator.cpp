@@ -7,6 +7,7 @@
 #include <functional>
 #include "training_current.h"
 #include <sys/stat.h>
+#include <set>
 #include <iomanip>
 
 const double NetworkGrowthSimulator::STDP_WINDOW = 100.0;
@@ -20,7 +21,7 @@ const double NetworkGrowthSimulator::MIN_INTERSOMATIC_DISTANCE = 10.0; // minimu
 
 const double NetworkGrowthSimulator::G_TRAINING_KICK = 3.0; // strength of excitatory conductance delivered to training neurons
 const double NetworkGrowthSimulator::MATURATION_SCALE_SPONTANEOUS = 100000; // timescale of neuron properties of spontaneous maturation
-const double NetworkGrowthSimulator::MATURATION_SCALE_DRIVEN = 25; // timescale of neuron properties of driven maturation
+const double NetworkGrowthSimulator::MATURATION_SCALE_DRIVEN = 1000; // timescale of neuron properties of driven maturation
 const double NetworkGrowthSimulator::EXPERIMENTAL_AXONAL_DELAY_PER_MICRON = 0.01; // experimental value of axonal time delay in ms for 1 micron distance
 const double NetworkGrowthSimulator::MATURE_SYNAPSE_SCALING = 15.0; // constant to scale excitatory synapses to mature neurons
 
@@ -119,6 +120,71 @@ void NetworkGrowthSimulator::generate_network_topology(int N_ra, int N_i, int N_
 		
 		this->write_network_topology(networkDir);
 		this->write_pajek_topology((networkDir + "network_topology.net").c_str());
+	}
+}
+
+void NetworkGrowthSimulator::sample_coordinates_for_replaced(std::vector<int>& neurons_to_replace)
+{
+	std::vector<int> neurons_with_fixed_coordinates;
+	
+	std::set<int> set_neurons_to_replace(neurons_to_replace.begin(), neurons_to_replace.end());
+	
+	for (int i = 0; i < N_RA; i++)
+		if ( set_neurons_to_replace.find(i) == set_neurons_to_replace.end() )
+			neurons_with_fixed_coordinates.push_back(i);
+	
+	const double pi = 3.14159265358979323846; // value of constant pi
+		
+	double too_close_distance = MODEL_INTERNEURON_DISTANCE * MIN_INTERSOMATIC_DISTANCE / EXPERIMENTAL_INTERNEURON_DISTANCE;
+		
+	// HVC(RA) neurons are sampled from uniform distribution on sphere
+	for (size_t i = 0; i < neurons_to_replace.size(); i++)
+	{
+		double tmp_x, tmp_y, tmp_z;
+		
+		bool too_close = true;
+		
+		// check if neuron is too close to other interneurons or previously sampled HVC-RA
+		while ( too_close )
+		{
+			too_close = false;
+		
+			double z = 2*noise_generator.random(1.0) - 1; // generate z in range(-1, 1)
+			double phi = noise_generator.random(2.0 * pi); // generate phi in range(0, 2*pi)
+		
+			tmp_x = sin(acos(z)) * cos(phi);
+			tmp_y = sin(acos(z)) * sin(phi);
+			tmp_z = z;		
+			
+			for (int j = 0; j < N_I; j++)
+			{
+				if ( distance_on_sphere(tmp_x, tmp_y, tmp_z, xx_I[j], yy_I[j], zz_I[j]) < too_close_distance )
+				{
+					too_close = true;
+					break;
+				}
+			}
+			
+			if ( !too_close )
+			{
+				for (size_t j = 0; j < neurons_with_fixed_coordinates.size(); j++)
+				{
+					int neuron_id = neurons_with_fixed_coordinates[j];
+					
+					if ( distance_on_sphere(tmp_x, tmp_y, tmp_z, xx_RA[neuron_id], yy_RA[neuron_id], zz_RA[neuron_id]) < too_close_distance )
+					{
+						too_close = true;
+						break;
+					}
+				}
+			}
+		}
+		
+		xx_RA[neurons_to_replace[i]] = tmp_x;
+		yy_RA[neurons_to_replace[i]] = tmp_y;
+		zz_RA[neurons_to_replace[i]] = tmp_z;
+		
+		neurons_with_fixed_coordinates.push_back(neurons_to_replace[i]);
 	}
 }
 
@@ -419,6 +485,98 @@ void NetworkGrowthSimulator::sample_axonal_delays()
 			axonal_delays_I_RA_global[i][j] = delay;
 		}
 	}
+}
+
+void NetworkGrowthSimulator::sample_connectionsAndDelays_for_replaced(std::vector<int>& neurons_to_replace)
+{
+	// connections for HVC(RA) neurons
+	for (size_t i = 0; i < neurons_to_replace.size(); i++)
+	{
+		int neuron_id = neurons_to_replace[i];
+		
+		for (int j = 0; j < N_I; j++)
+		{
+			double d = distance_on_sphere(xx_RA[neuron_id], yy_RA[neuron_id], zz_RA[neuron_id], xx_I[j], yy_I[j], zz_I[j]) * EXPERIMENTAL_INTERNEURON_DISTANCE / MODEL_INTERNEURON_DISTANCE; // distance between HVC(RA) and HVC(I)
+		
+			if (noise_generator.random(1) < p_RA2I(d))
+			{
+				double G = this->sample_G(connection_params.Gei_max);
+
+				weights_RA_I_global[neuron_id].push_back(G);
+				syn_ID_RA_I_global[neuron_id].push_back(j);
+				syn_lengths_RA_I_global[neuron_id].push_back(d);
+			
+				double delay = d * EXPERIMENTAL_AXONAL_DELAY_PER_MICRON * connection_params.delay_constant;
+													
+				axonal_delays_RA_I_global[neuron_id].push_back(delay);
+			}
+		}
+	 }
+	// connections for HVC(I) neurons
+
+	for (int i = 0; i < N_I; i++)
+	{
+		for (size_t j = 0; j < neurons_to_replace.size(); j++)
+		{
+			int neuron_id = neurons_to_replace[j];
+			
+			double d = distance_on_sphere(xx_I[i], yy_I[i], zz_I[i], xx_RA[neuron_id], yy_RA[neuron_id], zz_RA[neuron_id]) * EXPERIMENTAL_INTERNEURON_DISTANCE / MODEL_INTERNEURON_DISTANCE; // distance between HVC(I) and HVC(RA)
+		
+			if (noise_generator.random(1) < p_I2RA(d))
+			{
+				double G = this->sample_G(connection_params.Gie_max);
+
+				weights_I_RA_global[i].push_back(G);
+				syn_ID_I_RA_global[i].push_back(neuron_id);
+				syn_lengths_I_RA_global[i].push_back(d);
+				
+				double delay = d * EXPERIMENTAL_AXONAL_DELAY_PER_MICRON * connection_params.delay_constant;
+													
+				axonal_delays_I_RA_global[i].push_back(delay);
+			}
+		}
+	}
+
+	// update axonal delays for HVC-RA -> HVC-RA connections to and from replaced neurons
+	
+	// input connections
+	for (int i = 0; i < N_RA; i++)
+	{
+		for (size_t j = 0; j < neurons_to_replace.size(); j++)
+		{
+			int target_id = neurons_to_replace[j];
+			
+			if ( target_id != i )
+				syn_lengths_RA_RA_global[i][target_id] = distance_on_sphere(xx_RA[i], yy_RA[i], zz_RA[i], 
+											  xx_RA[target_id], yy_RA[target_id], zz_RA[target_id]) * EXPERIMENTAL_INTERNEURON_DISTANCE / MODEL_INTERNEURON_DISTANCE;
+			else
+				syn_lengths_RA_RA_global[i][target_id] = 0.0; 
+										  
+			double delay = syn_lengths_RA_RA_global[i][target_id] * EXPERIMENTAL_AXONAL_DELAY_PER_MICRON * connection_params.delay_constant;
+													
+			axonal_delays_RA_RA_global[i][target_id] = delay;
+		}
+	}
+	
+	// output connections
+	for (size_t i = 0; i < neurons_to_replace.size(); i++)
+	{
+		for (int j = 0; j < N_RA; j++)
+		{
+			int source_id = neurons_to_replace[i];
+			
+			if ( j != source_id )
+				syn_lengths_RA_RA_global[source_id][j] = distance_on_sphere(xx_RA[source_id], yy_RA[source_id], zz_RA[source_id], 
+											  xx_RA[j], yy_RA[j], zz_RA[j]) * EXPERIMENTAL_INTERNEURON_DISTANCE / MODEL_INTERNEURON_DISTANCE;
+			else
+				syn_lengths_RA_RA_global[source_id][j] = 0.0; 
+										  
+			double delay = syn_lengths_RA_RA_global[source_id][j] * EXPERIMENTAL_AXONAL_DELAY_PER_MICRON * connection_params.delay_constant;
+													
+			axonal_delays_RA_RA_global[source_id][j] = delay;
+		}
+	}
+	
 }
 
 void NetworkGrowthSimulator::sample_connections()
@@ -1631,6 +1789,33 @@ void NetworkGrowthSimulator::set_neuron_properties_sudden_maturation()
 			this->set_neuron_mature(i);
 		else
 			this->set_neuron_immature(i);
+	}
+}
+
+void NetworkGrowthSimulator::update_replaced_neurons(std::vector<int>& neurons_to_replace)
+{
+	for (size_t i = 0; i < neurons_to_replace.size(); i++)
+	{
+		int neuron_id = neurons_to_replace[i];
+		int rank, shift;
+		
+		this->get_neuronRA_location(neuron_id, &rank, &shift);
+		
+		if (MPI_rank == rank)
+		{
+			rest_potential_local[shift] = maturation_params.E_REST_IMMATURE;
+			GCa_local[shift] = maturation_params.GCA_IMMATURE;
+			
+			mature_local[shift] = 0;
+			maturation_scale_local[shift] = MATURATION_SCALE_SPONTANEOUS;
+			remodeled_local[shift] = 0;
+			
+			num_trials_after_replacement_local[shift] = 0;
+			
+			for (int j = 0; j < maturation_params.RATE_WINDOW_LONG; j++)
+				num_spikes_in_recent_trials_local[shift].push_back(0);
+	
+		}
 	}
 }
 
@@ -3121,6 +3306,58 @@ void NetworkGrowthSimulator::send_growth_parameters()
 	//if (MPI_rank == 1)
 		//this->print_simulation_parameters();
 }
+
+void NetworkGrowthSimulator::send_axonal_delays_RA2RA()
+{
+	int* sendcounts;
+	int* displs;
+	
+	if (MPI_rank == 0)
+	{
+		sendcounts = new int[MPI_size];
+		displs = new int[MPI_size];
+		
+		sendcounts[0] = N_RA_sizes[0];
+		displs[0] = 0;
+		
+		for (int i = 1; i < MPI_size; i++)
+		{
+			sendcounts[i] = N_RA_sizes[i];
+			displs[i] = displs[i-1] + sendcounts[i-1];
+		}
+    }
+
+	// for rank 0 copy data from global arrays to local
+	if (MPI_rank == 0)
+	{
+		for (int i = 0; i < N_RA_local; i++)
+			axonal_delays_RA_RA_local[i] = axonal_delays_RA_RA_global[i];
+	}
+
+	MPI_Status status;
+	int start_row_id = N_RA_sizes[0];
+
+	for (int i = 1; i < MPI_size; i++)
+	{ 
+		for (int j = 0; j < N_RA_sizes[i]; j++)
+		{ 	
+			if (MPI_rank == 0)
+				MPI_Send(&axonal_delays_RA_RA_global[j + start_row_id][0], N_RA, MPI_DOUBLE, i, 0, MPI_COMM_WORLD);
+			
+			else if (MPI_rank == i)
+				MPI_Recv(&axonal_delays_RA_RA_local[j][0], N_RA, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD, &status);
+		}
+		
+		start_row_id += N_RA_sizes[i];
+	}
+
+	if (MPI_rank == 0)
+	{
+        delete [] sendcounts;
+        delete [] displs;
+    }
+}
+
 
 void NetworkGrowthSimulator::send_connections_RA2RA()
 {
@@ -5215,11 +5452,44 @@ void NetworkGrowthSimulator::chain_growth(bool training, int save_freq_short, in
 	    //}
 	    
 		//this->reset_after_trial();
-		 
-		 // advance internal time of each neuron
+		
+		// advance internal time of each neuron
 		for (int i = 0; i < N_RA_local; i++)
 			num_trials_after_replacement_local[i] += 1;
         
+		
+		 
+		std::vector<int> neurons_to_replace;
+		 
+		this->check_neuron_activity(neurons_to_replace);
+		
+		
+		this->update_neuron_properties_sameDendrite_diffMaturationRate();
+		 
+		if ( !neurons_to_replace.empty() )
+		{
+			// write network state before replacement
+			//this->gather_graph_state_data();
+			//this->gather_full_state_data();
+			
+			//if (MPI_rank == 0)
+				//this->write_full_network_state("_" + std::to_string(trial_number) + "beforeReplacement", outputDirectory);
+	
+			this->replace_neurons(neurons_to_replace);
+			
+			// write network state after replacement
+			//this->gather_graph_state_data();
+			//this->gather_full_state_data();
+			
+			//if (MPI_rank == 0)
+			//{
+				//this->write_full_network_state("_" + std::to_string(trial_number) + "afterReplacement", outputDirectory);
+				//this->write_replaced_neurons(neurons_to_replace, (outputDirectory + "replaced_neurons.bin").c_str());
+			//}
+		}
+		
+		this->setToRest_afterEpoch();
+		
 		//this->update_neuron_properties();
 		
 		
@@ -5227,10 +5497,10 @@ void NetworkGrowthSimulator::chain_growth(bool training, int save_freq_short, in
 		//this->reset_after_trial_soma_pre_dend_post_delays();
 		
 		//this->setToRest_after_trial_soma_pre_dend_post_delays();
-		this->setToRest_afterEpoch();
 		
-		//this->update_neuron_properties_sameDendrite();
-		this->update_neuron_properties_sameDendrite_diffMaturationRate();
+		
+		// replace neurons if needed
+		
 		//~ // gather all neurons that are to be replaced
 		//~ this->gather_neurons_2replace();
     //~ 
@@ -8160,8 +8430,13 @@ void NetworkGrowthSimulator::trial_1stSoma_pre_1stSoma_post_delays_fixedSpread(b
     //printf("After potentiation decay")
     //this->update_all_synapses_sudden_maturation();
     this->update_all_synapses();
+}
+
+void NetworkGrowthSimulator::check_neuron_activity(std::vector<int>& neurons_to_replace)
+{
+	std::vector<int> neurons_to_replace_local;
 	
-	// check if some neurons became silent
+	// check if some neurons became silent or driven
 	for (int i = 0; i < N_RA_local; i++)
 	{
 		num_spikes_in_recent_trials_local[i].push_front(static_cast<int>(spikes_in_trial_soma_local[i].size()));
@@ -8170,7 +8445,7 @@ void NetworkGrowthSimulator::trial_1stSoma_pre_1stSoma_post_delays_fixedSpread(b
           //                          / static_cast<double>(RATE_WINDOW_SHORT);
 
 		// calculate firing rate in large window:
-		int window = 25;
+		int window = 1000;
 		
 		double death_threshold = 0.02;
 		double driven_threshold = 0.50;
@@ -8192,9 +8467,11 @@ void NetworkGrowthSimulator::trial_1stSoma_pre_1stSoma_post_delays_fixedSpread(b
 			maturation_scale_local[i] = MATURATION_SCALE_DRIVEN;
 		}
 		
-		if ( ( firing_robustness < death_threshold ) && ( trial_number > window ) )
+		if ( ( firing_robustness < death_threshold ) && ( num_trials_after_replacement_local[i] > window ) )
 		{
 			std::cout << "Neuron " << Id_RA_local[i] << " became silent!" << std::endl;
+			
+			neurons_to_replace_local.push_back(Id_RA_local[i]);
 		}                                                                                                                          
 			//if (std::accumulate(num_bursts_in_recent_trials[i].begin(), num_bursts_in_recent_trials[i].end(), 0.0) >= 1)
 			//{
@@ -8205,8 +8482,11 @@ void NetworkGrowthSimulator::trial_1stSoma_pre_1stSoma_post_delays_fixedSpread(b
 				
 			//	std::cout << std::endl;
 			//}
-		
 	}
+	
+	this->gather_localVectorsToGlobal(neurons_to_replace_local, neurons_to_replace);
+	
+	
 }
 
 void NetworkGrowthSimulator::trial_burst_pre_dend_event_post_delays_sudden_maturation_noImmatureOut_fixedSpread(bool training, std::vector<double>& spread_times)
@@ -13839,6 +14119,38 @@ void NetworkGrowthSimulator::trial_soma_pre_dend_post_stdp_no_delays(bool traini
     //~ //    this->replace_neurons();
 //~ }
 
+void NetworkGrowthSimulator::gather_localVectorsToGlobal(const std::vector<int>& vector_local, 
+													std::vector<int>& vector_global)
+{
+        int size_local = static_cast<int>(vector_local.size());
+        int size_global;
+        
+        int* recvcounts = new int[MPI_size];
+        int* displs = new int[MPI_size];
+
+        // get total number of elements
+        MPI_Allreduce(&size_local, &size_global, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+        
+        vector_global.resize(size_global);
+        
+        
+        // get array with local vectors size in each process
+        MPI_Allgather(&size_local, 1, MPI_INT, &recvcounts[0], 1, MPI_INT, MPI_COMM_WORLD);
+
+        displs[0] = 0;
+        for (int i = 1; i < MPI_size; i++)
+            displs[i] = displs[i-1] + recvcounts[i-1];
+
+
+        // get local elements
+        MPI_Allgatherv(&vector_local[0], size_local, MPI_INT,
+            &vector_global[0], recvcounts, displs, MPI_INT, MPI_COMM_WORLD);
+        
+
+        delete [] recvcounts;
+        delete [] displs;
+}
+
 void NetworkGrowthSimulator::gather_spiked_or_bursted_neurons(const std::vector<int>& RA_neurons_local, 
 													std::vector<int>& RA_neurons_global)
 {
@@ -14217,6 +14529,220 @@ void NetworkGrowthSimulator::gather_spiked_or_bursted_neurons(const std::vector<
 	//~ this->replace_neurons();
 //~ }
 //~ 
+
+//~ void NetworkGrowthSimulator::remove_neurons_from_network_local(std::vector<int>& neurons_to_remove)
+//~ {
+	//~ // remove input HVC-RA -> HVC-RA connections
+	//~ for (int i = 0; i < N_RA_local; i++)
+	//~ {
+		//~ for (int j = 0; j < neurons_to_remove.size(); j++)
+		//~ {
+			//~ // remove input active connections
+			//~ if ( active_indicators_local[i][neurons_to_remove[j]] == 1 )
+			//~ {
+				//~ auto it_active = std::find(active_synapses_local[i].begin(), active_synapses_local[i].end(), neurons_to_remove[j]);
+			//~ 
+				//~ if ( it_active != active_synapses_local[i].end() )
+					//~ active_synapses_local[i].erase(it_active);
+				//~ else
+					//~ std::cerr << "Synapse with active indicator was not found in active synapse array" << std::endl;
+				//~ 
+				//~ active_indicators_local[i][neurons_to_remove[j]] = 0;
+				//~ 
+			//~ }
+			//~ 
+			//~ // remove input super connections
+			//~ if ( supersynapses_indicators_local[i][neurons_to_remove[j]] == 1 )
+			//~ {
+				//~ std::cout << "Neuron " << neurons_to_remove[j] << " that is replaced had a supersynaptic connection "
+						  //~ << Id_RA_local[i] << " -> " << neurons_to_remove[j] << std::endl;
+						  //~ 
+				//~ auto it_super = std::find(supersynapses_local[i].begin(), supersynapses_local[i].end(), neurons_to_remove[j]);
+			//~ 
+				//~ if ( it_super != supersynapses_local[i].end() )
+					//~ supersynapses_local[i].erase(it_super);
+				//~ else
+					//~ std::cerr << "Synapse with super indicator was not found in super synapse array" << std::endl;
+				//~ 
+				//~ supersynapses_indicators_local[i][neurons_to_remove[j]] = 0;
+				//~ 
+			//~ }
+			//~ 
+			//~ // set weights to zero
+			//~ weights_RA_RA_local[i][neurons_to_remove[j]] = 0.0;
+		//~ }
+	//~ }
+	//~ 
+	//~ // remove input HVC-I -> HVC-RA connections
+	//~ for (int i = 0; i < N_I_local; i++)
+	//~ {
+		//~ for (int j = 0; j < neurons_to_remove.size(); j++)
+		//~ {
+			//~ auto it = std::find(syn_ID_I_RA_local[i].begin(), syn_ID_I_RA_local[i].end(), neurons_to_remove[j]);
+			//~ 
+			//~ if ( it != syn_ID_I_RA_local[i].end() )
+			//~ {
+				//~ int ind = std::distance(syn_ID_I_RA_local[i].begin(), it);
+				//~ 
+				//~ syn_ID_I_RA_local[i].erase(it);
+				//~ weights_I_RA_local[i].erase(weights_I_RA_local[i].begin() + ind);
+			//~ }
+		//~ }
+		//~ 
+	//~ }
+	//~ 
+	//~ // remove output connections
+	//~ for (int i = 0; i < neurons_to_remove.size(); i++)
+	//~ {
+		//~ // remove output connections to HVC-RA neurons
+		//~ active_synapses_local[neurons_to_remove[i]].clear();
+		//~ 
+		//~ if ( !supersynapses_local[neurons_to_remove[i]].empty() )
+			//~ std::cout << "Neuron " << neurons_to_remove[i] << " being replaced has supersynaptic outputs" << std::endl;
+		//~ 
+		//~ supersynapses_local[neurons_to_remove[i]].clear();
+		//~ 
+		//~ for (int j = 0; j < N_RA; j++)
+		//~ {
+			//~ supersynapses_indicators_local[neurons_to_remove[i]][j] = 0;
+			//~ active_synapses_indicators_local[neurons_to_remove[i]][j] = 0;
+			//~ 
+			//~ weights_RA_RA_local[neurons_to_remove[i]][j] = 0.0;
+		//~ }
+		//~ 
+		//~ // remove output connections to HVC-I neurons
+		//~ syn_ID_RA_I_local[neurons_to_remove[i]].clear();
+		//~ weights_RA_I_local[neurons_to_remove[i]].clear();
+	//~ }
+	//~ 
+//~ }
+
+void NetworkGrowthSimulator::remove_neurons_from_network(std::vector<int>& neurons_to_remove)
+{
+	// remove input HVC-RA -> HVC-RA connections
+	for (int i = 0; i < N_RA_local; i++)
+	{
+		for (size_t j = 0; j < neurons_to_remove.size(); j++)
+		{
+			// remove input active connections
+			if ( active_indicators_local[i][neurons_to_remove[j]] == 1 )
+			{
+				auto it_active = std::find(active_synapses_local[i].begin(), active_synapses_local[i].end(), neurons_to_remove[j]);
+			
+				if ( it_active != active_synapses_local[i].end() )
+					active_synapses_local[i].erase(it_active);
+				else
+					std::cerr << "Synapse with active indicator was not found in active synapse array" << std::endl;
+				
+				active_indicators_local[i][neurons_to_remove[j]] = 0;
+				
+			}
+			
+			// remove input super connections
+			if ( supersynapses_indicators_local[i][neurons_to_remove[j]] == 1 )
+			{
+				std::cout << "Neuron " << neurons_to_remove[j] << " that is replaced had an input supersynaptic connection "
+						  << Id_RA_local[i] << " -> " << neurons_to_remove[j] << std::endl;
+						  
+				auto it_super = std::find(supersynapses_local[i].begin(), supersynapses_local[i].end(), neurons_to_remove[j]);
+			
+				if ( it_super != supersynapses_local[i].end() )
+					supersynapses_local[i].erase(it_super);
+				else
+					std::cerr << "Synapse with super indicator was not found in super synapse array" << std::endl;
+				
+				supersynapses_indicators_local[i][neurons_to_remove[j]] = 0;
+				remodeled_local[i] = 0;
+			}
+			
+			// set weights to zero
+			weights_RA_RA_local[i][neurons_to_remove[j]] = 0.0;
+		}
+	}
+	
+	// remove output connections
+	for (size_t i = 0; i < neurons_to_remove.size(); i++)
+	{
+		// find location of HVC-RA neuron
+		int rank, shift;
+		
+		this->get_neuronRA_location(neurons_to_remove[i], &rank, &shift);
+		
+		if (MPI_rank == rank)
+		{	
+			// remove output connections to HVC-RA neurons
+			active_synapses_local[shift].clear();
+			
+			if ( !supersynapses_local[shift].empty() )
+				std::cout << "Neuron " << neurons_to_remove[i] << " being replaced has supersynaptic outputs" << std::endl;
+			
+			supersynapses_local[shift].clear();
+			
+			for (int j = 0; j < N_RA; j++)
+			{
+				supersynapses_indicators_local[shift][j] = 0;
+				active_indicators_local[shift][j] = 0;
+				
+				weights_RA_RA_local[shift][j] = 0.0;
+			}
+		}
+	}
+	
+	if (MPI_rank == 0)
+	{
+		// remove input HVC-I -> HVC-RA connections
+		for (int i = 0; i < N_I; i++)
+		{
+			for (size_t j = 0; j < neurons_to_remove.size(); j++)
+			{
+				auto it = std::find(syn_ID_I_RA_global[i].begin(), syn_ID_I_RA_global[i].end(), neurons_to_remove[j]);
+				
+				if ( it != syn_ID_I_RA_global[i].end() )
+				{
+					int ind = std::distance(syn_ID_I_RA_global[i].begin(), it);
+					
+					syn_ID_I_RA_global[i].erase(it);
+					weights_I_RA_global[i].erase(weights_I_RA_global[i].begin() + ind);
+					syn_lengths_I_RA_global[i].erase(syn_lengths_I_RA_global[i].begin() + ind);
+					axonal_delays_I_RA_global[i].erase(axonal_delays_I_RA_global[i].begin() + ind);
+				}
+			}
+			
+		}
+		
+		for (size_t i = 0; i < neurons_to_remove.size(); i++)
+		{
+			// remove output connections to HVC-I neurons
+			syn_ID_RA_I_global[neurons_to_remove[i]].clear();
+			syn_lengths_RA_I_global[neurons_to_remove[i]].clear();
+			axonal_delays_RA_I_global[neurons_to_remove[i]].clear();
+			weights_RA_I_global[neurons_to_remove[i]].clear();
+		}
+	}
+}
+
+void NetworkGrowthSimulator::resample_neurons(std::vector<int>& neurons_to_replace)
+{
+	this->sample_coordinates_for_replaced(neurons_to_replace);
+	this->sample_connectionsAndDelays_for_replaced(neurons_to_replace);
+	
+	
+}
+
+void NetworkGrowthSimulator::replace_neurons(std::vector<int>& neurons_to_replace)
+{
+	this->remove_neurons_from_network(neurons_to_replace);
+
+	if (MPI_rank == 0)
+		this->resample_neurons(neurons_to_replace);
+		
+	this->send_connections_RAandI();
+	this->send_axonal_delays_RA2RA();
+	
+	this->update_replaced_neurons(neurons_to_replace);
+	this->set_neuron_properties();
+}
+
 //~ void NetworkGrowthSimulator::replace_neurons()
 //~ {
     //~ // write active, supersynapses and weights before replacing neurons
@@ -16111,6 +16637,32 @@ void NetworkGrowthSimulator::write_jitter(int num_trials,
 	
 }
 
+void NetworkGrowthSimulator::write_replaced_neurons(const std::vector<int>& replaced_neurons, 
+												const char* filename)
+{
+	if (MPI_rank == 0)
+	{
+		std::ofstream out;
+   
+        if (trial_number == 0)
+	    	out.open(filename, std::ios::binary | std::ios::out);
+        else
+	    	out.open(filename, std::ios::binary | std::ios::out | std::ios::app);
+
+		int num_replaced = static_cast<int>(replaced_neurons.size());
+
+        out.write(reinterpret_cast<char*>(&trial_number), sizeof(int)); // write current trial number
+		out.write(reinterpret_cast<char*>(&num_replaced), sizeof(int)); // number of replaced neurons
+		
+		for (int i = 0; i < num_replaced; i++)
+			out.write(reinterpret_cast<const char*>(&replaced_neurons[i]), sizeof(int)); // write ids of replaced neurons
+	
+        out.close();
+	}
+}
+
+
+
 void NetworkGrowthSimulator::write_num_synapses(const char* fileSynapses)
 {
 	if (MPI_rank == 0)
@@ -16139,7 +16691,6 @@ void NetworkGrowthSimulator::write_num_synapses(const char* fileSynapses)
 	
         out_synapses.close();
 	}
-
 }
 
 

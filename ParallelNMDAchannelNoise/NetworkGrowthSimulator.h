@@ -240,15 +240,6 @@ protected:
 		vector<int> Id_RA_global; // global array with ids of RA neurons in all processes
 		vector<int> Id_I_local; // Id of I neurons in each process
 
-        // neurons to be replaced in neurogenesis process
-        vector<int> replace_local_id_local; // local id of neurons to be replaced stored locally
-        vector<int> replace_real_id_local; // real id of neurons to be replaced stored locally
-        vector<int> replace_process_rank_local; // process rank that contains neuron to be replace
-        
-        vector<int> replace_local_id_global; // all local id of neurons to be replaced
-        vector<int> replace_real_id_global; // all real id of neurons to be replaced
-        vector<int> replace_process_rank_global; // all process ranks that contain neurons to be replaced
-
         // neuron's internal time after previous replacement
         vector<int> num_trials_after_replacement_local;
         vector<int> num_trials_after_replacement_global;
@@ -271,7 +262,7 @@ protected:
 		///////////////////////////////////
 		//// Maturation
 		///////////////////////////////////
-		
+		void check_neuron_activity(std::vector<int>& neurons_to_replace); // check if neurons became driven or silent 
         void update_neuron_properties(); // update all neuron properties based on their age
         void update_neuron_properties_sameDendrite(); // update all neuron properties based on their age for same dendrite size
         void update_neuron_properties_sameDendrite_diffMaturationRate();// update all neuron properties based on their age for same dendrite size;
@@ -366,9 +357,17 @@ protected:
 		
 		void rescale_synapses_to_mature(int neuron_id); // rescale all synapses to neuron that got mature
 		void rescale_inhibition_to_mature(int neuron_id); // rescale inhibitory synapses to mature neurons
+        
         // neurogenesis support
-        void add_new_neurons(int N); // add N immature neurons to network
-        void replace_neurons(); // replace all neurons specified by replace arrays
+        //void add_new_neurons(int N); // add N immature neurons to network
+        
+        void replace_neurons(std::vector<int>& neurons_to_replace); // replace all neurons specified by replace arrays
+        void remove_neurons_from_network(std::vector<int>& neurons_to_replace); // remove HVC-RA neurons from network
+        void resample_neurons(std::vector<int>& neurons_to_replace); // resample coordinates and HVC-RA <-> HVC-I connections for replaced neurons
+        void sample_coordinates_for_replaced(std::vector<int>& neurons_to_replace); // sample coordinates for replaced HVC-RA neurons
+        void sample_connectionsAndDelays_for_replaced(std::vector<int>& neurons_to_replace); // sample connections and delays for replaced HVC-RA neurons
+        void update_replaced_neurons(std::vector<int>& neurons_to_replace); // update properties of replaced neurons
+        
         void find_chain_neurons(std::vector<int>& chain_neurons); // find neurons in the chain
         void make_lesion(double fraction); // kill fraction of neurons in the chain and replace them with new neurons
         void kill_neuron(int local_id, int global_id, int process_rank); // erase all outgoing and incoming connections from HVC(RA) 
@@ -541,6 +540,8 @@ protected:
 							const std::vector<double> &std_first_dend_spike_time,
 							const char *filename); // write results of jitter test to a file
 		
+		void write_replaced_neurons(const std::vector<int>& replaced_neurons, 
+												const char* filename); // write neurons that were replaced to a file
 		//////////////////////////
 		// Check correctness
 		//////////////////////////
@@ -559,6 +560,7 @@ protected:
 		void send_growth_parameters(); // send parameters of growth simulation to all processes
 	    void send_connections_RAandI(); // send connections between HVC-RA and HVC-I neurons to all processes
         void send_connections_RA2RA(); // send connections between HVC-RA neurons to all processes
+        void send_axonal_delays_RA2RA(); // send axonal delays between HVC-RA neurons to all processes
         
         void send_replacement_history(); // send replacement history from master to all processes 
         void send_activity_history(); // send activity history from master to all processes 
@@ -569,7 +571,9 @@ protected:
         void send_maturation_properties(); // send maturation properties from master to all processes
         
         
-        
+        void gather_localVectorsToGlobal(const std::vector<int>& vector_local, 
+													std::vector<int>& vector_global); // gather elements of local arrays from processes to global array on master process
+													
         void gather_mature_data(std::vector<std::vector<double>>& average_dendritic_spike_time); // gather data from all processes in case of mature chain trial
 	    void gather_graph_state_data(); // gather data needed for GUI from all processes
 	    void gather_full_state_data(); // gather additional data needed for full network state from all processes

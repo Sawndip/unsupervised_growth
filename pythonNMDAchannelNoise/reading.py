@@ -690,6 +690,40 @@ def read_weight_statistics(filename):
    
     return (trial_number, mean, std)
 
+def read_replaced_neurons(filename):
+    """
+    Read replaced neurons from file
+    """
+    with open(filename, "rb") as file:
+        data = file.read()
+        
+        replaced_neurons = {}
+        
+        
+        ind = 0
+        
+        while ind < len(data):    
+            trial_number = struct.unpack("<i", data[ind:(ind+SIZE_OF_INT)])[0]
+            num_replaced = struct.unpack("<i", data[(ind+SIZE_OF_INT):(ind+2*SIZE_OF_INT)])[0]
+            
+            #print trial_number
+            #print num_replaced
+            
+            replaced = []
+            
+            
+            for i in range(num_replaced):
+                replaced.append(struct.unpack("<i", data[(ind+(i+2)*SIZE_OF_INT):(ind+(i+3)*SIZE_OF_INT)])[0])
+            
+            #print replaced
+            
+            replaced_neurons[trial_number] = list(replaced)
+            
+            ind += 2*SIZE_OF_INT + num_replaced*SIZE_OF_INT
+       
+        return replaced_neurons
+
+
 def read_num_synapses(filename):
     """
     Read number of active and supersynapses from file
@@ -931,38 +965,6 @@ def read_training_neurons(filename):
         training_neurons[i] = struct.unpack("<i", data[(i+1)*SIZE_OF_INT:(i+2)*SIZE_OF_INT])[0]
 
     return training_neurons
-    
-def read_replaced_neurons(filename):
-    """
-    Read ids of all replaced neurons and times of their replacement
-    """
-    with open(filename, "rb") as file:
-        data = file.read()
-        file.close()
-
-    replacement_time = [] # trial number of neuron replacement
-    replaced_neurons = [] # neurons replaced at all trial numbers
-    
-    ind = 0
-
-   
-    while ind < len(data):
-        replaced_at_t = [] # neurons replaced at current trial
-    
-        t = struct.unpack("<i", data[ind:(ind+SIZE_OF_INT)])[0]
-        num_replaced = struct.unpack("<i", data[(ind+SIZE_OF_INT):(ind+2*SIZE_OF_INT)])[0]
-        
-        for i in range(num_replaced):
-            replaced_id = struct.unpack("<i", data[(ind+(2+i)*SIZE_OF_INT):(ind+(3+i)*SIZE_OF_INT)])[0]
-            replaced_at_t.append(replaced_id)
-
-        replacement_time.append(t)
-        replaced_neurons.append(replaced_at_t)
-        
-        ind += (2+num_replaced)*SIZE_OF_INT
-        
-    return replacement_time, replaced_neurons
-    
     
  
 def read_fI_HVCRA(filename):

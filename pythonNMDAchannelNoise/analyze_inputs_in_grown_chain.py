@@ -25,7 +25,7 @@ def get_hist_for_discrete_integers(data):
 
 CONVERTION_CONSTANT = 10.0
 
-trial_number = 10350
+trial_number = 22000
 
 #dirname = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/maturationTransition2/"
 dirname = "/home/eugene/results/immature/clusters/matTrans19/"
@@ -268,7 +268,7 @@ ax4.set_title("# super outputs")
 
 
 ###### Plot total number of active and super synapses #####
-trialStep = 50
+trialStep = 100
 
 total_num_active, total_num_super = utils.get_num_active_and_super_synapses(dirname, trial_number, trialStep)
 
