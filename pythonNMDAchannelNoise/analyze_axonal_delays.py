@@ -1,4 +1,4 @@
-ho# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 """
 Created on Mon Feb  5 18:58:35 2018
 
@@ -11,9 +11,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os
 
-dirname = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/noImmatureOut2/"
+dirname = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/maturationTransition3/"
 
-trial_number = 11900
+trial_number = 0
 
 fileAxonalDelaysRA2I = os.path.join(dirname, "axonal_delays_RA2I_" + str(trial_number) + ".bin")
 fileAxonalDelaysRA2RA = os.path.join(dirname, "axonal_delays_RA2RA_" + str(trial_number) + ".bin")
@@ -62,11 +62,11 @@ print hist
 bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2.
 ax1.step(bin_centers, hist / float(np.sum(hist)), label="HVC(RA) -> HVC(RA)", where="pre")
 
-hist, bin_edges = np.histogram(super_axonal_delays_RA2RA, bins=nbins)
-print bin_edges
-print hist
-bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2.
-ax1.step(bin_centers, hist / float(np.sum(hist)), label="super HVC(RA) -> HVC(RA)", where="pre")
+#hist, bin_edges = np.histogram(super_axonal_delays_RA2RA, bins=nbins)
+#print bin_edges
+#print hist
+#bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2.
+#ax1.step(bin_centers, hist / float(np.sum(hist)), label="super HVC(RA) -> HVC(RA)", where="pre")
 
 
 hist, bin_edges = np.histogram(all_axonal_delays_I2RA, bins=nbins)

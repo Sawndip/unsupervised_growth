@@ -14,15 +14,15 @@ import matplotlib.pyplot as plt
 import numpy as np
 import math
 
-N = 200 # number of neurons
+N = 400 # number of neurons
 TRIAL_DURATION = 500
 
 #fileInterneuron = "/home/eugene/Output/networks/chainGrowth/testGrowthDelays5/spike_times_interneuron_300.bin"
 #fileInterneuron = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/test1/test_spike_times_interneuron_10.bin"
-fileInterneuron = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/maturationTransition1/spike_times_interneuron_0.bin"
+#fileInterneuron = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/matTrans1_network2000/spike_times_interneuron_0.bin"
 
 #fileInterneuron = "/home/eugene/results/immature/clusters/8/spike_times_interneuron_200.bin"
-f#ileInterneuron = "/home/eugene/results/immature/clusters/11/spike_times_interneuron_10050.bin"
+fileInterneuron = "/home/eugene/results/immature/clusters/matTrans21/spike_times_interneuron_20950.bin"
 
 (trial_number, simulation_time, spike_times_interneuron, neuron_fired) = reading.read_time_info(fileInterneuron)
 

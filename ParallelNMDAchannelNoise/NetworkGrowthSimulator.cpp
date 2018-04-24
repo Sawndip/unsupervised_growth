@@ -7819,13 +7819,13 @@ void NetworkGrowthSimulator::trial_1stSoma_pre_1stSoma_post_delays_fixedSpread(b
 				{
 					RA_neurons_new_postEvent_local.push_back(Id_RA_local[i]);
 					some_RA_neuron_new_postEvent_local = 1;
-					std::cout << "HVC-RA " << Id_RA_local[i] << " postsynaptic event at " << internal_time << std::endl;
+					//std::cout << "HVC-RA " << Id_RA_local[i] << " postsynaptic event at " << internal_time << std::endl;
 				}
 				else if ( internal_time > previous_postEvent_times_global[Id_RA_local[i]].back() + event_window)
 				{
 					RA_neurons_new_postEvent_local.push_back(Id_RA_local[i]);
 					some_RA_neuron_new_postEvent_local = 1;
-					std::cout << "HVC-RA " << Id_RA_local[i] << " postsynaptic event at " << internal_time << std::endl;
+					//std::cout << "HVC-RA " << Id_RA_local[i] << " postsynaptic event at " << internal_time << std::endl;
 				}
 							
 				// for inhibitory neurons
@@ -8066,7 +8066,7 @@ void NetworkGrowthSimulator::trial_1stSoma_pre_1stSoma_post_delays_fixedSpread(b
 				//~ if (p.first == p.second)
 					//~ std::cout << "HVC-RA " << Id_RA_local[i] << " dend spike at " << internal_time << std::endl;
 				//~ 
-				std::cout << "HVC-RA " << Id_RA_local[i] << " dend spike at " << internal_time << std::endl;
+				//std::cout << "HVC-RA " << Id_RA_local[i] << " dend spike at " << internal_time << std::endl;
 				
 				spikes_in_trial_dend_local[i].push_back(internal_time); // dend spike time relative to trial onset
 				

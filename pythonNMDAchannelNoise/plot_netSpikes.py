@@ -14,21 +14,21 @@ import matplotlib.pyplot as plt
 import numpy as np
 import math
 
-N = 1000 # number of neurons
+N = 2000 # number of neurons
 
 #fileDend = "/home/eugene/Output/networks/chainGrowth/testGrowthDelays6/spike_times_dend_1900.bin"
 #fileSoma = "/home/eugene/Output/networks/chainGrowth/testGrowthDelays6/spike_times_soma_1900.bin"
 
-#fileDend = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/maturationTransition2/spike_times_dend_14600.bin"
-#fileSoma = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/maturationTransition2/spike_times_soma_14600.bin"
+#fileDend = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/matTrans3_network2000/spike_times_dend_50.bin"
+#fileSoma = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/matTrans3_network2000/spike_times_soma_50.bin"
 
 
 
-fileDend = "/home/eugene/results/immature/clusters/matTrans19/spike_times_dend_18000.bin"
-fileSoma = "/home/eugene/results/immature/clusters/matTrans19/spike_times_soma_18000.bin"
+fileDend = "/home/eugene/results/immature/clusters/matTrans22/spike_times_dend_150.bin"
+fileSoma = "/home/eugene/results/immature/clusters/matTrans22/spike_times_soma_150.bin"
 
-#fileDend = "/home/eugene/results/immature/clusters/test/matTrans17/test_spike_times_dend_10.bin"
-#fileSoma = "/home/eugene/results/immature/clusters/test/matTrans17/test_spike_times_soma_10.bin"
+#fileDend = "/home/eugene/results/immature/clusters/test/matTrans21/test_spike_times_dend_1.bin"
+#fileSoma = "/home/eugene/results/immature/clusters/test/matTrans21/test_spike_times_soma_1.bin"
 
 #fileDend = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/test/noImmatureOut4/test_spike_times_dend_5.bin"
 #fileSoma = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/test/noImmatureOut4/test_spike_times_soma_5.bin"

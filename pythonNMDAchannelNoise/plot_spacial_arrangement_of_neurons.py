@@ -12,7 +12,7 @@ import os
 import space
 import numpy as np
 
-directory = "/home/eugene/Output/networks/chainGrowth/test/"
+directory = "/home/eugene/Output/networks/chainGrowth/network2000/"
 
 file_RA_coord = os.path.join(directory, "RA_xy.bin")
 file_I_coord = os.path.join(directory, "I_xy.bin")

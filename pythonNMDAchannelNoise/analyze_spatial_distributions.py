@@ -10,8 +10,12 @@ import matplotlib.pyplot as plt
 import reading
 import numpy as np
 
-file_RA2I = "/home/eugene/Output/networks/chainGrowth/test/RA_I_connections.bin"
-file_I2RA = "/home/eugene/Output/networks/chainGrowth/test/I_RA_connections.bin"
+file_RA2I = "/home/eugene/Output/networks/chainGrowth/network2000/RA_I_connections.bin"
+file_I2RA = "/home/eugene/Output/networks/chainGrowth/network2000/I_RA_connections.bin"
+
+#file_RA2I = "/home/eugene/Output/networks/chainGrowth/test/RA_I_connections.bin"
+#file_I2RA = "/home/eugene/Output/networks/chainGrowth/test/I_RA_connections.bin"
+
 
 file_RA2RA = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/noImmatureOut2/RA_RA_super_connections.bin"
 

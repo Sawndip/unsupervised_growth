@@ -12,10 +12,10 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 
-#dirname = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/maturationTransition2/"
-dirname = "/home/eugene/results/immature/clusters/matTrans19/"
-end_trial = 18000
-trialStep = 100
+#dirname = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/matTrans1_network2000/"
+dirname = "/home/eugene/results/immature/clusters/matTrans22/"
+end_trial = 23000
+trialStep = 50
 
 
 
@@ -44,18 +44,25 @@ while current_trial <= end_trial:
 
 fileAxonalDelaysRA2RA = os.path.join(dirname, "axonal_delays_RA2RA_" + str(end_trial) + ".bin")
 fileSuper = os.path.join(dirname, "RA_RA_super_connections_" + str(end_trial) + ".bin")
+fileActive = os.path.join(dirname, "RA_RA_active_connections_" + str(end_trial) + ".bin")
 
 (N, _, super_synapses) = reading.read_synapses(fileSuper)
+(N, _, active_synapses) = reading.read_synapses(fileActive)
 (_, _, axonal_delays_RA2RA) = reading.read_axonal_delays(fileAxonalDelaysRA2RA)
 
 supersynapses_final = set()
-delays_final = []
+delays_super_final = []
+delays_active_final = []
 
 for i in range(N):
     for target in super_synapses[i]:
         supersynapses_final.add((i, target))
-        delays_final.append(axonal_delays_RA2RA[i][target])
-        
+        delays_super_final.append(axonal_delays_RA2RA[i][target])
+    
+    for target in active_synapses[i]:
+        delays_active_final.append(axonal_delays_RA2RA[i][target])
+    
+    
 pruned_super = set()
 pruned_delays = []
         
@@ -74,11 +81,16 @@ hist, bin_edges = np.histogram(all_axonal_delays_RA2RA, bins=50)
 bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2.
 plt.step(bin_centers, hist / float(np.sum(hist)), label="HVC(RA) -> HVC(RA) random", where="pre")
 
-hist, bin_edges = np.histogram(pruned_delays, bins=50)
-bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2.
-plt.step(bin_centers, hist / float(np.sum(hist)), label="pruned super", where="pre")
+#hist, bin_edges = np.histogram(pruned_delays, bins=50)
+#bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2.
+#plt.step(bin_centers, hist / float(np.sum(hist)), label="pruned super", where="pre")
 
-hist, bin_edges = np.histogram(delays_final, bins=50)
+hist, bin_edges = np.histogram(delays_active_final, bins=50)
+bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2.
+plt.step(bin_centers, hist / float(np.sum(hist)), label="active", where="pre")
+
+
+hist, bin_edges = np.histogram(delays_super_final, bins=50)
 bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2.
 plt.step(bin_centers, hist / float(np.sum(hist)), label="super", where="pre")
 
@@ -168,78 +180,80 @@ plt.legend()
 # 
 #==============================================================================
 
-# record supersynapses that emerged and disappeared before target maturation
-
-was_super_indicators = np.zeros((N, N), dtype=bool)
-
-num_timepoints = end_trial / trialStep + 1
-current_trial = 0
-timepoint = 0
-
-pruned_before_target_maturation_super = set()
-pruned_before_target_maturation_delays = []
-
-while current_trial <= end_trial:   
-    fileSuper = os.path.join(dirname, "RA_RA_super_connections_" + str(current_trial) + ".bin")
-    fileMature = os.path.join(dirname, "mature_" + str(current_trial) + ".bin")
-   
-    (_, _, mature_indicators) = reading.read_mature_indicators(fileMature)    
-    (N, _, super_synapses) = reading.read_synapses(fileSuper)
-    
-    super_indicators = np.zeros((N, N), dtype=bool)
-    
-    super_indicators[:, np.where(mature_indicators == 1)] = 1
-    
-    
-    for source_id in range(N):
-        for target_id in super_synapses[source_id]:
-            if mature_indicators[target_id] == 0:
-                was_super_indicators[source_id][target_id] = 1
-                super_indicators[source_id][target_id] = 1
-    
-    pruned_ind = np.where((was_super_indicators == 1) & (super_indicators == 0))
-    
-    #print pruned_ind
-    
-    num_pruned = len(pruned_ind[0])
-    
-    for i in range(num_pruned):
-        row = pruned_ind[0][i]
-        col = pruned_ind[1][i]
-        pruned_before_target_maturation_super.add((row, col))
-        pruned_before_target_maturation_delays.append(axonal_delays_RA2RA[row][col])
-   
-    
-  #  for source_id in range(N):
-   #     for target_id in range(N):
-    #        if was_super_indicators[source_id][target_id] == 1 and super_indicators[source_id][target_id] == 0:
-     #          pruned_before_target_maturation_super.add((source_id, target_id))
-      #         pruned_before_target_maturation_delays.append(axonal_delays_RA2RA[source_id][target_id])
-   
-    timepoint += 1
-    current_trial += trialStep
-
-
-print pruned_before_target_maturation_delays
-  
-#print pruned_super
-plt.figure()
-plt.title('Before target maturation')
-hist, bin_edges = np.histogram(all_axonal_delays_RA2RA, bins=50)
-bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2.
-plt.step(bin_centers, hist / float(np.sum(hist)), label="HVC(RA) -> HVC(RA) random", where="pre")
-
-hist, bin_edges = np.histogram(pruned_before_target_maturation_delays, bins=50)
-bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2.
-plt.step(bin_centers, hist / float(np.sum(hist)), label="pruned super", where="pre")
-
-#hist, bin_edges = np.histogram(delays_before_target_maturation_final, bins=50)
-#bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2.
-#plt.step(bin_centers, hist / float(np.sum(hist)), label="super", where="pre")
-
-
-plt.xlabel('Delay (ms)')
-plt.ylabel("Counts")
-plt.legend()
-
+#==============================================================================
+# # record supersynapses that emerged and disappeared before target maturation
+# 
+# was_super_indicators = np.zeros((N, N), dtype=bool)
+# 
+# num_timepoints = end_trial / trialStep + 1
+# current_trial = 0
+# timepoint = 0
+# 
+# pruned_before_target_maturation_super = set()
+# pruned_before_target_maturation_delays = []
+# 
+# while current_trial <= end_trial:   
+#     fileSuper = os.path.join(dirname, "RA_RA_super_connections_" + str(current_trial) + ".bin")
+#     fileMature = os.path.join(dirname, "mature_" + str(current_trial) + ".bin")
+#    
+#     (_, _, mature_indicators) = reading.read_mature_indicators(fileMature)    
+#     (N, _, super_synapses) = reading.read_synapses(fileSuper)
+#     
+#     super_indicators = np.zeros((N, N), dtype=bool)
+#     
+#     super_indicators[:, np.where(mature_indicators == 1)] = 1
+#     
+#     
+#     for source_id in range(N):
+#         for target_id in super_synapses[source_id]:
+#             if mature_indicators[target_id] == 0:
+#                 was_super_indicators[source_id][target_id] = 1
+#                 super_indicators[source_id][target_id] = 1
+#     
+#     pruned_ind = np.where((was_super_indicators == 1) & (super_indicators == 0))
+#     
+#     #print pruned_ind
+#     
+#     num_pruned = len(pruned_ind[0])
+#     
+#     for i in range(num_pruned):
+#         row = pruned_ind[0][i]
+#         col = pruned_ind[1][i]
+#         pruned_before_target_maturation_super.add((row, col))
+#         pruned_before_target_maturation_delays.append(axonal_delays_RA2RA[row][col])
+#    
+#     
+#   #  for source_id in range(N):
+#    #     for target_id in range(N):
+#     #        if was_super_indicators[source_id][target_id] == 1 and super_indicators[source_id][target_id] == 0:
+#      #          pruned_before_target_maturation_super.add((source_id, target_id))
+#       #         pruned_before_target_maturation_delays.append(axonal_delays_RA2RA[source_id][target_id])
+#    
+#     timepoint += 1
+#     current_trial += trialStep
+# 
+# 
+# print pruned_before_target_maturation_delays
+#   
+# #print pruned_super
+# plt.figure()
+# plt.title('Before target maturation')
+# hist, bin_edges = np.histogram(all_axonal_delays_RA2RA, bins=50)
+# bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2.
+# plt.step(bin_centers, hist / float(np.sum(hist)), label="HVC(RA) -> HVC(RA) random", where="pre")
+# 
+# hist, bin_edges = np.histogram(pruned_before_target_maturation_delays, bins=50)
+# bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2.
+# plt.step(bin_centers, hist / float(np.sum(hist)), label="pruned super", where="pre")
+# 
+# #hist, bin_edges = np.histogram(delays_before_target_maturation_final, bins=50)
+# #bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2.
+# #plt.step(bin_centers, hist / float(np.sum(hist)), label="super", where="pre")
+# 
+# 
+# plt.xlabel('Delay (ms)')
+# plt.ylabel("Counts")
+# plt.legend()
+# 
+#==============================================================================
 plt.show()

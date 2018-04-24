@@ -25,10 +25,10 @@ def get_hist_for_discrete_integers(data):
 
 CONVERTION_CONSTANT = 10.0
 
-trial_number = 22000
+trial_number = 23000
 
 #dirname = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/maturationTransition2/"
-dirname = "/home/eugene/results/immature/clusters/matTrans19/"
+dirname = "/home/eugene/results/immature/clusters/matTrans22/"
 
 fileSoma = os.path.join(dirname, "spike_times_soma_" + str(trial_number) + ".bin")
 fileWeights = os.path.join(dirname, "weights_" + str(trial_number) + ".bin")

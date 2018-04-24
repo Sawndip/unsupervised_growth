@@ -12,11 +12,11 @@ import numpy as np
 
 TRAINING_KICK_TIME = 100.0
 
-filename = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/test/maturationTransition2/jitter.bin"
-fileMature = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/maturationTransition2/mature_14750.bin"
+#filename = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/test/maturationTransition2/jitter.bin"
+#fileMature = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/maturationTransition2/mature_14750.bin"
 
-#filename = "/home/eugene/results/immature/clusters/test/matTrans15/jitter.bin"
-#fileMature = "/home/eugene/results/immature/clusters/matTrans15/mature_10500.bin"
+filename = "/home/eugene/results/immature/clusters/test/matTrans19/jitter.bin"
+fileMature = "/home/eugene/results/immature/clusters/matTrans19/mature_22000.bin"
 
 N, num_test_trials, \
     probability_soma_spike, average_num_soma_spikes_in_trial, mean_first_soma_spike_time, std_first_soma_spike_time,\
@@ -25,8 +25,11 @@ N, num_test_trials, \
 
 (_,_,mature_indicators) = reading.read_mature_indicators(fileMature)
 
-#mature_neurons = np.where(mature_indicators == 1)[0]
-mature_neurons = range(N)
+mature_neurons = np.where(mature_indicators == 1)[0]
+
+print mature_neurons
+print "Number of mature: ",len(mature_neurons)
+#mature_neurons = range(N)
 
 mean_first_soma_spike_time_mature = mean_first_soma_spike_time[mature_neurons]
 mean_first_dend_spike_time_mature = mean_first_dend_spike_time[mature_neurons]
