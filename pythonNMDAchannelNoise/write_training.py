@@ -26,11 +26,11 @@ def write_training_neurons(training_neurons, filename):
 if __name__ == "__main__":
     #filename = "/home/eugene/Output/networks/MLong/generateNetwork/dendritic_tree/parallelChains_20_5500hvcI/training_neurons.bin"
     #
-    filename = "/home/eugene/Output/networks/chainGrowth/network2000/training_neurons_20.bin"
+    filename = "/home/eugene/Output/networks/chainGrowth/network2000RA550I_v2/training_neurons_40.bin"
     #filename = "/home/eugene/results/immature/clusters/5/training_neurons.bin"
     
     N_RA = 2000
-    N_TR = 20    
+    N_TR = 40    
     
     #training_neurons = range(N_TR)
     training_neurons = np.random.choice(N_RA, N_TR, replace=False)

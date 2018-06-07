@@ -144,12 +144,88 @@ def write_pajek_neurons(dirname, trial_number):
                     f.write('{0} {1} {2} c Green\n'.format(i+1, ind+1, weights[source_id][target_id]))
                 except ValueError:
                     continue
+
+def write_pajek_network_subset(dirname, trial_number, N, fileSpikes):
+    """
+    Create .net file with locations and connections between mature HVC-RA neurons in array
+        first N mature neurons that spiked are plotted
+    """
+    file_RA_xy = os.path.join(dirname, "RA_xy_" + str(trial_number) + ".bin")
     
+    file_training = os.path.join(dirname, "training_neurons.bin")
+    file_pajek = os.path.join(dirname, "network_subset_" + str(trial_number) + ".net")
+    fileMature = os.path.join(dirname, "mature_" + str(trial_number) + ".bin")
+    fileSuperSynapses = os.path.join(dirname, "RA_RA_super_connections_" + str(trial_number) + ".bin")
+    fileWeights = os.path.join(dirname, "weights_" + str(trial_number) + ".bin")
+    
+    coord_RA = reading.read_coordinates(file_RA_xy)
+    training_neurons = reading.read_training_neurons(file_training)
+    (N_RA, _, weights) = reading.read_weights(fileWeights) 
+    (_, _, mature_indicators) = reading.read_mature_indicators(fileMature)
+    (_, _, super_synapses) = reading.read_synapses(fileSuperSynapses)
+
+   
+    #print list(mature_neurons)
+    #mature_neurons = range(N_RA)
+   
+    # sort array with neurons and training neurons #
+    training_neurons.sort()
+   
+    
+   
+#fileDend = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/test/noImmatureOut4/test_spike_times_dend_5.bin"
+#fileSoma = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/test/noImmatureOut4/test_spike_times_soma_5.bin"
+
+
+
+    (_, _, spike_times_soma, neuron_fired_soma) = reading.read_time_info(fileSpikes)
+
+    ordered_soma_spikes_raw, ordered_soma_raw = zip(*sorted(zip(spike_times_soma, neuron_fired_soma)))
+
+    first_mature_spiked = []
+
+    for spikes, neuron_ids in zip(ordered_soma_spikes_raw, ordered_soma_raw):
+        if len(first_mature_spiked) >= N:
+            break
+        
+        if mature_indicators[neuron_ids[0]] == 1:
+            first_mature_spiked.append(neuron_ids[0])
+
+    first_mature_spiked.sort()
+    
+    num_neurons = len(first_mature_spiked)
+    
+    with open(file_pajek, 'w') as f:
+        f.write("*Vertices {0}\n".format(num_neurons))
+        
+        for i, neuron_id in enumerate(first_mature_spiked):
+            if neuron_id in training_neurons:    
+                f.write('{0} "{1}" {2} {3} {4} ic Green\n'.format(i+1, neuron_id, coord_RA[neuron_id][0], coord_RA[neuron_id][1], coord_RA[neuron_id][2]))
+            else:    
+                f.write('{0} "{1}" {2} {3} {4} ic Yellow\n'.format(i+1, neuron_id, coord_RA[neuron_id][0], coord_RA[neuron_id][1], coord_RA[neuron_id][2]))
+        
+        
+        f.write("*Arcs\n".format(num_neurons))
+        
+        # write targets of HVC(RA) neurons
+        for i, source_id in enumerate(first_mature_spiked):
+            for target_id in super_synapses[source_id]:
+                try:
+                    ind = utils.index(first_mature_spiked, target_id)                 
+                    f.write('{0} {1} {2} c Green\n'.format(i+1, ind+1, weights[source_id][target_id]))
+                except ValueError:
+                    continue
+  
 if __name__ == "__main__":
-    #dirname = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/maturationTransition2/"
-    dirname = "/home/eugene/results/immature/clusters/matTrans22/"
+    #dirname = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/maturationTransition4/"
+    dirname = "/home/eugene/results/immature/clusters/matTrans46/"
     
-    trial_number = 12350
+    fileSpikes = "/home/eugene/results/immature/clusters/test/matTrans29/test_spike_times_soma_10.bin"
+
+    
+    trial_number = 22600
+    #N = 200
     
     write_pajek_neurons(dirname, trial_number)
+    #write_pajek_network_subset(dirname, trial_number, N, fileSpikes)
     #write_pajek_hvcRA_coord(dirname, trial_number)

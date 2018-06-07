@@ -14,24 +14,53 @@ import matplotlib.pyplot as plt
 import numpy as np
 import math
 
+
+def calculate_burst_density(burst_times, bin_width):
+    """
+    Calculate burst density - number of bursts in time bins
+    """
+    
+    
+    size = int(burst_times[-1] / bin_width) + 1
+    time = np.array([float(i)*bin_width + bin_width/2. for i in range(size)])
+    
+    #print burst_times
+    #print size
+    
+    num_bursts = np.zeros(size, np.int32)    
+    
+    for burst_time in burst_times:
+        #print burst_time, int(burst_time / bin_width)
+        num_bursts[int(burst_time / bin_width)] += 1
+        
+    burst_density = num_bursts / bin_width
+    
+    return time, burst_density
+
 N = 2000 # number of neurons
 
 #fileDend = "/home/eugene/Output/networks/chainGrowth/testGrowthDelays6/spike_times_dend_1900.bin"
 #fileSoma = "/home/eugene/Output/networks/chainGrowth/testGrowthDelays6/spike_times_soma_1900.bin"
 
-#fileDend = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/matTrans3_network2000/spike_times_dend_50.bin"
-#fileSoma = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/matTrans3_network2000/spike_times_soma_50.bin"
+#fileDend = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/matTrans3_network2000RA550I/spike_times_dend_11550.bin"
+#fileSoma = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/matTrans3_network2000RA550I/spike_times_soma_11550.bin"
+
+#fileDend = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/split1/spike_times_dend_7200.bin"
+#fileSoma = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/split1/spike_times_soma_7200.bin"
 
 
+#fileDend = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/chain_1.0/test_spike_times_dend_0.bin"
+#fileSoma = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/chain_1.0/test_spike_times_soma_0.bin"
 
-fileDend = "/home/eugene/results/immature/clusters/matTrans22/spike_times_dend_150.bin"
-fileSoma = "/home/eugene/results/immature/clusters/matTrans22/spike_times_soma_150.bin"
 
-#fileDend = "/home/eugene/results/immature/clusters/test/matTrans21/test_spike_times_dend_1.bin"
-#fileSoma = "/home/eugene/results/immature/clusters/test/matTrans21/test_spike_times_soma_1.bin"
+fileDend = "/home/eugene/results/immature/clusters/matTrans57/spike_times_dend_20400.bin"
+fileSoma = "/home/eugene/results/immature/clusters/matTrans57/spike_times_soma_20400.bin"
 
-#fileDend = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/test/noImmatureOut4/test_spike_times_dend_5.bin"
-#fileSoma = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/test/noImmatureOut4/test_spike_times_soma_5.bin"
+#fileDend = "/home/eugene/results/immature/clusters/test/matTrans44/test_spike_times_dend_10.bin"
+#fileSoma = "/home/eugene/results/immature/clusters/test/matTrans44/test_spike_times_soma_10.bin"
+
+#fileDend = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/test/maturationTransition4/test_spike_times_dend_7.bin"
+#fileSoma = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/test/maturationTransition4/test_spike_times_soma_7.bin"
 
 
 TRIAL_DURATION = 500
@@ -71,8 +100,9 @@ ordered_soma_neurons = [t for sublist in list(ordered_soma_raw) for t in sublist
 ordered_id_soma_list = [neuron_id[0] for neuron_id in ordered_soma_raw]
 id_soma_map = {i : j for i,j in zip(ordered_id_soma_list, range(len(ordered_id_soma_list)))}
 
-ordered_dend_spikes = [t for sublist in list(ordered_dend_spikes_raw) for t in sublist]
-ordered_dend_neurons = [t for sublist in list(ordered_dend_raw) for t in sublist]
+
+ordered_dend_spikes, ordered_dend_neurons = zip(*sorted(zip(spike_times_dend, neuron_fired_dend)))
+
 
 ordered_id_dend_list = [neuron_id[0] for neuron_id in ordered_dend_raw]
 id_dend_map = {i : j for i,j in zip(ordered_id_dend_list, range(len(ordered_id_dend_list)))}
@@ -158,6 +188,30 @@ ax2.set_ylabel("neuron ID")
 ax2.set_xlabel("Time (ms)")
 ax2.set_title("Ordered dendritic spikes")
 ax2.set_ylim([-5, len(ordered_id_dend_list)+5])
+
+
+bin_width = 1.0
+
+ordered_dend_spikes = [d - min_dend_spike_time for d in ordered_dend_spikes]
+
+time, burst_density = calculate_burst_density(ordered_dend_spikes, bin_width)
+
+start_time = 0.0
+end_time = 120.0
+        
+
+print "Mean burst density: ",np.mean(burst_density[(time > start_time) & (time < end_time)])
+print "Std burst density: ",np.std(burst_density[(time > start_time) & (time < end_time)])
+print "std / mean = ",np.std(burst_density[(time > start_time) & (time < end_time)]) / np.mean(burst_density[(time > start_time) & (time < end_time)])
+
+plt.figure()
+plt.plot(time, burst_density)
+plt.xlabel('Time (ms)')
+plt.ylabel('# of bursts / ms')
+#plt.title('Burst density in causal network $G_Emax = 1.5 G_L; G_Imax = 0.5 G_L$')
+#plt.title('pruned spread 0.0 ms')
+plt.xlim([0,300])
+plt.ylim([0,10])
 
 
 plt.show()

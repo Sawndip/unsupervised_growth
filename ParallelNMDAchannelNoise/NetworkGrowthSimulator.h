@@ -47,7 +47,7 @@ public:
 	void new_chain_growth(const ConfigurationNetworkGrowth &cfg, std::string networkDirectory, std::string fileTraining,  std::string outputDirectory, 
 															bool training, int save_freq_short, int save_freq_long);
 	
-	void continue_chain_growth(std::string dataDir, int starting_trial, bool training, int save_freq_short, int save_freq_long); // continue chain growth using network state defined by files in 
+	void continue_chain_growth(std::string dataDir, std::string outDir, int starting_trial, bool training, int save_freq_short, int save_freq_long); // continue chain growth using network state defined by files in 
 																						// directory dataDir from trial starting_trial
 
 	void test_inhAndExc_response(const struct ConnectionParameters &con_par,
@@ -55,6 +55,11 @@ public:
 													std::string networkDirectory, std::string fileTraining,
 													std::string outputDirectory); // test neuron responses to inhibitory and excitatory inputs
 
+	void test_synthetic_chain(const ConfigurationNetworkGrowth &cfg, int num_layers, int num_group, double probability, double Gee,
+										std::string networkDirectory, int num_trials, std::string outputDirectory); // test pruned chain topology with 
+																									// "num_layers" layers and "num_group" neurons in each layer
+																									// neurons connect to neurons in the next layer with
+																									// probability "probability" and stregnth "Gee"
 
 	void test_chain_recovery(std::string dataDir, int starting_trial,
 				double fraction, bool training, int save_freq_short, int save_freq_long); // make lesion by killing fraction of chain neurons. Then continue growth to see how network recovers
@@ -248,6 +253,8 @@ protected:
 		////////////////
 		//// Network testing
 		////////////////////
+		void generate_synthetic_chain(int num_layers, int num_group, double probability, double Gee); // generate pruned synfire chain topology
+		
 		void calculate_and_write_inhAndExc(const std::vector<std::vector<double>> &spike_times,
 											  const std::vector<std::vector<double>> &relevant_spike_times,
 											  const std::vector<std::vector<int>> &num_somatic_spikes_in_trials,
@@ -380,6 +387,8 @@ protected:
 	    double sample_G(double G_max); // sample strength of synaptic connection
 	    void sample_axonal_delays(); // sample axonal delays based on distances between neurons and delay_constant 
 									 // parameter in connection_parameters struct
+	    
+	    void set_delays_RA2RA(double delay); // set all delays between HVC-RA neurons to a fixed value
 	    
 	    double p_RA2I(double d); // probability of HVC-RA -> HVC-I  connections based on distances between neurons
 	    double p_I2RA(double d); // probability of HVC-I  -> HVC-RA connections based on distances between neurons

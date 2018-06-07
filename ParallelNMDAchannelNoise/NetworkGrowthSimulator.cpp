@@ -13,7 +13,7 @@
 const double NetworkGrowthSimulator::STDP_WINDOW = 100.0;
 const double NetworkGrowthSimulator::WAITING_TIME = 100.0;
 const double NetworkGrowthSimulator::TIMESTEP = 0.02; // timestep for solving neuronal dynamics in ms
-const double NetworkGrowthSimulator::NETWORK_UPDATE_FREQUENCY = 0.1; // frequency of communication between processes in ms
+const double NetworkGrowthSimulator::NETWORK_UPDATE_FREQUENCY = 0.25; // frequency of communication between processes in ms
 const double NetworkGrowthSimulator::TRIAL_DURATION = 500.0; // duration of simulation trial in ms
 
 const double NetworkGrowthSimulator::EXPERIMENTAL_INTERNEURON_DISTANCE = 40.0; // experimental distance between interneurons in microns
@@ -74,6 +74,32 @@ NetworkGrowthSimulator::NetworkGrowthSimulator()
     //~ this->set_gaba_parameters(gaba_params);
     //~ this->set_time_parameters(time_params);
     //~ this->set_noise_parameters(noise_params);
+}
+
+void NetworkGrowthSimulator::generate_synthetic_chain(int num_layers, int num_group, double probability, double Gee)
+{
+	N_TR = num_group;
+	
+	training_neurons.resize(N_TR);
+
+	std::iota(training_neurons.begin(), training_neurons.end(), 0);
+		
+	for (int i = 0; i < num_layers-1; i++)
+	{
+		for (int j = 0; j < num_group; j++)
+		{
+			for (int k = 0; k < num_group; k++)
+			{
+				if ( noise_generator.random(1.0) < probability )
+				{
+					active_synapses_global[i*num_group+j].push_back((i+1)*num_group+k);
+					supersynapses_global[i*num_group+j].push_back((i+1)*num_group+k);
+					weights_RA_RA_global[i*num_group+j][(i+1)*num_group+k] = this->sample_G(Gee);
+					
+				}
+			}
+		}
+	}
 }
 
 void NetworkGrowthSimulator::generate_network_topology(int N_ra, int N_i, int N_tr, 
@@ -422,6 +448,13 @@ void NetworkGrowthSimulator::write_different_training_arrangements(std::string n
 	}
 	
 	this->write_training_neurons((networkDir + "training_neurons_random.bin").c_str());
+	
+}
+
+void NetworkGrowthSimulator::set_delays_RA2RA(double delay)
+{
+	for (int i = 0; i < N_RA; i++)
+		std::fill(axonal_delays_RA_RA_global[i].begin(), axonal_delays_RA_RA_global[i].end(), delay);
 	
 }
 
@@ -1073,6 +1106,203 @@ void NetworkGrowthSimulator::create_second_layer()
 	
 }
 
+void NetworkGrowthSimulator::test_synthetic_chain(const ConfigurationNetworkGrowth &cfg, int num_layers, int num_group, double probability, double Gee,
+										std::string networkDirectory, int num_trials, std::string outputDirectory)
+{
+	if (MPI_rank == 0)
+	{
+		connection_params = cfg.get_connection_parameters();
+		noise_params = cfg.get_noise_parameters();
+		maturation_params = cfg.get_maturation_parameters(); 
+	}
+	
+	this->send_growth_parameters();
+	
+	if (MPI_rank == 0)
+	{
+		// read initial network from directory
+		this->read_network_topology(networkDirectory);
+		
+		// write topology parameters to output directory
+		ConfigurationNetworkTopology cfg_topology;
+		cfg_topology.set_topology_parameters(topology_params);
+		cfg_topology.write_configuration((outputDirectory + "network_parameters.cfg").c_str());
+		
+		this->sample_axonal_delays();
+		this->resample_weights();
+		
+		this->set_delays_RA2RA(3.0);
+		
+		this->generate_synthetic_chain(num_layers, num_group, probability, Gee);
+		
+		// sort training neurons for convenience
+		std::sort(training_neurons.begin(), training_neurons.end());
+		
+		// make all chain neurons mature
+		for (int i = 0; i < num_layers; i++)
+		{
+			for (int j = 0; j < num_group; j++)
+			{
+				mature_global[i*num_group+j] = 1;
+				GCa_global[i*num_group+j] = maturation_params.GCA_MATURE;
+				rest_potential_global[i*num_group+j] = maturation_params.E_REST_MATURE;
+			}
+		}
+		
+		// write network to output directory both as initial
+		std::string filename_I_coordinates = outputDirectory + "I_xy.bin";
+		std::string filename_out_training = outputDirectory + "training_neurons.bin";
+		std::string filename_training_spread = outputDirectory + "training_spread.bin";
+		std::string filename_num_neurons = outputDirectory + "num_neurons.bin";
+		
+		// generate fixed spread times
+		double spread = 5.0;
+		
+		training_spread_times.resize(N_TR);
+		for (int i = 0; i < N_TR; i++)
+			training_spread_times[i] = noise_generator.random(spread) - spread / 2.;
+	
+	
+		this->write_coordinates(xx_I,  yy_I,  zz_I,  filename_I_coordinates.c_str());
+		this->write_training_neurons(filename_out_training.c_str());
+		this->write_training_spread(filename_training_spread.c_str());
+		this->write_number_of_neurons(filename_num_neurons.c_str());
+		this->write_alterable_network("_initial", outputDirectory);
+		
+		
+		cfg.write_configuration((outputDirectory + "growth_parameters.cfg").c_str());
+		
+		std::string fileTraining = outputDirectory + "training_neurons.bin";
+		
+		this->write_full_network_state("_" + std::to_string(0), outputDirectory);
+		this->write_training_neurons(fileTraining.c_str());
+	}
+	
+	this->initialize_network();
+	
+		
+	// start simulation
+	std::vector<std::vector<double>> first_soma_spike_times;
+	std::vector<std::vector<double>> first_dend_spike_times;
+	
+	std::vector<std::vector<int>> num_somatic_spikes_in_trials;
+	std::vector<std::vector<int>> num_dendritic_spikes_in_trials;
+	
+	
+	std::vector<double> spread_times(N_RA);
+	
+	if (MPI_rank == 0){
+		for (int i = 0; i < N_TR; i++){
+			spread_times[training_neurons[i]] = training_spread_times[i];
+			std::cout << "Neuron " << training_neurons[i] << " spread time = " << spread_times[training_neurons[i]] << std::endl;
+		}
+	}
+	
+	MPI_Bcast(&spread_times[0], N_RA, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+	MPI_Bcast(&training_spread_times[0], N_TR, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+	
+	if (MPI_rank == 0)
+	{
+		first_soma_spike_times.resize(N_RA);
+		first_dend_spike_times.resize(N_RA);
+		
+		num_somatic_spikes_in_trials.resize(N_RA);
+		num_dendritic_spikes_in_trials.resize(N_RA);
+		
+		for (int i = 0; i < N_RA; i++)
+		{
+			num_somatic_spikes_in_trials[i].resize(num_trials);
+			num_dendritic_spikes_in_trials[i].resize(num_trials);
+		}
+	}
+	
+    for (int i = 0; i < num_trials; i++)
+    {
+        if (MPI_rank == 0)
+            std::cout << "Trial " << i << std::endl;
+		
+		// set recording for the last trial
+		//if ( i == num_trials - 1)
+			//this->set_recording(RAtoWrite, ItoWrite, outputDirectory);
+	
+		
+		//this->trial_no_stdp(training_kick_time);
+	    this->trial_no_stdp_fixedSpread(spread_times);
+	    
+	    int bad_values_indicator_local = this->check_bad_values();
+	    int bad_values_indicator_global;
+	    
+	    MPI_Allreduce(&bad_values_indicator_local, &bad_values_indicator_global, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+	   
+		if (bad_values_indicator_global < 0)
+		{
+			//std::endl << ""
+			return;
+        }  
+	    
+      
+		this->gather_graph_state_data();
+
+		this->write_chain_test(outputDirectory, i);
+		
+		if (MPI_rank == 0)
+		{
+			// spikes and bursts of HVC-RA neurons
+			
+			size_t num_HVCRA_spikes = 0; // total number of spikes of HVC-RA neurons during trial
+			size_t num_HVCRA_bursts = 0; // total number of bursts of HVC-RA neurons during trial
+			size_t num_HVCRA_silent = 0; // number of HVC-RA neurons that did not burst
+			
+			for (int j = 0; j < N_RA; j++)
+			{
+				if ( spikes_in_trial_soma_global[j].size() >= 1 )
+					//printf("Average dendritic spike time = %f\n", average_spike_time);
+					first_soma_spike_times[j].push_back(spikes_in_trial_soma_global[j][0]);
+				else
+					num_HVCRA_silent += 1;
+					
+				if ( spikes_in_trial_dend_global[j].size() >= 1 )
+					//printf("Average dendritic spike time = %f\n", average_spike_time);
+					first_dend_spike_times[j].push_back(spikes_in_trial_dend_global[j][0]);
+				
+				num_HVCRA_spikes += spikes_in_trial_soma_global[j].size();
+				num_HVCRA_bursts += spikes_in_trial_dend_global[j].size();
+				
+				
+                num_dendritic_spikes_in_trials[j][i] = static_cast<int>(spikes_in_trial_dend_global[j].size());
+                num_somatic_spikes_in_trials[j][i] = static_cast<int>(spikes_in_trial_soma_global[j].size());
+        
+			}
+			
+			std::cout << "Number of silent HVC-RA = " << num_HVCRA_silent << "\n" << std::endl;
+			
+			std::cout << "Average number of bursts of HVC-RA = " << static_cast<double>(num_HVCRA_bursts) / static_cast<double>(N_RA) << "\n" << std::endl;
+			std::cout << "Average number of spikes of HVC-RA = " << static_cast<double>(num_HVCRA_spikes) / static_cast<double>(N_RA) << "\n" << std::endl;
+			
+			std::cout << "Average burst frequency of HVC-RA = " << static_cast<double>(num_HVCRA_bursts) * 1000.0 / (TRIAL_DURATION * static_cast<double>(N_RA)) << "\n" << std::endl;
+			std::cout << "Average spike frequency of HVC-RA = " << static_cast<double>(num_HVCRA_spikes) * 1000.0 / (TRIAL_DURATION * static_cast<double>(N_RA)) << "\n" << std::endl;
+			
+			// spikes of HVC-I neurons
+			size_t num_HVCI_spikes = 0; // total number of spikes of HVC-I neurons during trial
+			
+			for (int j = 0; j < N_I; j++)
+				num_HVCI_spikes += spikes_in_trial_interneuron_global[j].size();
+				
+			std::cout << "Average number of spikes of HVC-I = " << static_cast<double>(num_HVCI_spikes) / static_cast<double>(N_I) << "\n" << std::endl;
+			std::cout << "Average spike frequency of HVC-I = " << static_cast<double>(num_HVCI_spikes) * 1000.0 / (TRIAL_DURATION * static_cast<double>(N_I)) << "\n" << std::endl;
+		
+		}
+
+		this->reset_after_chain_test();
+	}
+	
+	// process dendritic spikes
+	if (MPI_rank == 0)
+		this->calculate_and_write_jitter(num_trials, first_soma_spike_times, first_dend_spike_times,
+									num_somatic_spikes_in_trials, num_dendritic_spikes_in_trials,
+											 outputDirectory);                      
+}
+
 
 void NetworkGrowthSimulator::test_chain(std::string networkDirectory,  int starting_trial, int num_trials, std::string outputDirectory)
 {
@@ -1085,12 +1315,6 @@ void NetworkGrowthSimulator::test_chain(std::string networkDirectory,  int start
     this->send_growth_parameters();
     this->initialize_network();
     
-    
-    // make everyone mature
-    for (int i = 0; i < N_RA_local; i++)
-		mature_local[i] = 1;
-    
-    this->set_neuron_properties_sudden_maturation();
     
     //this->set_time_for_neurons(trial_number * trial_duration);
     //this->print_super();
@@ -1718,7 +1942,7 @@ void NetworkGrowthSimulator::read_network_state(std::string dataDir, int startin
 	//~ //this->chain_growth(training, save_freq_short, save_freq_long);
 //~ }
 
-void NetworkGrowthSimulator::continue_chain_growth(std::string dataDir, int starting_trial, bool training, int save_freq_short, int save_freq_long)
+void NetworkGrowthSimulator::continue_chain_growth(std::string dataDir, std::string outDir, int starting_trial, bool training, int save_freq_short, int save_freq_long)
 {
 	trial_number = starting_trial;
 	
@@ -1739,7 +1963,7 @@ void NetworkGrowthSimulator::continue_chain_growth(std::string dataDir, int star
     //if (MPI_rank == 0)
 		//this->write_full_network_state("_" + std::to_string(trial_number) + "afterReading", dataDir);
 	
-	this->chain_growth(training, save_freq_short, save_freq_long, dataDir);
+	this->chain_growth(training, save_freq_short, save_freq_long, outDir);
 	
 }
 
@@ -5414,7 +5638,7 @@ void NetworkGrowthSimulator::chain_growth(bool training, int save_freq_short, in
 	   
 		if (bad_values_indicator_global < 0)
 		{
-			//std::endl << ""
+			std::cout << "Bad values in neuron dynamics!" << std::endl;
 			return;
         }  
 	    

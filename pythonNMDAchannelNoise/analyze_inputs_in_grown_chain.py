@@ -25,10 +25,12 @@ def get_hist_for_discrete_integers(data):
 
 CONVERTION_CONSTANT = 10.0
 
-trial_number = 23000
+trial_number = 6800
 
-#dirname = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/maturationTransition2/"
-dirname = "/home/eugene/results/immature/clusters/matTrans22/"
+#dirname = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/matTrans2_network2000RA550I/"
+#dirname = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/split1/"
+
+dirname = "/home/eugene/results/immature/clusters/matTrans54/"
 
 fileSoma = os.path.join(dirname, "spike_times_soma_" + str(trial_number) + ".bin")
 fileWeights = os.path.join(dirname, "weights_" + str(trial_number) + ".bin")
@@ -266,66 +268,78 @@ d, left_of_first_bin, right_of_last_bin = get_hist_for_discrete_integers(num_sup
 ax4.hist(num_super_outputs[neurons_in_chain], np.arange(left_of_first_bin, right_of_last_bin + d, d))
 ax4.set_title("# super outputs")
 
+plt.show()
+#==============================================================================
+# ###### Plot total number of active and super synapses #####
+# trialStep = 100
+# 
+# total_num_active, total_num_super = utils.get_num_active_and_super_synapses(dirname, trial_number, trialStep)
+# 
+# f = plt.figure()
+# 
+# ax1 = f.add_subplot(211)
+# ax1.plot([float(i)*trialStep for i in range(trial_number / trialStep + 1)], total_num_active)
+# ax1.set_ylabel("# active synapses")
+# 
+# ax2 = f.add_subplot(212)
+# ax2.plot([float(i)*trialStep for i in range(trial_number / trialStep + 1)], total_num_super)
+# ax2.set_ylabel("# super synapses")
+# ax2.set_xlabel('time in trials')
+# 
+#==============================================================================
 
-###### Plot total number of active and super synapses #####
-trialStep = 100
+#signal.pause(5)
 
-total_num_active, total_num_super = utils.get_num_active_and_super_synapses(dirname, trial_number, trialStep)
-
-f = plt.figure()
-
-ax1 = f.add_subplot(211)
-ax1.plot([float(i)*trialStep for i in range(trial_number / trialStep + 1)], total_num_active)
-ax1.set_ylabel("# active synapses")
-
-ax2 = f.add_subplot(212)
-ax2.plot([float(i)*trialStep for i in range(trial_number / trialStep + 1)], total_num_super)
-ax2.set_ylabel("# super synapses")
-ax2.set_xlabel('time in trials')
-
-layer = set(training_neurons)
-
-print "Training_neurons:", layer
-print "In degree active = ",num_active_inputs[list(layer)]
-print "Out degree active = ",num_active_outputs[list(layer)]
-print "In degree super = ",num_super_inputs[list(layer)]
-print "Out degree super = ",num_super_outputs[list(layer)]
-
-prev_layer = set()   
-
-while len(layer) <= 20 and len(layer) > 0:
-    num_active_out = 0
-    num_super_out = 0
-    
-    new_layer = set()
-    
-    print "Current layer: ",layer
-    print "Prev layer: ",prev_layer
-        
-    
-    for i in layer:
-        #print len(super_synapses[i])
-        #print len(active_synapses[i])
-        num_active_out += len(active_synapses[i])
-        num_super_out += len(super_synapses[i])
-        
-        for synapse in super_synapses[i]:
-            if synapse not in prev_layer:
-                new_layer.add(synapse)
-    
-    print "Next layer: ",new_layer
-    
-        
-    prev_layer = layer
-    layer = new_layer
-        
-    
-    print "Num active out = ",num_active_out
-    print "Num super out = ",num_super_out
-    print "In degree active = ",num_active_inputs[list(layer)]
-    print "Out degree active = ",num_active_outputs[list(layer)]
-    print "In degree super = ",num_super_inputs[list(layer)]
-    print "Out degree super = ",num_super_outputs[list(layer)]
+#==============================================================================
+# layer = set(training_neurons)
+# 
+# print "Training_neurons:", layer
+# print "In degree active = ",num_active_inputs[list(layer)]
+# print "Out degree active = ",num_active_outputs[list(layer)]
+# print "In degree super = ",num_super_inputs[list(layer)]
+# print "Out degree super = ",num_super_outputs[list(layer)]
+# 
+# prev_layer = set()   
+# 
+# fig = plt.figure()
+# plt.ion()
+# 
+# while len(layer) > 0:
+#     num_active_out = 0
+#     num_super_out = 0
+#     
+#     new_layer = set()
+#     
+#     print "Current layer: ",layer
+#     print "Prev layer: ",prev_layer
+#         
+#     
+#     for i in layer:
+#         #print len(super_synapses[i])
+#         #print len(active_synapses[i])
+#         num_active_out += len(active_synapses[i])
+#         num_super_out += len(super_synapses[i])
+#         
+#         for synapse in super_synapses[i]:
+#             if synapse not in prev_layer:
+#                 new_layer.add(synapse)
+#     
+#     print "Next layer: ",new_layer
+#     
+#     utils.plot_out_weight_distribution(layer, weights, fig)
+#     plt.pause(10)
+#         
+#     prev_layer = layer
+#     layer = new_layer
+#         
+#     
+#     print "Num active out = ",num_active_out
+#     print "Num super out = ",num_super_out
+#     print "In degree active = ",num_active_inputs[list(layer)]
+#     print "Out degree active = ",num_active_outputs[list(layer)]
+#     print "In degree super = ",num_super_inputs[list(layer)]
+#     print "Out degree super = ",num_super_outputs[list(layer)]
+#==============================================================================
    
     
 #for i in range(N_RA):
@@ -336,13 +350,13 @@ while len(layer) <= 20 and len(layer) > 0:
      #   print "super: {0} -> 553; w = {1}".format(i, weights[i][553])
 
 
-source_neurons = [195, 228, 860, 461, 525, 146, 726, 873, 252, 893]
+source_neurons = [291, 1764, 1206, 423, 1192, 1897, 650, 203, 1394, 782, 208, 1288, 1298, 85, 278, 55, 1550, 1307, 124, 949]
 #target_neurons = [448]
 #target_neurons = [897, 803, 465, 203, 913, 210, 186, 785, 125, 927]
 
 #target_neurons = [195, 228, 860, 461, 525, 146, 726, 873, 252, 893]
 
-target_neurons = range(N_RA)
+target_neurons = [291, 1764, 1206, 423, 1192, 1897, 650, 203, 1394, 782, 208, 1288, 1298, 85, 278, 55, 1550, 1307, 124, 949]
 #for i in range(N_RA):
  #   if i not in source_neurons:
 
@@ -377,7 +391,7 @@ for i in source_neurons:
 
 
 
-plt.show()
+
 
 #spike_times_soma = [t for sublist in list(spike_times_soma) for t in sublist]
 #neuron_fired_soma = [ind for sublist in list(neuron_fired_soma) for ind in sublist]

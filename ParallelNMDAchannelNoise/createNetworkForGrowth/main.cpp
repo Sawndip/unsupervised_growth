@@ -38,7 +38,7 @@ int main(int argc, char **argv)
 		NetworkGrowthSimulator networkSimulator;
 		
 		int N_RA = 2000;
-		int N_I = 400;
+		int N_I = 550;
 		int N_TR = 10;
 	
 		

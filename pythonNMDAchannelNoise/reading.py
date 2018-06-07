@@ -723,6 +723,18 @@ def read_replaced_neurons(filename):
        
         return replaced_neurons
 
+def read_num_neurons(filename):
+    """
+    Read number of neurons in HVC network file
+    """
+    with open(filename, "rb") as file:
+        data = file.read()
+        
+        N_RA = struct.unpack("<i", data[0:SIZE_OF_INT])[0]
+        N_I = struct.unpack("<i", data[SIZE_OF_INT:2*SIZE_OF_INT])[0]
+        
+   
+        return (N_RA, N_I)
 
 def read_num_synapses(filename):
     """

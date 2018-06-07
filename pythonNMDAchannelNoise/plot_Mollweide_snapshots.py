@@ -22,16 +22,16 @@ window = 10
 num_rows = 3
 num_cols = 3
 
-#dirname = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/noImmatureOut8/"
-dirname = "/home/eugene/results/immature/clusters/matTrans19/"
+#dirname = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/maturationTransition4/"
+dirname = "/home/eugene/results/immature/clusters/matTrans30/"
 
-trial_number = 22000
+trial_number = 15200
 
 fileCoordRA = os.path.join(dirname, "RA_xy_" + str(trial_number) + ".bin")
 fileTraining = os.path.join(dirname, "training_neurons.bin")
 #fileSoma = os.path.join(dirname, "spike_times_soma_" + str(trial_number) + ".bin")
 #fileSoma = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/test/noImmatureOut8/test_spike_times_soma_5.bin"
-fileSoma = "/home/eugene/results/immature/clusters/test/matTrans19/test_spike_times_soma_5.bin"
+fileSoma = "/home/eugene/results/immature/clusters/test/matTrans30/test_spike_times_soma_10.bin"
 
 coord = reading.read_coordinates(fileCoordRA)
 training_neurons = reading.read_training_neurons(fileTraining)

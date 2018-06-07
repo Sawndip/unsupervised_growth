@@ -12,6 +12,20 @@ import os
 import reading
 import matplotlib.pyplot as plt
 
+def plot_out_weight_distribution(layer, weights, fig):
+    """
+    Plot output weight distribution for neurons in layer
+    """
+    fig.clf()
+    
+    out_weights = []
+    
+    for i in layer:
+        out_weights.extend(weights[i][np.nonzero(weights[i,:])])
+    
+    ax = fig.add_subplot(111)
+    ax.hist(out_weights, bins=20)
+
 def calculate_longAndLat(coord):
     """
     Computes longitude and latitude from arrays with 3d coordinates

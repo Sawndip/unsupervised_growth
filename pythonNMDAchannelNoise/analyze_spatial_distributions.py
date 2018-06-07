@@ -10,14 +10,14 @@ import matplotlib.pyplot as plt
 import reading
 import numpy as np
 
-file_RA2I = "/home/eugene/Output/networks/chainGrowth/network2000/RA_I_connections.bin"
-file_I2RA = "/home/eugene/Output/networks/chainGrowth/network2000/I_RA_connections.bin"
+file_RA2I = "/home/eugene/Output/networks/chainGrowth/network2000RA550I_v2/RA_I_connections.bin"
+file_I2RA = "/home/eugene/Output/networks/chainGrowth/network2000RA550I_v2/I_RA_connections.bin"
 
 #file_RA2I = "/home/eugene/Output/networks/chainGrowth/test/RA_I_connections.bin"
 #file_I2RA = "/home/eugene/Output/networks/chainGrowth/test/I_RA_connections.bin"
 
 
-file_RA2RA = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/noImmatureOut2/RA_RA_super_connections.bin"
+#file_RA2RA = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/noImmatureOut2/RA_RA_super_connections.bin"
 
 (N_RA, targets_id_RA2I, _, syn_lengths_RA2I, _) = reading.read_connections(file_RA2I)
 #(_, targets_id_RA2RA, _, syn_lengths_RA2RA, _) = reading.read_connections(file_RA2RA)
@@ -30,6 +30,10 @@ file_RA2RA = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/noImmatur
 fractions = []
 
 for targets in targets_id_RA2I:
+    # check that each connection is unique
+    if len(set(targets)) != len(targets):
+        print "Several connections between HVC-RA and HVC-I neurons exist!"
+        
     fractions.append(float(len(targets)) / float(N_I))
 
 print "Fraction of connected HVC-I by single HVC-RA: ", np.mean(np.array(fractions))
@@ -37,6 +41,10 @@ print "Fraction of connected HVC-I by single HVC-RA: ", np.mean(np.array(fractio
 fractions = []
 
 for targets in targets_id_I2RA:
+    # check that each connection is unique
+    if len(set(targets)) != len(targets):
+        print "Several connections between HVC-RA and HVC-I neurons exist!"
+    
     fractions.append(float(len(targets)) / float(N_RA))
 
 print "Fraction of connected HVC-RA by single HVC-I: ", np.mean(np.array(fractions))
@@ -55,8 +63,8 @@ f = plt.figure()
 ax1 = f.add_subplot(111)
 
 hist, bin_edges = np.histogram(all_syn_lengths_RA2I, bins=nbins)
-print bin_edges
-print hist
+#print bin_edges
+#print hist
 bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2.
 ax1.step(bin_centers, hist / float(N_RA), label="HVC(RA) -> HVC(I)", where="pre")
 
@@ -68,8 +76,8 @@ ax1.step(bin_centers, hist / float(N_RA), label="HVC(RA) -> HVC(I)", where="pre"
 
 
 hist, bin_edges = np.histogram(all_syn_lengths_I2RA, bins=nbins)
-print bin_edges
-print hist
+#print bin_edges
+#print hist
 bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2.
 ax1.step(bin_centers, hist / float(N_I), label="HVC(I) -> HVC(RA)", where="pre")
 

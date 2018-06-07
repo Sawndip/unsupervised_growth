@@ -33,8 +33,8 @@ int main(int argc, char **argv)
 	ConfigurationNetworkGrowth cfg;
 	
 	bool training = true;
-	int save_freq_short = 25;
-	int save_freq_long = 50;
+	int save_freq_short = 75;
+	int save_freq_long = 150;
 	
 	// read topology parameters on master process
 	if (rank == 0)

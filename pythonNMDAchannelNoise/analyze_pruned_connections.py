@@ -12,34 +12,36 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 
-#dirname = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/matTrans1_network2000/"
-dirname = "/home/eugene/results/immature/clusters/matTrans22/"
-end_trial = 23000
-trialStep = 50
+#dirname = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/maturationTransition4/"
+dirname = "/home/eugene/results/immature/clusters/matTrans36/"
+end_trial = 20400
+trialStep = 100
 
 
 
 # go through all previous trials and record all supersynaptic connections
 num_timepoints = end_trial / trialStep + 1
     
-all_supersynapses_ever = set()
-
-current_trial = 0
-timepoint = 0
-
-while current_trial <= end_trial:   
-    fileSuper = os.path.join(dirname, "RA_RA_super_connections_" + str(current_trial) + ".bin")
-    
-    (N, _, super_synapses) = reading.read_synapses(fileSuper)
-    
-    for source_id in range(N):
-        for target_id in super_synapses[source_id]:
-            all_supersynapses_ever.add((source_id, target_id))
-            
-    timepoint += 1
-    current_trial += trialStep
-    
-
+#==============================================================================
+# all_supersynapses_ever = set()
+# 
+# current_trial = 0
+# timepoint = 0
+# 
+# while current_trial <= end_trial:   
+#     fileSuper = os.path.join(dirname, "RA_RA_super_connections_" + str(current_trial) + ".bin")
+#     
+#     (N, _, super_synapses) = reading.read_synapses(fileSuper)
+#     
+#     for source_id in range(N):
+#         for target_id in super_synapses[source_id]:
+#             all_supersynapses_ever.add((source_id, target_id))
+#             
+#     timepoint += 1
+#     current_trial += trialStep
+#     
+# 
+#==============================================================================
 # check which supersynapses are not supersynapses at the end_trial
 
 fileAxonalDelaysRA2RA = os.path.join(dirname, "axonal_delays_RA2RA_" + str(end_trial) + ".bin")
@@ -62,14 +64,16 @@ for i in range(N):
     for target in active_synapses[i]:
         delays_active_final.append(axonal_delays_RA2RA[i][target])
     
-    
-pruned_super = set()
-pruned_delays = []
-        
-for (source_id, target_id) in all_supersynapses_ever:
-    if (source_id, target_id) not in supersynapses_final:
-        pruned_super.add((source_id, target_id))
-        pruned_delays.append(axonal_delays_RA2RA[source_id][target_id])
+#==============================================================================
+#     
+# pruned_super = set()
+# pruned_delays = []
+#         
+# for (source_id, target_id) in all_supersynapses_ever:
+#     if (source_id, target_id) not in supersynapses_final:
+#         pruned_super.add((source_id, target_id))
+#         pruned_delays.append(axonal_delays_RA2RA[source_id][target_id])
+#==============================================================================
         
 #print pruned_super
 
