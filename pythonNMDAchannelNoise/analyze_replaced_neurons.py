@@ -13,5 +13,7 @@ filename = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/maturationT
 
 replaced_neurons = reading.read_replaced_neurons(filename)
 
+
+
 print replaced_neurons
 

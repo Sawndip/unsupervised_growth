@@ -15,8 +15,8 @@ TRAINING_KICK_TIME = 100.0
 #filename = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/test/maturationTransition4/jitter.bin"
 #fileMature = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/maturationTransition4/mature_16500.bin"
 
-filename = "/home/eugene/results/immature/clusters/test/matTrans44/jitter.bin"
-fileMature = "/home/eugene/results/immature/clusters/matTrans44/mature_20400.bin"
+filename = "/mnt/hodgkin/eugene/results/immature/clusters/test/matTrans62/trial4200/jitter.bin"
+fileMature = "/mnt/hodgkin/eugene/results/immature/clusters/matTrans62/mature_4200.bin"
 
 N, num_test_trials, \
     probability_soma_spike, average_num_soma_spikes_in_trial, mean_first_soma_spike_time, std_first_soma_spike_time,\

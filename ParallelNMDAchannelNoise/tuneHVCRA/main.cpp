@@ -1,5 +1,5 @@
 #include <iostream>
-#include "../HH2_buffer.h"
+#include "../HH2_test.h"
 #include "../poisson_noise.h"
 #include <functional>
 #include <fstream>
@@ -10,13 +10,13 @@ using namespace std::placeholders;
 
 // target neuron model parameters
 double E_GABA_MATURE = -80.000000;
-double E_GABA_IMMATURE = -55.000000; // was -55.0
+double E_GABA_IMMATURE = -80.000000; // was -55.0
 
 double E_REST_MATURE = -80.000000;
-double E_REST_IMMATURE = -80.000000; // was -65.0
+double E_REST_IMMATURE = -55.000000; // was -55.0
 
 double AD_MATURE = 10000.000000;
-double AD_IMMATURE = 1000.000000; // was 1000
+double AD_IMMATURE = 10000.000000; // was 1000
 
 double GK_MATURE = 8.000000;
 double GK_IMMATURE = 8.000000; // was 16.0
@@ -24,20 +24,20 @@ double GK_IMMATURE = 8.000000; // was 16.0
 double GNA_MATURE = 60.000000;
 double GNA_IMMATURE = 60.000000; // was 40.0
 
-double RC_MATURE = 55.000000;
-double RC_IMMATURE = 400.000; // was 5.5
+double RC_MATURE = 55.000000; // was 55.0
+double RC_IMMATURE = 55.000; // was 5.5
 
-double GCA_MATURE = 55.0;
-double GCA_IMMATURE = 55.0;
+double GCA_MATURE = 55.0; // original 55.0
+double GCA_IMMATURE = 0.0;
 
 double GCAK_MATURE = 150.0;
 double GCAK_IMMATURE = 150.0;
 
-double GSL_MATURE = 0.1;
-double GSL_IMMATURE = 0.1;
+double GSL_MATURE = 0.1; // original 0.1
+double GSL_IMMATURE = 0.1; // original 0.1
 
-double GDL_MATURE = 0.1;
-double GDL_IMMATURE = 0.1;
+double GDL_MATURE = 0.1; // original 0.1
+double GDL_IMMATURE = 0.1; // original 0.1
 
 double age = 0.0;
 
@@ -126,7 +126,7 @@ void calculate_fI(int N, double ampl_step, bool injection_to_soma, std::string d
 	
 	for (int i = 0; i < N; i++)
 	{
-		HH2_buffer *neuron = new HH2_buffer;
+		HH2_test *neuron = new HH2_test;
 	
 	
 		std::function<double (double)> f = std::bind(&I, ampl, start, _1);
@@ -210,7 +210,7 @@ void calculate_conductance_response(int N, double G_step, std::string dirname)
 	
 	for (int i = 0; i < N; i++)
 	{
-		HH2_buffer *neuron = new HH2_buffer;
+		HH2_test *neuron = new HH2_test;
 	
 		neuron->set_dynamics(timestep);
 		
@@ -280,10 +280,10 @@ void calculate_conductance_response(int N, double G_step, std::string dirname)
 
 int main(int argc, char **argv)
 {
-	std::string dirname = "/mnt/hodgkin_home/eugene/Output/tuneHVCRA/Ad1000/tc25/Rc400/";
+	std::string dirname = "/mnt/hodgkin/eugene/Output/tuneHVCRA/finalModel/KLTH3.5Rest55mVLargeIrange/age0/";
 	
 	int N = 50;
-	double ampl_step = 0.025;
+	double ampl_step = 0.080; // was 0.025
 	
 	
 	
@@ -301,7 +301,7 @@ int main(int argc, char **argv)
 	calculate_fI(N, ampl_step, true, dirname);
 	calculate_fI(N, ampl_step, false, dirname);
 	
-	double G_step = 0.05;
+	double G_step = 0.10; // was 0.05
 	N = 100;
 	
 	calculate_conductance_response(N, G_step, dirname);

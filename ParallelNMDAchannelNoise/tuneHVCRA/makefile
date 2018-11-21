@@ -2,12 +2,15 @@ CC = mpic++
 VPATH = ../
 CFLAGS = -std=c++0x -g -w -O2
 LDFLAGS = -lconfig++
-objects = poisson_noise.o HHI_buffer.o HH2_buffer.o main.o
+objects = poisson_noise.o HHI_buffer.o HH2_buffer.o  HH2_test.o main.o
 
 all: $(objects)
 	$(CC) $(CFLAGS) $^ $(LDFLAGS) -o exec
 
 main.o: main.cpp
+	$(CC) $(CFLAGS) -c $^ -o $@
+
+HH2_test.o: HH2_test.cpp
 	$(CC) $(CFLAGS) -c $^ -o $@
 
 HH2_buffer.o: HH2_buffer.cpp

@@ -23,18 +23,19 @@ num_rows = 3
 num_cols = 3
 
 #dirname = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/maturationTransition4/"
-dirname = "/home/eugene/results/immature/clusters/matTrans30/"
+dirname = "/mnt/hodgkin/eugene/results/immature/clusters/matTrans62/"
 
-trial_number = 15200
+trial_number = 32400
 
 fileCoordRA = os.path.join(dirname, "RA_xy_" + str(trial_number) + ".bin")
 fileTraining = os.path.join(dirname, "training_neurons.bin")
 #fileSoma = os.path.join(dirname, "spike_times_soma_" + str(trial_number) + ".bin")
 #fileSoma = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/test/noImmatureOut8/test_spike_times_soma_5.bin"
-fileSoma = "/home/eugene/results/immature/clusters/test/matTrans30/test_spike_times_soma_10.bin"
+fileSoma = "/mnt/hodgkin/eugene/results/immature/clusters/test/matTrans62/trial32400/test_spike_times_soma_5.bin"
 
 coord = reading.read_coordinates(fileCoordRA)
 training_neurons = reading.read_training_neurons(fileTraining)
+(_, _, mature_indicators) = reading.read_mature_indicators(os.path.join(dirname, "mature_"+str(trial_number)+".bin"))
 
 (_, _, spike_times_soma, neuron_fired_soma) = reading.read_time_info(fileSoma)
 
@@ -52,11 +53,19 @@ for spikes, neuron_id in zip(spike_times_soma, neuron_fired_soma):
 
 #print ordered_soma_spikes_raw
 #print ordered_soma_raw
+mature_neurons = set(np.where(mature_indicators == 1)[0])
 
-first_spike_times = [spikes[0] for spikes in list(spike_times_soma)]
-id_fired = [ids[0] for ids in list(neuron_fired_soma)]
+first_spike_times = []
+id_fired = []
+
+for spikes, ids in zip(list(spike_times_soma), list(neuron_fired_soma)):
+    if ids[0] in mature_neurons:
+        first_spike_times.append(spikes[0])
+        id_fired.append(ids[0])
+        
 
 ordered_first_spike_times, ordered_id_fired = zip(*sorted(zip(first_spike_times, id_fired)))
+
 
 ### find first spike of one of the training neurons
 start_id = -1
@@ -69,6 +78,22 @@ for i, neuron_id in enumerate(ordered_id_fired):
 if start_id < 0:
     print "No training neurons fired!"
 else:
+    
+    # plot latitude and longitude of fired neurons vs time
+    #print ordered_id_fired[start_id:]
+    print coord.shape
+    print coord[list(ordered_id_fired[start_id:])]
+    longitude, latitude = utils.calculate_longAndLat(coord[list(ordered_id_fired[start_id:])])
+
+    plt.figure()
+    plt.scatter(np.array(ordered_first_spike_times[start_id:]) - ordered_first_spike_times[start_id], latitude / (np.pi/2.))        
+    plt.xlabel('Time (ms)')
+    plt.ylabel('latitude')
+    
+    plt.figure()
+    plt.scatter(np.array(ordered_first_spike_times[start_id:]) - ordered_first_spike_times[start_id], longitude / (np.pi))        
+    plt.xlabel('Time (ms)')
+    plt.ylabel('longitude')
     
     # calculate meridians
     num_meridians = 10
@@ -113,6 +138,8 @@ else:
                 print max(longitude) / np.pi
                 print min(latitude) / (np.pi/2.)
                 print max(latitude) / (np.pi/2.)
+                
+           
                 
                 Mollweide_RA = np.empty(shape=(len(neurons_to_plot),2), dtype=np.float32) # array with Mollweide coordinates of active HVC(RA) neurons
                 Mollweide_RA.fill(np.nan)

@@ -35,7 +35,12 @@ static double distance2d(double x1, double y1, double x2, double y2)
 
 static double distance_on_sphere(double x1, double y1, double z1, double x2, double y2, double z2)
 {
-	return acos(x1*x2 + y1*y2 + z1*z2);
+	double tmp = x1*x2 + y1*y2 + z1*z2;
+	
+	if (tmp > 1.0)
+		return 0.0;
+	else
+		return acos(tmp);
 }
 
 using namespace std::placeholders;
@@ -733,7 +738,7 @@ void NetworkGrowthSimulator::resample_weights()
 
 double NetworkGrowthSimulator::sample_G(double G_max)
 {
-    return G_max;
+    return noise_generator.random(1.0) * G_max;
 }
 
 
@@ -1329,17 +1334,20 @@ void NetworkGrowthSimulator::test_chain(std::string networkDirectory,  int start
     this->gather_graph_state_data();
     this->gather_full_state_data();
     
-    if (MPI_rank == 0)
-		this->write_full_network_state("_" + std::to_string(trial_number) + "afterReading", outputDirectory);
+    //if (MPI_rank == 0)
+		//this->write_full_network_state("_" + std::to_string(trial_number) + "afterReading", outputDirectory);
 	
 	
 	// start simulations
 	
 	std::vector<int> RAtoWrite{};
-    std::vector<int> ItoWrite{0, 1, 2, 3};
+    //std::vector<int> ItoWrite{0, 1, 2, 3};
+    std::vector<int> ItoWrite{};
     
 
-    std::vector<int> source{0, 1, 2, 3};
+    //std::vector<int> source{0, 1, 2, 3};
+    
+    std::vector<int> source{};
     std::vector<int> target{};
 
     for (int i = 0; i < N_RA; i++)
@@ -1389,8 +1397,8 @@ void NetworkGrowthSimulator::test_chain(std::string networkDirectory,  int start
             std::cout << "Trial " << i << std::endl;
 		
 		// set recording for the last trial
-		if ( i == num_trials - 1)
-			this->set_recording(RAtoWrite, ItoWrite, outputDirectory);
+		
+		this->set_recording(RAtoWrite, ItoWrite, i, outputDirectory);
 	
 		
 		//this->trial_no_stdp(training_kick_time);
@@ -1819,7 +1827,7 @@ void NetworkGrowthSimulator::new_chain_growth(const ConfigurationNetworkGrowth &
 		std::string filename_num_neurons = outputDirectory + "num_neurons.bin";
 		
 		// generate fixed spread times
-		double spread = 5.0;
+		double spread = 0.0;
 		
 		training_spread_times.resize(N_TR);
 		for (int i = 0; i < N_TR; i++)
@@ -2259,7 +2267,7 @@ void NetworkGrowthSimulator::set_all_neurons_immature()
 	std::fill(mature_local.begin(), mature_local.end(), 0);
 }
 
-void NetworkGrowthSimulator::set_recording(const std::vector<int> &RA_neurons, const std::vector<int> &I_neurons,
+void NetworkGrowthSimulator::set_recording(const std::vector<int> &RA_neurons, const std::vector<int> &I_neurons, int trial_number,
 																std::string outputDirectory)
 {
 	std::string RAdir = outputDirectory + "RA/";
@@ -2297,7 +2305,7 @@ void NetworkGrowthSimulator::set_recording(const std::vector<int> &RA_neurons, c
 		
 		if (MPI_rank == rank)
 		{	
-			std::string filename = RAdir + "RA" + std::to_string(RA_neurons[i]) + ".bin";
+			std::string filename = RAdir + "RA" + std::to_string(RA_neurons[i]) + "_trial" + std::to_string(trial_number) + ".bin";
 			HVCRA_local[shift].set_recording_full(filename.c_str());
 		}		
 	}
@@ -2308,7 +2316,7 @@ void NetworkGrowthSimulator::set_recording(const std::vector<int> &RA_neurons, c
 		
 		if (MPI_rank == rank)
 		{	
-			std::string filename = Idir + "I" + std::to_string(I_neurons[i]) + ".bin";
+			std::string filename = Idir + "I" + std::to_string(I_neurons[i]) + "_trial" + std::to_string(trial_number) + ".bin";
 			HVCI_local[shift].set_recording(filename.c_str());
 		}		
 	}
@@ -8671,7 +8679,6 @@ void NetworkGrowthSimulator::check_neuron_activity(std::vector<int>& neurons_to_
 		// calculate firing rate in large window:
 		int window = 1000;
 		
-		double death_threshold = 0.02;
 		double driven_threshold = 0.50;
 		
         firing_rate_long_local[i] = std::accumulate(num_spikes_in_recent_trials_local[i].begin(), num_spikes_in_recent_trials_local[i].end(), 0.0)
@@ -8691,7 +8698,7 @@ void NetworkGrowthSimulator::check_neuron_activity(std::vector<int>& neurons_to_
 			maturation_scale_local[i] = MATURATION_SCALE_DRIVEN;
 		}
 		
-		if ( ( firing_robustness < death_threshold ) && ( num_trials_after_replacement_local[i] > window ) )
+		if ( ( firing_robustness < maturation_params.DEATH_RATE_THRESHOLD ) && ( num_trials_after_replacement_local[i] > window ) )
 		{
 			std::cout << "Neuron " << Id_RA_local[i] << " became silent!" << std::endl;
 			

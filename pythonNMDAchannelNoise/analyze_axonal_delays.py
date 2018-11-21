@@ -12,9 +12,9 @@ import numpy as np
 import os
 
 #dirname = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/matTrans2_network2000RA550I/"
-dirname = "/home/eugene/results/immature/clusters/matTrans56/"
+dirname = "/mnt/hodgkin/eugene/results/immature/clusters/matTrans62/"
 
-trial_number = 12200
+trial_number = 57000
 
 
 # 11550
@@ -47,6 +47,18 @@ all_axonal_delays_RA2I = [delay for delays in axonal_delays_RA2I for delay in de
 all_axonal_delays_RA2RA = [delay for delays in axonal_delays_RA2RA for delay in delays]
 all_axonal_delays_I2RA = [delay for delays in axonal_delays_I2RA for delay in delays]
 
+for i, delays in enumerate(axonal_delays_RA2RA):
+    for j, delay in enumerate(delays):
+        if np.isnan(delay) == True:
+            print " {0} -> {1} Delay = {2}".format(i, j, delay)
+            
+            #print delays
+
+all_delays_RA2RA_np = np.array(all_axonal_delays_RA2RA)
+
+if np.isnan(all_delays_RA2RA_np).any():
+    print len(np.where(np.isnan(all_delays_RA2RA_np) == True)[0])
+
 nbins = 50
 
 f = plt.figure()
@@ -54,27 +66,27 @@ f = plt.figure()
 ax1 = f.add_subplot(111)
 
 hist, bin_edges = np.histogram(all_axonal_delays_RA2I, bins=nbins)
-print bin_edges
-print hist
+#print bin_edges
+#print hist
 bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2.
 ax1.step(bin_centers, hist / float(np.sum(hist)), label="HVC(RA) -> HVC(I)", where="pre")
 
 hist, bin_edges = np.histogram(all_axonal_delays_RA2RA, bins=nbins)
-print bin_edges
-print hist
+#print bin_edges
+#print hist
 bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2.
 ax1.step(bin_centers, hist / float(np.sum(hist)), label="HVC(RA) -> HVC(RA)", where="pre")
 
 hist, bin_edges = np.histogram(super_axonal_delays_RA2RA, bins=nbins)
-print bin_edges
-print hist
+#print bin_edges
+#print hist
 bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2.
 ax1.step(bin_centers, hist / float(np.sum(hist)), label="super HVC(RA) -> HVC(RA)", where="pre")
 
 
 hist, bin_edges = np.histogram(all_axonal_delays_I2RA, bins=nbins)
-print bin_edges
-print hist
+#print bin_edges
+#print hist
 bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2.
 ax1.step(bin_centers, hist / float(np.sum(hist)), label="HVC(I) -> HVC(RA)", where="pre")
 

@@ -3,4 +3,4 @@
 # starting trial
 # number of testing trials
 # path to output directory
-mpirun -np 23 ./main /home/eugene/results/immature/clusters/matTrans44/ 20400 20 /home/eugene/results/immature/clusters/test/matTrans44/
+mpirun -np 8 ./main /mnt/hodgkin/eugene/results/immature/clusters/matTrans63/ 25200 10 /mnt/hodgkin/eugene/results/immature/clusters/test/matTrans63/trial25200/

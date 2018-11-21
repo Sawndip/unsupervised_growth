@@ -12,6 +12,112 @@ import os
 import reading
 import matplotlib.pyplot as plt
 
+def plotNormHist(a, nbins, ax, label):
+    """
+    Plots normalized histogram on axes ax
+    """
+    hist, bin_edges = np.histogram(a, bins=nbins)
+    bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2.
+    
+    if np.isnan(hist).any():
+        print "Histogram has NaN values!"
+
+        if np.isnan(np.array(a)).any():
+            print "Array contains NaN values!"
+        
+        if len(np.where(np.array(a)>0)[0]) > 0:
+            print "Array contains negative values!"
+        
+        #print a
+    elif np.sum(hist) == 0:
+        print "Histogram has all zero values"
+        
+        if np.isnan(np.array(a)).any():
+            print "Array contains NaN values!"
+        
+        if len(np.where(np.array(a)>0)[0]) > 0:
+            print "Array contains negative values!"
+                
+        #print a
+            
+    ax.step(bin_centers, hist / float(np.sum(hist)), label=label, where="pre")
+
+def plotNumSpikes(spike_times, ax, xlabel):
+    """
+    Plot histogram of spikes
+    """
+    num_spiked = len(spike_times)    
+    
+    num_spikes = np.empty(num_spiked, np.int8)
+    
+    for i, neuron_spikes in enumerate(spike_times):
+        num_spikes[i] = len(neuron_spikes)
+    
+    numSpikesUnique, counts = np.unique(num_spikes, return_counts=True)
+
+    ax.bar(numSpikesUnique, counts, align='center', width=0.5)
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel('Count')
+
+def getBursts(spike_times, burst_duration):
+    """
+    Find bursts for each neuron from spike times array. Burst duration are taken to be burst_duration
+    
+    Input: spike_times - array with spike times returned by getSpikes function
+              burst_duration - duration of the burst in ms
+    """
+    bursts = []
+     
+    for spikes in spike_times:
+        currentBurst = []
+        burstsForNeuron = []
+        
+        for spike in spikes:
+            if len(currentBurst) == 0 :
+                currentBurst.append(spike)
+            elif spike - currentBurst[0] <= burst_duration:
+                currentBurst.append(spike)
+            else:
+                burstsForNeuron.append(currentBurst)
+                currentBurst = [spike]
+        
+        burstsForNeuron.append(currentBurst)
+        
+        bursts.append(burstsForNeuron)
+        
+    return bursts
+        
+
+def getSpikes(filename):
+    """
+    Obtain spikes from the raster data file
+    
+    Input: filename - absolute path to a file with data
+    """
+    (trial_number, simulation_time, spike_times, neuron_id) = reading.read_time_info(filename)
+    
+    
+    num_spiked = len(spike_times)    
+    
+    print "Number of spiked neurons: ",num_spiked
+    
+    # order neurons based on their first spike time
+    ordered_spikes, neuron_ordered_id = zip(*sorted(zip(spike_times, neuron_id)))        
+        
+    #id_map = {i[0] : j for i,j in zip(neuron_ordered_id, range(num_spiked))}
+    
+    return spike_times,  neuron_id,  ordered_spikes, neuron_ordered_id
+
+
+def plotSpikes(spike_times, neuron_id, ax):
+    """
+    Plot spikes
+    """
+    for neuron_spikes, id in zip(spike_times, neuron_id):
+        for spike in neuron_spikes:
+            ax.vlines(spike, id[0] - 0.5, id[0] + 0.5)
+
+
 def plot_out_weight_distribution(layer, weights, fig):
     """
     Plot output weight distribution for neurons in layer
@@ -25,6 +131,62 @@ def plot_out_weight_distribution(layer, weights, fig):
     
     ax = fig.add_subplot(111)
     ax.hist(out_weights, bins=20)
+
+
+def calculate_burst_density_hist(burst_times, bin_width, tmin, tmax):
+    """
+    Calculate burst density - number of bursts in time bins
+    
+    Input: burst_times - array with burst times
+              bin_width - desired time resolution
+              tmin, tmax - range of time
+              
+    Output:
+              time - time bin centers
+              burst_density - number of bursts in bins
+    """
+    size = int((tmax-tmin) / bin_width) + 1
+    time = np.array([tmin + float(i)*bin_width for i in range(size)])
+    
+    #print burst_times
+    #print size
+    
+    num_bursts = np.zeros(size, np.int32)    
+    
+    for burst_time in burst_times:
+        #print burst_time, int(burst_time / bin_width)
+        num_bursts[int(round((burst_time - tmin) / bin_width))] += 1
+        
+    burst_density = num_bursts / bin_width
+    
+    return time, burst_density
+
+def calculate_burst_density(burst_times, bin_width):
+    """
+    Calculate burst density - number of bursts in time bins
+    
+    Input: burst_times - array with burst times
+              bin_width - desired time resolution
+              
+    Output:
+              time - time bin centers
+              burst_density - number of bursts in bins
+    """
+    size = int(burst_times[-1] / bin_width) + 1
+    time = np.array([float(i)*bin_width + bin_width/2. for i in range(size)])
+    
+    #print burst_times
+    #print size
+    
+    num_bursts = np.zeros(size, np.int32)    
+    
+    for burst_time in burst_times:
+        #print burst_time, int(burst_time / bin_width)
+        num_bursts[int(burst_time / bin_width)] += 1
+        
+    burst_density = num_bursts / bin_width
+    
+    return time, burst_density
 
 def calculate_longAndLat(coord):
     """

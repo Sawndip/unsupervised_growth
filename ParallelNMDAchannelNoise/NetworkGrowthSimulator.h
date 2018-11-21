@@ -499,7 +499,7 @@ protected:
 		void write_maturation_properties(const char* filename); // write HVC-RA neuron maturation properties  
 		void write_axonal_delays(const std::vector<std::vector<double>> &axonal_delays, const char *filename); // write axonal time delays between neurons
         
-        void set_recording(const std::vector<int> &RA_neurons, const std::vector<int> &I_neurons,
+        void set_recording(const std::vector<int> &RA_neurons, const std::vector<int> &I_neurons, int trial_number,
 																std::string outputDirectory); // record dynamics of HVC-RA and HVC-I neurons to files
 																
         void write_number_of_neurons(const char* filename); // write number of HVC-RA and HVC-I neurons in network

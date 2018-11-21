@@ -12,30 +12,10 @@ Script plots all spikes occured in the network
 import reading
 import matplotlib.pyplot as plt
 import numpy as np
-import math
+
+from utils import *
 
 
-def calculate_burst_density(burst_times, bin_width):
-    """
-    Calculate burst density - number of bursts in time bins
-    """
-    
-    
-    size = int(burst_times[-1] / bin_width) + 1
-    time = np.array([float(i)*bin_width + bin_width/2. for i in range(size)])
-    
-    #print burst_times
-    #print size
-    
-    num_bursts = np.zeros(size, np.int32)    
-    
-    for burst_time in burst_times:
-        #print burst_time, int(burst_time / bin_width)
-        num_bursts[int(burst_time / bin_width)] += 1
-        
-    burst_density = num_bursts / bin_width
-    
-    return time, burst_density
 
 N = 2000 # number of neurons
 
@@ -53,8 +33,8 @@ N = 2000 # number of neurons
 #fileSoma = "/home/eugene/Output/networks/chainGrowth/passiveDendrite/chain_1.0/test_spike_times_soma_0.bin"
 
 
-fileDend = "/home/eugene/results/immature/clusters/matTrans57/spike_times_dend_20400.bin"
-fileSoma = "/home/eugene/results/immature/clusters/matTrans57/spike_times_soma_20400.bin"
+fileDend = "/mnt/hodgkin/eugene/results/immature/clusters/matTrans54/spike_times_dend_6800.bin"
+fileSoma = "/mnt/hodgkin/eugene/results/immature/clusters/matTrans54/spike_times_soma_6800.bin"
 
 #fileDend = "/home/eugene/results/immature/clusters/test/matTrans44/test_spike_times_dend_10.bin"
 #fileSoma = "/home/eugene/results/immature/clusters/test/matTrans44/test_spike_times_soma_10.bin"

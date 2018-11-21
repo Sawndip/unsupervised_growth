@@ -474,7 +474,7 @@ def read_hh2_buffer_full(filename):
         c = np.empty(num_datapoints, np.float32)
         Ca = np.empty(num_datapoints, np.float32)
         
-        print num_datapoints
+        #print num_datapoints
         
         start_ind = 0
         
@@ -961,6 +961,22 @@ def read_num_bursts_in_recent_trials(filename):
             
     return num_bursts_in_recent_trials
 
+def read_training_spread(filename):
+    """
+    Read spread of training neurons
+    """
+    with open(filename, "rb") as file:
+        data = file.read()
+      
+        N_TR = struct.unpack("<i", data[:SIZE_OF_INT])[0]
+        
+        training_spread = np.empty(N_TR, np.float64)
+        
+        for i in range(N_TR):
+            training_spread[i] = struct.unpack("<d", data[(SIZE_OF_INT+i*SIZE_OF_DOUBLE):(SIZE_OF_INT+(i+1)*SIZE_OF_DOUBLE)])[0]
+    
+        return training_spread
+        
 def read_training_neurons(filename):
     """
     Read ids of training neurons
