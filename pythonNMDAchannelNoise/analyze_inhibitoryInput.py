@@ -23,6 +23,46 @@ def maximize_figure(figure=None):
         plt.figure(figure).set_size_inches(width, height)
     return width, height
 
+def computeAverageConductances(dataDir, testDataDir, simName, trial):
+    """
+    Function reads conductances for all neurons in the networks, calculates the average conductances
+    for each neuron and writes them to a file
+    
+    """
+    N_RA, _ = reading.read_num_neurons(os.path.join(dataDir, "num_neurons.bin"))
+    
+    t, Vs, Vd, Gexc_d, Ginh_d = reading.read_hh2_buffer(os.path.join(testDataDir, "RA/RA0_trial0.bin"))
+    
+    Ginh = np.zeros((N_RA, len(t)), np.float32)
+    Gexc = np.zeros((N_RA, len(t)), np.float32)
+    
+    _, numTestTrials, _, _,_ ,_ , _, _, _, _ = reading.read_jitter(os.path.join(testDataDir, "jitter.bin")) 
+    
+    for testTrial in range(numTestTrials):
+        print "Test trial: ",testTrial
+        #if testTrial == 1:
+         #   break
+        
+        for neuronId in range(N_RA):
+            t, Vs, Vd, Gexc_d, Ginh_d = reading.read_hh2_buffer(os.path.join(testDataDir, "RA/RA"+str(neuronId)+"_trial" + str(testTrial) + ".bin"))
+            
+            Ginh[neuronId] += Ginh_d
+            Gexc[neuronId] += Gexc_d
+        
+                
+    for neuronId in range(N_RA):
+        Ginh[neuronId] /= float(numTestTrials)
+        
+    np.savez(os.path.join(testDataDir, "averageConductances.npz"), t=t, Ginh=Ginh, Gexc=Gexc)
+
+def loadAverageConductances(filename):
+    """
+    Function reads average conductances from a file
+    """
+    conductances = np.load(filename)
+    
+    return conductances['t'], conductances['Ginh'], conductances['Gexc']
+
 def compare_networkAndPoolConductance(dataDir, testDataDir, outFigureDir, simName, trial):
     """
     Function reads conductances for all neurons in the network, calculates average total conductances
@@ -326,9 +366,9 @@ def integral(a, dx):
     """
     return (np.sum(a) - (a[0]+a[-1])/2. ) * dx
     
-def compare_conductanceOfNetworkNeurons(dataDir, testDataDir, outFigureDir, simName, trial):
+def compare_conductanceOfNetworkNeurons(Ginh, dataDir, testDataDir, outFigureDir, simName, trial):
     """
-    Function reads conductances for network  neurons and compares inhibitory conductance of neurons with 
+    Function compares inhibitory conductance of neurons with 
     conductances of the neurons that burst later
     """
     N_RA, N_I = reading.read_num_neurons(os.path.join(dataDir, "num_neurons.bin"))
@@ -342,27 +382,12 @@ def compare_conductanceOfNetworkNeurons(dataDir, testDataDir, outFigureDir, simN
     neuronsWithRobustDendriticSpike = np.where(probability_dend_spike >= 0.75)[0]
     meanFirstSomaSpikeOfNeuronsWithRoburstDendriticSpike = mean_first_soma_spike_time[neuronsWithRobustDendriticSpike]
     
-    t, Vs, Vd, Gexc_d, Ginh_d, n, h, r, c, Ca = reading.read_hh2_buffer_full(os.path.join(testDataDir, "RA/RA0_trial0.bin"))
-    
-    Ginh = np.zeros((len(neuronsWithRobustDendriticSpike), len(t)), np.float32)
-
     
     print "Robustly firing neurons: ",neuronsWithRobustDendriticSpike    
-    print "First soma spikes of robust neurons: ", meanFirstSomaSpikeOfNeuronsWithRoburstDendriticSpike
-    
-    for testTrial in range(numTestTrials):
-        print "Test trial: ",testTrial
-        #f testTrial == 1:
-          #  break
-        for neuronCounter, neuronId in enumerate(neuronsWithRobustDendriticSpike):
-            t, Vs, Vd, Gexc_d, Ginh_d, n, h, r, c, Ca = reading.read_hh2_buffer_full(os.path.join(testDataDir, "RA/RA"+str(neuronId)+"_trial" + str(testTrial) + ".bin"))    
-            Ginh[neuronCounter] += Ginh_d
+    print "First soma spikes of robust neurons: ", meanFirstSomaSpikeOfNeuronsWithRoburstDendriticSpike            
                 
-                
-    for neuronId in range(len(Ginh)):
-        Ginh[neuronId] /= float(numTestTrials)
     
-    window = 30.0
+    window = 20.0
     dt = t[1] - t[0]
     window_t = [float(i)*dt-window/2. for i in range(int(window / dt)-1)]
     
@@ -385,50 +410,103 @@ def compare_conductanceOfNetworkNeurons(dataDir, testDataDir, outFigureDir, simN
     integralConductanceOfAllSpiked = []
     integralConductanceOfAllOther = []    
     
-    for neuronCounter, (nid, meanFirstSpikeTime) in enumerate(zip(neuronsWithRobustDendriticSpike, meanFirstSomaSpikeOfNeuronsWithRoburstDendriticSpike)):
+    averageInhConductanceOfRecruitedBeforeBurstTime = []
+    averageInhConductanceOfLaterRecruitedBeforeBurstTime = []
+    
+    neuronCounter = 0
+    
+    for nid, meanFirstSpikeTime in zip(neuronsWithRobustDendriticSpike, meanFirstSomaSpikeOfNeuronsWithRoburstDendriticSpike):
         if nid in training_neurons:
             continue
     
     
-        print "counter = {0}; mean first spike time = {1}".format(neuronCounter, meanFirstSpikeTime)
+        #print "counter = {0}; mean first spike time = {1}".format(neuronCounter, meanFirstSpikeTime)
         
         meanFirstSpikeTime =  round(int(meanFirstSpikeTime / dt) *dt, 2)
         
         #GburstedInh_window[neuronSavedCounter] = Ginh[nid][(t >meanFirstSpikeTime - window/2.)&(t < meanFirstSpikeTime + window/2.)]    
         
-        #f = plt.figure()
+        
+        GburstedInh = Ginh[nid][(t >meanFirstSpikeTime - window/2.)&(t < meanFirstSpikeTime + window/2.)]    
+        
+        #plt.figure()
+        #plt.title('Neuron {0} with first spike time {1}'.format(nid, meanFirstSpikeTime))
+        #plt.plot(window_t, GburstedInh)
         #ax  = f.add_subplot(511)      
         
-        GburstedInh = Ginh[neuronCounter][(t >meanFirstSpikeTime - window/2.)&(t < meanFirstSpikeTime + window/2.)]    
         
         integralConductanceOfSpiked = integral(GburstedInh, dt)
         integralConductanceOfAllSpiked.append(integralConductanceOfSpiked)     
+        minInhibition = np.min(GburstedInh)
         
+        averageInhConductanceOfRecruitedBeforeBurstTime = np.mean(Ginh[nid][t < meanFirstSpikeTime + window/2.])
         
         #ax.plot(window_t, GburstedInh)
         
         # neurons that spike later:
         integralConductanceOfOther = []
+        minInhibitionLater = []
         
-        laterSpikedNeurons = np.where(meanFirstSomaSpikeOfNeuronsWithRoburstDendriticSpike > meanFirstSpikeTime + window)[0]
-        print "ind of neurons that spiked later: ",laterSpikedNeurons
-        #numToPlot = 4
+        laterSpikedNeurons = np.where((probability_dend_spike >= 0.75) & (mean_first_soma_spike_time > meanFirstSpikeTime + window))[0]
+        #print "ind of neurons that spiked later: ",laterSpikedNeurons
+        print "first spike times of neurons that spiked later: ",mean_first_soma_spike_time[laterSpikedNeurons]
+        
+        numToPlot = 0
+        plotCounter = 0
+        
         for nid_later in laterSpikedNeurons:
             #if i >= numToPlot:
                # break
             GInhLater = Ginh[nid_later][(t >meanFirstSpikeTime - window/2.)&(t < meanFirstSpikeTime + window/2.)]    
             integralConductanceOfOther.append(integral(GInhLater, dt))    
-        
+            minInhibitionLater.append(np.min(GInhLater))
+            
+            if plotCounter < numToPlot:
+                plt.figure()
+                plt.plot(window_t, GInhLater)
+                plt.title('Neuron {0} with later first spike time {1}'.format(nid_later, mean_first_soma_spike_time[nid_later]))
+
+                plotCounter += 1
+    
+            averageInhConductanceOfLaterRecruitedBeforeBurstTime.append(np.mean(Ginh[nid_later][t < meanFirstSpikeTime + window/2.]))
+            
         integralConductanceOfAllOther.extend(integralConductanceOfOther)     
             
+        
         plt.figure()
-        plt.hist(integralConductanceOfOther, fill=False, edgecolor='r', label='spiked later')
+        plt.title('Min conductance near burst time of recruited')
+        plt.hist(minInhibitionLater, fill=False, edgecolor='r', label='spiked later')
         ylim=plt.ylim()
-        plt.vlines(integralConductanceOfSpiked, 0, ylim[1])
+        plt.vlines(minInhibition, 0, ylim[1])
         plt.legend()
+        
+        #plt.figure()
+        #plt.title('Conductance near burst time of recruited')
+        #plt.hist(integralConductanceOfOther, fill=False, edgecolor='r', label='spiked later')
+        #ylim=plt.ylim()
+        #plt.vlines(integralConductanceOfSpiked, 0, ylim[1])
+        #plt.legend()
+        
+        
+        #plt.figure()
+        #plt.title('Comparison of average inhibitory conductance of recruited and not recruited before burst time')
+        #plt.hist(averageInhConductanceOfLaterRecruitedBeforeBurstTime, fill=False, edgecolor='r', label='spiked later')
+        #ylim=plt.ylim()
+        #plt.vlines(averageInhConductanceOfRecruitedBeforeBurstTime, 0, ylim[1])
+        #plt.legend()
+        
+        
+        #plt.figure()
+        #plt.hist(integralConductanceOfOther, fill=False, edgecolor='r', label='spiked later')
+        #ylim=plt.ylim()
+        #plt.vlines(integralConductanceOfSpiked, 0, ylim[1])
+        #plt.legend()
 
-        if neuronCounter == 20:
+        if neuronCounter == 10:
             break
+        neuronCounter += 1
+        
+        #break
             #ax = f.add_subplot(510 + i + 2)
             #ax.plot(window_t, GInhLater)
              
@@ -475,13 +553,47 @@ if __name__ == "__main__":
     trial = 25200
     simName = "matTrans63"
     
-    dataDir = "/mnt/hodgkin/eugene/results/immature/clusters/" + simName + "/"
-    testDataDir = "/mnt/hodgkin/eugene/results/immature/clusters/test/" + simName + "/trial" + str(trial) + "/"
-    outFigureDir = "/mnt/hodgkin/eugene/figures/chainGrowth/111818/"
+    dataDir = "/home/eugene/results/immature/clusters/" + simName + "/"
+    testDataDir = "/home/eugene/results/immature/clusters/test/" + simName + "/trial" + str(trial) + "/"
+    outFigureDir = "/home/eugene/figures/chainGrowth/111818/"
     
     
+    t, Ginh_d = reading.read_inhibitory_conductance_during_trial("/mnt/hodgkin/eugene/Output/networks/chainGrowth/matTrans84/Ginh_trial_1.bin")
+
+    plt.figure()    
+    plt.plot(t, Ginh_d[123])
+    plt.show()
+    
+    #t, Vs, Vd, Gexc_d, Ginh_d = reading.read_hh2_buffer(os.path.join(testDataDir, "RA/RA5_trial40.bin"))
+    #print t
+    
+    #plt.figure()
+    #plt.plot(t, Vs)
+    
+    #computeAverageConductances(dataDir, testDataDir, simName, trial)
+    
+    #t, Ginh_average, Gexc_average = loadAverageConductances(testDataDir + "averageConductances.npz")
+
+
+    #compare_conductanceOfNetworkNeurons(Ginh_average, dataDir, testDataDir, outFigureDir, simName, trial)    
+    #print t
+    
+    #print t.shape
+    #print Ginh_average.shape    
+    
+    #plt.figure()
+    #plt.plot(t, Ginh_average[0])
+    #plt.xlabel('Time (ms)')    
+    #plt.ylabel('Ginh (mS/cm^2)')
+    
+    #plt.figure()
+    #plt.plot(t, Gexc_average[0])
+    #plt.xlabel('Time (ms)')    
+    #plt.ylabel('Gexc (mS/cm^2)')
+
+    #plt.show()
     #compare_conductanceOfNetworkNeurons(dataDir, testDataDir, outFigureDir, simName, trial)
-    compare_inhibitory_weights(dataDir, testDataDir, outFigureDir, simName, trial)
+    #compare_inhibitory_weights(dataDir, testDataDir, outFigureDir, simName, trial)
     #x = np.linspace(0, 1, 1000)
     #a = x*x
     #print integral(a, x[1]-x[0])

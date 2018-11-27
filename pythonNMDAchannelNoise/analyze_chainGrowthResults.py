@@ -19,9 +19,10 @@ BURST_DURATION = 30.0
 A_D = 10000.0
 BIN_WIDTH = 1.0
 
-dataDir = "/mnt/hodgkin/eugene/results/immature/clusters/matTrans80"
+#dataDir = "/mnt/hodgkin/eugene/Output/networks/chainGrowth/matTrans83"
+dataDir = "/mnt/hodgkin/eugene/results/immature/clusters/matTrans63"
 #trial = 6800
-trial = 11800
+trial = 25200
 
 
 N_RA, N_I = reading.read_num_neurons(os.path.join(dataDir, "num_neurons.bin"))

@@ -59,6 +59,31 @@ def plotNumSpikes(spike_times, ax, xlabel):
     ax.set_xlabel(xlabel)
     ax.set_ylabel('Count')
 
+def getBurstsForNeuron(spike_times, burst_duration):
+    """
+    Find bursts for a neuron from spike times array. Burst duration are taken to be burst_duration
+    
+    Input: spike_times - array with spike times
+              burst_duration - duration of the burst in ms
+    """
+    bursts = []
+     
+    currentBurst = []
+        
+    for spike in spike_times:
+        if len(currentBurst) == 0 :
+            currentBurst.append(spike)
+        elif spike - currentBurst[0] <= burst_duration:
+            currentBurst.append(spike)
+        else:
+            bursts.append(currentBurst)
+            currentBurst = [spike]
+    
+    bursts.append(currentBurst)
+    
+    return bursts
+
+
 def getBursts(spike_times, burst_duration):
     """
     Find bursts for each neuron from spike times array. Burst duration are taken to be burst_duration

@@ -451,6 +451,63 @@ def read_hh2(fileName):
     
     return (t, Vs, Is, n, h, Vd, Id, r, c, Ca, Gexc_d, Ginh_d, Gexc_s, Ginh_s, Ei, flag, Nsoma, Ndend)
 
+def read_inhibitory_conductance_during_trial(filename):
+    """
+    Reads dendritic compartment inhibitory conductance of HVC-RA neurons during trial
+    """
+    with open(filename, mode = "rb") as f:
+        data = f.read()
+        
+        # calculate number of datapoints
+        N = struct.unpack("<i", data[:SIZE_OF_INT])[0]
+        num_datapoints = struct.unpack("<i", data[SIZE_OF_INT:2*SIZE_OF_INT])[0]
+        time_resolution = struct.unpack("<d", data[2*SIZE_OF_INT:(2*SIZE_OF_INT+SIZE_OF_DOUBLE)])[0]
+
+        t = np.array([float(i)*time_resolution for i in range(num_datapoints)])
+        Ginh_d = np.empty((N, num_datapoints), np.float32)
+        
+        #print num_datapoints
+        start_ind = 2*SIZE_OF_INT+SIZE_OF_DOUBLE
+        
+        for nid in range(N):
+            for i in range(num_datapoints):
+                Ginh_d[nid][i] = struct.unpack("<d", data[start_ind:(start_ind+SIZE_OF_DOUBLE)])[0]
+                start_ind += SIZE_OF_DOUBLE
+                            
+        return t, Ginh_d
+        
+def read_hh2_buffer(filename):
+    """
+    Reads time, membrane potential for soma and dendrite and dendritic conductances of HH2_buffer neuron
+    """
+    with open(filename, mode = "rb") as f:
+        data = f.read()
+        
+        # calculate number of datapoints
+        num_datapoints = len(data) / (5 * SIZE_OF_DOUBLE)
+        
+        t = np.empty(num_datapoints, np.float32)
+        Vs = np.empty(num_datapoints, np.float32)
+        Vd = np.empty(num_datapoints, np.float32)
+        Gexc_d = np.empty(num_datapoints, np.float32)
+        Ginh_d = np.empty(num_datapoints, np.float32)
+        
+        
+        #print num_datapoints
+        
+        start_ind = 0
+        
+        for i in range(num_datapoints):
+            t[i] = struct.unpack("<d", data[start_ind:(start_ind+SIZE_OF_DOUBLE)])[0]
+            Vs[i] = struct.unpack("<d", data[(start_ind+SIZE_OF_DOUBLE):(start_ind+2*SIZE_OF_DOUBLE)])[0]
+            Vd[i] = struct.unpack("<d", data[(start_ind+2*SIZE_OF_DOUBLE):(start_ind+3*SIZE_OF_DOUBLE)])[0]
+            Gexc_d[i] = struct.unpack("<d", data[(start_ind+3*SIZE_OF_DOUBLE):(start_ind+4*SIZE_OF_DOUBLE)])[0]
+            Ginh_d[i] = struct.unpack("<d", data[(start_ind+4*SIZE_OF_DOUBLE):(start_ind+5*SIZE_OF_DOUBLE)])[0]
+        
+        
+            start_ind += 5*SIZE_OF_DOUBLE
+            
+        return t, Vs, Vd, Gexc_d, Ginh_d
 
 def read_hh2_buffer_full(filename):
     """

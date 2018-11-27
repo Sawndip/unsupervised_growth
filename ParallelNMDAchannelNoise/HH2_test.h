@@ -39,6 +39,8 @@ public:
 	std::vector<double> get_Vs(); // get voltage of somatic compartment
 	std::vector<double> get_Vd(); // get voltage of dendritic compartment
     
+    double get_Ginh_d(){return _Ginh_d;}; // get inhibitory conductance of dendritic compartment
+    
     // set functions
     void set_original_model_parameters(); // set neuron model parameters as in original model (mature HVC-RA)
     

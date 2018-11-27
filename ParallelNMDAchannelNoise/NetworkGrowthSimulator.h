@@ -44,8 +44,17 @@ public:
                                                                        // NOTE: coordinates and connections MUST be initialized before using chain_growth
 
 	
+	void chain_growth_with_inhibition_tracking(bool training, int save_freq_long, int num_trials, 
+											double time_resolution_conductance, std::string outputDirectory);
+											// perform chain growth trials with tracking inhibitory conductance of HVC-RA neurons
+	
 	void new_chain_growth(const ConfigurationNetworkGrowth &cfg, std::string networkDirectory, std::string fileTraining,  std::string outputDirectory, 
 															bool training, int save_freq_short, int save_freq_long);
+	
+	void new_chain_growth_with_inhibition_tracking(const ConfigurationNetworkGrowth &cfg, std::string networkDirectory, std::string fileTraining,  std::string outputDirectory, 
+															bool training, int save_freq_long, int num_trials, double time_resolution_conductance);
+															// start new chain growth simulation with inhibitory conductance tracking
+															//  at each simulation trial
 	
 	void continue_chain_growth(std::string dataDir, std::string outDir, int starting_trial, bool training, int save_freq_short, int save_freq_long); // continue chain growth using network state defined by files in 
 																						// directory dataDir from trial starting_trial
@@ -126,6 +135,9 @@ protected:
 		int trial_number; // number of simulated trials
 
 		Poisson_noise noise_generator; // poisson noise generator
+
+		vector<vector<double>> Ginh_global; // array of inhibitory conductances of all HVC-RA neurons on master process
+		vector<vector<double>> Ginh_local; // array of inhibitory conductances of local HVC-RA neurons
 
 		vector<vector<double>> weights_RA_RA_global; // array of synaptic strength of all connections between RA neurons
         vector<vector<double>> weights_RA_RA_local; // array of synaptic strength of all connections between RA neurons
@@ -311,6 +323,14 @@ protected:
 																				// events; dendritic spikes - postsynaptic. Immature neurons have no output connections
 																				// training neurons have fixed spread
 		
+		void trial_1stSoma_pre_1stSoma_post_delays_fixedSpread_with_inhibition_tracking(bool training, std::vector<double>& spread_times, 
+																					double time_resolution_conductance);
+															// single trial with STDP rule; presynaptic event - delivered first somatic spike
+															// postsynaptic event - fired first somatic spike
+															// each trial inhibitory conductance at time resolution time_resolution_conductance
+															// of all HVC-RA neurons is saved to local arrays
+															
+		
 		void trial_1stSoma_pre_1stSoma_post_delays_fixedSpread(bool training, std::vector<double>& spread_times);
 													// single trial with STDP rule; presynaptic event - delivered first somatic spike
 													// postsynaptic event - fired first somatic spike
@@ -474,6 +494,7 @@ protected:
           //                    std::vector<double>& average_num_somatic_spikes_in_trials, std::vector<double>& mean_burst_time, 
             //                  std::vector<double>& std_burst_time, const char* filename); // write results of chain test to file
         
+        void write_inhibitory_conductance(int trial, double time_conductance_resolution, std::string outputDir); // write inhibitory conductance of all HVC-RA neurons during the trial
         
         void write_num_synapses(const char* fileSynapses); // write amount of active synapses and supersynapses
         void write_active_synapses(const char* RA_RA); // write RA to RA active connections
@@ -563,6 +584,12 @@ protected:
         ///////////////////////////////
         void set_synapse_indicators(); // set active and super synapse indicators
         
+        void initialize_global_inhibitory_conductances(double time_resolution_conductance); // initialize global array on master process
+																							// for inhibitory conductance of HVC-RA neurons
+        
+        void initialize_local_inhibitory_conductances(double time_resolution_conductance); // initialize local arrays on all processes
+																							// for inhibitory conductance of HVC-RA neurons
+        
 		void resize_arrays_for_master_process(); // resize global data arrays for master process
         void resize_arrays_for_all_processes(); // resize local data arrays for all processes
         
@@ -583,6 +610,8 @@ protected:
         void gather_localVectorsToGlobal(const std::vector<int>& vector_local, 
 													std::vector<int>& vector_global); // gather elements of local arrays from processes to global array on master process
 													
+        
+        void gather_inhibition(); // gather inhibitory conductance of HVC-RA neurons from local arrays to global on master process
         void gather_mature_data(std::vector<std::vector<double>>& average_dendritic_spike_time); // gather data from all processes in case of mature chain trial
 	    void gather_graph_state_data(); // gather data needed for GUI from all processes
 	    void gather_full_state_data(); // gather additional data needed for full network state from all processes
