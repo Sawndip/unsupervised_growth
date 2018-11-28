@@ -291,7 +291,7 @@ def computeLockingInfo(dataDir, testDir):
     
 if __name__ == "__main__":
 
-    trial = 23800
+    trial = 4200
     simName = "matTrans62"
     dataDir = "/mnt/hodgkin/eugene/results/immature/clusters/" + simName
     testDir = "/mnt/hodgkin/eugene/results/immature/clusters/test/" + simName + "/trial" + str(trial)
@@ -328,5 +328,24 @@ if __name__ == "__main__":
  
     plt.figure()
     plt.scatter(syllableLockingTIme[(pvalues < 0.05) & (~np.isnan(medianFsi))], medianFsi[(pvalues < 0.05) & (~np.isnan(medianFsi))])
+    plt.xlabel('Syllable locking time (ms)')
+    plt.ylabel('median first isi (ms)')
+    
+    plt.figure()
+    plt.scatter(syllableLockingTIme[(pvalues < 0.05) & (~np.isnan(meanFsi))], meanFsi[(pvalues < 0.05) & (~np.isnan(meanFsi))])
+    plt.xlabel('Syllable locking time (ms)')
+    plt.ylabel('mean first isi (ms)')
+        
+    plt.figure()
+    plt.scatter(syllableLockingTIme[(pvalues < 0.05) & (~np.isnan(medianIsi))], medianIsi[(pvalues < 0.05) & (~np.isnan(medianIsi))])
+    plt.xlabel('Syllable locking time (ms)')
+    plt.ylabel('median isi (ms)')
+    
+    plt.figure()
+    plt.scatter(syllableLockingTIme[(pvalues < 0.05) & (~np.isnan(meanIsi))], meanIsi[(pvalues < 0.05) & (~np.isnan(meanIsi))])
+    plt.xlabel('Syllable locking time (ms)')
+    plt.ylabel('mean isi (ms)')
+    
+    
     
     plt.show()

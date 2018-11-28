@@ -494,6 +494,12 @@ protected:
           //                    std::vector<double>& average_num_somatic_spikes_in_trials, std::vector<double>& mean_burst_time, 
             //                  std::vector<double>& std_burst_time, const char* filename); // write results of chain test to file
         
+        void write_inhibition_tracking_state(int trial_number, double time_resolution_conductance, std::string outputDirectory); 
+																			// write state of the network for simulation
+																		   // which tracks inhibitory conductance
+																		   // Info written each trial: inhibitory conductances of all neurons
+																		   // num active and super synapses; spike times of all neurons
+																		   
         void write_inhibitory_conductance(int trial, double time_conductance_resolution, std::string outputDir); // write inhibitory conductance of all HVC-RA neurons during the trial
         
         void write_num_synapses(const char* fileSynapses); // write amount of active synapses and supersynapses

@@ -5705,8 +5705,11 @@ void NetworkGrowthSimulator::chain_growth_with_inhibition_tracking(bool training
 		}
 		
 		this->gather_inhibition();
+		this->gather_graph_state_data();
+
 		if (MPI_rank == 0)
-			this->write_inhibitory_conductance(trial_number, time_resolution_conductance, outputDirectory);
+			this->write_inhibition_tracking_state(trial_number, time_resolution_conductance, outputDirectory);
+			
 		
 		// advance internal time of each neuron
 		for (int i = 0; i < N_RA_local; i++)
@@ -18598,6 +18601,20 @@ void NetworkGrowthSimulator::write_chain_test(std::string outputDirectory, int t
 	this->write_soma_spike_times(fileTimeSoma.c_str());
 	this->write_dend_spike_times(fileTimeDend.c_str());
 	this->write_interneuron_spike_times(fileTimeInterneuron.c_str());
+}
+
+void NetworkGrowthSimulator::write_inhibition_tracking_state(int trial_number, double time_resolution_conductance, std::string outputDirectory)
+{
+	std::string fileNumSynapses = outputDirectory + "num_synapses_" + std::to_string(trial_number) + ".bin";
+	std::string fileTimeSoma = outputDirectory + "spike_times_soma_" + std::to_string(trial_number) + ".bin";
+    std::string fileTimeDend = outputDirectory + "spike_times_dend_" + std::to_string(trial_number) + ".bin";
+    std::string fileTimeInterneuron = outputDirectory + "spike_times_interneuron_" + std::to_string(trial_number) + ".bin";
+    
+	this->write_num_synapses(fileNumSynapses.c_str());
+	this->write_soma_spike_times(fileTimeSoma.c_str());
+	this->write_dend_spike_times(fileTimeDend.c_str());
+	this->write_interneuron_spike_times(fileTimeInterneuron.c_str());
+	this->write_inhibitory_conductance(trial_number, time_resolution_conductance, outputDirectory);
 }
 
 void NetworkGrowthSimulator::write_graph_network_state(std::string outputDirectory)

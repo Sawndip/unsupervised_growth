@@ -251,7 +251,7 @@ def compare_networkAndPoolConductance(dataDir, testDataDir, outFigureDir, simNam
     
     
     
-def compare_inhibitory_weights(dataDir, testDataDir, outFigureDir, simName, trial):
+def compare_inhibitory_weights(dataDir, outFigureDir, simName, trial):
     """
     Compare inhibitory inputs to network and pool neurons
     """
@@ -371,6 +371,8 @@ def compare_conductanceOfNetworkNeurons(Ginh, dataDir, testDataDir, outFigureDir
     Function compares inhibitory conductance of neurons with 
     conductances of the neurons that burst later
     """
+    plt.ioff()    
+    
     N_RA, N_I = reading.read_num_neurons(os.path.join(dataDir, "num_neurons.bin"))
     training_neurons = reading.read_training_neurons(os.path.join(dataDir, "training_neurons.bin"))
     N_TR = len(training_neurons)
@@ -473,28 +475,32 @@ def compare_conductanceOfNetworkNeurons(Ginh, dataDir, testDataDir, outFigureDir
         integralConductanceOfAllOther.extend(integralConductanceOfOther)     
             
         
-        plt.figure()
+        f = plt.figure()
         plt.title('Min conductance near burst time of recruited')
         plt.hist(minInhibitionLater, fill=False, edgecolor='r', label='spiked later')
         ylim=plt.ylim()
         plt.vlines(minInhibition, 0, ylim[1])
         plt.legend()
+        f.savefig(outFigureDir + simName + "_neuron" + str(nid) + '_min_Ginh.png', bbox_inches='tight')
+        plt.close(f)
         
-        #plt.figure()
-        #plt.title('Conductance near burst time of recruited')
-        #plt.hist(integralConductanceOfOther, fill=False, edgecolor='r', label='spiked later')
-        #ylim=plt.ylim()
-        #plt.vlines(integralConductanceOfSpiked, 0, ylim[1])
-        #plt.legend()
+        f = plt.figure()
+        plt.title('Integral of conductance near burst time of recruited')
+        plt.hist(integralConductanceOfOther, fill=False, edgecolor='r', label='spiked later')
+        ylim=plt.ylim()
+        plt.vlines(integralConductanceOfSpiked, 0, ylim[1])
+        plt.legend()
+        f.savefig(outFigureDir + simName + "_neuron" + str(nid) + '_integral_Ginh.png', bbox_inches='tight')
+        plt.close(f)
         
-        
-        #plt.figure()
-        #plt.title('Comparison of average inhibitory conductance of recruited and not recruited before burst time')
-        #plt.hist(averageInhConductanceOfLaterRecruitedBeforeBurstTime, fill=False, edgecolor='r', label='spiked later')
-        #ylim=plt.ylim()
-        #plt.vlines(averageInhConductanceOfRecruitedBeforeBurstTime, 0, ylim[1])
-        #plt.legend()
-        
+        f = plt.figure()
+        plt.title('Comparison of average conductance before burst time')
+        plt.hist(averageInhConductanceOfLaterRecruitedBeforeBurstTime, fill=False, edgecolor='r', label='spiked later')
+        ylim=plt.ylim()
+        plt.vlines(averageInhConductanceOfRecruitedBeforeBurstTime, 0, ylim[1])
+        plt.legend()
+        f.savefig(outFigureDir + simName + "_neuron" + str(nid) + '_average_Ginh.png', bbox_inches='tight')
+        plt.close(f)
         
         #plt.figure()
         #plt.hist(integralConductanceOfOther, fill=False, edgecolor='r', label='spiked later')
@@ -502,7 +508,7 @@ def compare_conductanceOfNetworkNeurons(Ginh, dataDir, testDataDir, outFigureDir
         #plt.vlines(integralConductanceOfSpiked, 0, ylim[1])
         #plt.legend()
 
-        if neuronCounter == 10:
+        if neuronCounter == 5:
             break
         neuronCounter += 1
         
@@ -515,11 +521,11 @@ def compare_conductanceOfNetworkNeurons(Ginh, dataDir, testDataDir, outFigureDir
 
         #break
 
-    plt.figure()
-    plt.hist(integralConductanceOfAllSpiked, fill=False, edgecolor='b', label='spiked neurons')
-    plt.hist(integralConductanceOfAllOther, fill=False, edgecolor='r', label='spiked later')
-    plt.legend()
-    plt.show()
+    #plt.figure()
+    #plt.hist(integralConductanceOfAllSpiked, fill=False, edgecolor='b', label='spiked neurons')
+    #plt.hist(integralConductanceOfAllOther, fill=False, edgecolor='r', label='spiked later')
+    #plt.legend()
+    #plt.show()
 
 
         # normalize conductance by max value    
@@ -546,23 +552,100 @@ def compare_conductanceOfNetworkNeurons(Ginh, dataDir, testDataDir, outFigureDir
             #neuronPlotCounter += 1
         
         #neuronSavedCounter += 1
+
+def moving_average(a, n=3):
+    """
+    Function smoothes array over n points
+    """
+    ret = np.cumsum(a, dtype=float)
+    ret[n:] = ret[n:] - ret[:-n]
+    return np.r_[a[0:(n-1)/2],ret[n - 1:]/n,a[-(n-1)/2:]] 
+   
+def analyze_inhibitory_input_history(dataDir, testDataDir, trial):
+    """
+    Function compares inhibitory conductance of neurons with 
+    conductances of the neurons that burst later
+    """
+    N_RA, N_I = reading.read_num_neurons(os.path.join(dataDir, "num_neurons.bin"))
+    training_neurons = set(reading.read_training_neurons(os.path.join(dataDir, "training_neurons.bin")))
     
+    
+    _, _, activity_history = reading.read_activity_history(os.path.join(dataDir, "activity_history_"+str(trial)+".bin"))
+    
+    smoothWindowSize = 25
+    smooth_activity_history = np.apply_along_axis(moving_average, 1, activity_history, smoothWindowSize)
+    
+    #print np.any(smooth_activity_history[4] >= 1.0)
+    recruited_candidates = np.where(np.any(smooth_activity_history[:,smoothWindowSize:] >= 1, axis=1))[0]
+    
+    recruited = [c for c in recruited_candidates if c not in training_neurons]
+    print training_neurons
+    
+    smooth_activity_history = smooth_activity_history[:, trial:smoothWindowSize:-1]    
+
+    recruitment_time = []
+    for r in recruited:
+        recruitment_time.append(np.where(smooth_activity_history[r] >= 1)[0][0])
         
+    #print recruitment_time
+    
+
+
+    _, _, \
+        _, _, mean_first_soma_spike_time, _,\
+        _, _, _, _ = reading.read_jitter(os.path.join(testDataDir, "jitter.bin")) 
+
+    recruitment_time, recruited = zip(*sorted(zip(recruitment_time, recruited)))
+    
+    first_soma_spike_time_recruited = mean_first_soma_spike_time[recruited]
+        
+    print zip(recruited, recruitment_time, first_soma_spike_time_recruited)
+    
+    trialsBefore = 95
+    laterSpiking = 20.0
+    
+    for rid, rtime, rfirstSpikeTime in zip(recruited, recruitment_time, first_soma_spike_time_recruited):
+        laterSpikedNeurons = set(np.array(recruited)[first_soma_spike_time_recruited >= rfirstSpikeTime + laterSpiking])
+
+        for trialNum in range(rtime - trialsBefore, rtime):
+            t, Ginh_d = reading.read_inhibitory_conductance_during_trial(os.path.join(dataDir, "Ginh_trial_" + str(trialNum) + ".bin"))
+                        
+            for nid in laterSpikeNeurons:
+                pass
+
+        break
+    #plt.figure()
+    #plt.plot(smooth_activity_history[recruited[1]], c='g')
+        
+    #plt.xlabel('Trial #')
+    #plt.ylabel('# of spikes fired')
+    #plt.show()
     
 if __name__ == "__main__":
-    trial = 25200
-    simName = "matTrans63"
+    #trial = 86400
+    #simName = "matTrans78"
     
-    dataDir = "/home/eugene/results/immature/clusters/" + simName + "/"
-    testDataDir = "/home/eugene/results/immature/clusters/test/" + simName + "/trial" + str(trial) + "/"
-    outFigureDir = "/home/eugene/figures/chainGrowth/111818/"
+    #dataDir = "/mnt/hodgkin/eugene/results/immature/clusters/" + simName + "/"
+    #testDataDir = "/mnt/hodgkin/eugene/results/immature/clusters/test/" + simName + "/trial" + str(trial) + "/"
+    #outFigureDir = "/mnt/hodgkin/eugene/figures/chainGrowth/111818/"
     
     
-    t, Ginh_d = reading.read_inhibitory_conductance_during_trial("/mnt/hodgkin/eugene/Output/networks/chainGrowth/matTrans84/Ginh_trial_1.bin")
+    
+    dataDir = "/mnt/hodgkin/eugene/Output/networks/chainGrowth/matTrans85"
+    testDataDir = "/mnt/hodgkin/eugene/Output/networks/chainGrowth/matTrans85/test"
+    outFigureDir = "/mnt/hodgkin/eugene/Output/networks/chainGrowth/matTrans85/figures/"
+    simName = "matTrans85"
+    
+    trial = 2000
+    
+    #analyze_inhibitory_input_history(dataDir, trial)
+    
+    
+    #t, Ginh_d = reading.read_inhibitory_conductance_during_trial("/mnt/hodgkin/eugene/Output/networks/chainGrowth/matTrans84/Ginh_trial_1.bin")
 
-    plt.figure()    
-    plt.plot(t, Ginh_d[123])
-    plt.show()
+    #plt.figure()    
+    #plt.plot(t, Ginh_d[123])
+    #plt.show()
     
     #t, Vs, Vd, Gexc_d, Ginh_d = reading.read_hh2_buffer(os.path.join(testDataDir, "RA/RA5_trial40.bin"))
     #print t
@@ -593,7 +676,7 @@ if __name__ == "__main__":
 
     #plt.show()
     #compare_conductanceOfNetworkNeurons(dataDir, testDataDir, outFigureDir, simName, trial)
-    #compare_inhibitory_weights(dataDir, testDataDir, outFigureDir, simName, trial)
+    compare_inhibitory_weights(dataDir, outFigureDir, simName, trial)
     #x = np.linspace(0, 1, 1000)
     #a = x*x
     #print integral(a, x[1]-x[0])

@@ -19,10 +19,10 @@ BURST_DURATION = 30.0
 A_D = 10000.0
 BIN_WIDTH = 1.0
 
-#dataDir = "/mnt/hodgkin/eugene/Output/networks/chainGrowth/matTrans83"
-dataDir = "/mnt/hodgkin/eugene/results/immature/clusters/matTrans63"
+dataDir = "/mnt/hodgkin/eugene/Output/networks/chainGrowth/matTrans85"
+#dataDir = "/mnt/hodgkin/eugene/results/immature/clusters/matTrans63"
 #trial = 6800
-trial = 25200
+trial = 1500
 
 
 N_RA, N_I = reading.read_num_neurons(os.path.join(dataDir, "num_neurons.bin"))
@@ -66,6 +66,7 @@ ax2.set_xlabel('Time (ms)')
 ax2.set_xlim([-5, TRIAL_DURATION])
 ax2.set_ylim([-25, N_RA+25])
 ax2.set_title('Dendritic spikes')
+
 
 ##############################################
 # plot burst density
@@ -340,6 +341,8 @@ ax1.set_xlim([-5, TRIAL_DURATION])
 ax1.set_ylim([-25, N_I+25])
 ax1.set_title('Interneuron spikes')
 
+
+plt.show()
 ##############################################
 # plot number of active and supersynapses
 ##############################################
